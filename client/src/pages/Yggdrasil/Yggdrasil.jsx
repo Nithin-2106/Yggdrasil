@@ -312,7 +312,7 @@ function RealmCard({ realm, delay, visible, onClick }) {
           backgroundImage: `url(${realm.image})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          opacity: hovered ? 0.18 : 0,
+          opacity: hovered ? 0.30 : 0,
           transition: 'opacity 0.5s ease',
           pointerEvents: 'none',
       }} />
