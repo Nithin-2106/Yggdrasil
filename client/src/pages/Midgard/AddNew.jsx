@@ -134,7 +134,7 @@ async function searchTMDB(query) {
   const url = `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
   const res = await fetch(url)
   const data = await res.json()
-  const allowed = ['KR', 'CN', 'TW', 'HK']
+  const allowed = ['KR', 'CN', 'TW', 'HK', 'JP']
   return (data.results || []).filter(item => {
     const countries = (item.origin_country || []).map(c => c.toUpperCase())
     const isAnimation = (item.genre_ids || []).includes(16)
