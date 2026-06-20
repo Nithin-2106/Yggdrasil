@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import AddNew from './AddNew'
+import SearchPage from './SearchPage'
 
 const API = 'http://localhost:5000/api/drama'
 
@@ -9,6 +10,7 @@ const C = {
   bg:           '#080D1A',
   surface:      '#0F1829',
   surfaceHover: '#141F33',
+  input:        '#0A1220',
   ember:        '#C2410C',
   emberSoft:    'rgba(194,65,12,0.15)',
   gold:         '#CA8A04',
@@ -40,17 +42,14 @@ function VegvisirWatermark() {
         zIndex: 0,
       }}
     >
-      {/* Outer circle */}
       <circle cx="100" cy="100" r="95" fill="none" stroke="#CA8A04" strokeWidth="1"/>
       <circle cx="100" cy="100" r="80" fill="none" stroke="#CA8A04" strokeWidth="0.5"/>
-      {/* 8 directional arms */}
       {[0,45,90,135,180,225,270,315].map((angle, i) => {
         const rad = (angle * Math.PI) / 180
         const x1 = 100 + 20 * Math.cos(rad)
         const y1 = 100 + 20 * Math.sin(rad)
         const x2 = 100 + 80 * Math.cos(rad)
         const y2 = 100 + 80 * Math.sin(rad)
-        // branch points
         const bx = 100 + 55 * Math.cos(rad)
         const by = 100 + 55 * Math.sin(rad)
         const perpRad = rad + Math.PI / 2
@@ -70,14 +69,13 @@ function VegvisirWatermark() {
           </g>
         )
       })}
-      {/* Inner rune circle */}
       <circle cx="100" cy="100" r="20" fill="none" stroke="#CA8A04" strokeWidth="1"/>
       <circle cx="100" cy="100" r="6" fill="#CA8A04" opacity="0.5"/>
     </svg>
   )
 }
 
-// ── Corner ornament (like realm cards) ────────────────────────────────────────
+// ── Corner ornament ───────────────────────────────────────────────────────────
 function Corners({ color = C.goldBright, size = 14, opacity = 1 }) {
   const s = { position: 'absolute', width: size, height: size, opacity }
   const b = `1px solid ${color}`
@@ -91,8 +89,79 @@ function Corners({ color = C.goldBright, size = 14, opacity = 1 }) {
   )
 }
 
+// ── NEW: Search bar component ─────────────────────────────────────────────────
+function SearchBar({ onSearch }) {
+  const [query, setQuery] = useState('')
+  const [focused, setFocused] = useState(false)
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && query.trim()) {
+      onSearch(query.trim())
+      setQuery('')
+    }
+  }
+
+  const handleIconClick = () => {
+    if (query.trim()) {
+      onSearch(query.trim())
+      setQuery('')
+    }
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+      {/* Search icon — clickable */}
+      <button
+        onClick={handleIconClick}
+        style={{
+          position: 'absolute',
+          left: '10px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'none',
+          border: 'none',
+          color: focused ? C.electric : C.textDim,
+          fontSize: '15px',
+          cursor: 'pointer',
+          padding: 0,
+          lineHeight: 1,
+          transition: 'color 0.25s',
+          zIndex: 1,
+        }}
+      >
+        ⌕
+      </button>
+      <input
+        placeholder="Search dramas..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          paddingLeft: '32px',
+          paddingRight: '12px',
+          height: '34px',
+          // Expands on focus for a nice effect
+          width: focused ? '220px' : '160px',
+          background: C.input,
+          border: `1px solid ${focused ? C.electric + '99' : C.borderGold}`,
+          color: C.text,
+          fontSize: '12px',
+          fontFamily: '"Cinzel", serif',
+          letterSpacing: '0.05em',
+          outline: 'none',
+          transition: 'all 0.3s ease',
+          boxShadow: focused ? `0 0 18px rgba(56,189,248,0.15)` : 'none',
+        }}
+      />
+    </div>
+  )
+}
+
 // ── Navbar ────────────────────────────────────────────────────────────────────
-function Navbar({ activePage, onNavigate }) {
+// CHANGED: accepts onSearch prop; right section now has SearchBar + Yggdrasil button
+function Navbar({ activePage, onNavigate, onSearch }) {
   const navigate = useNavigate()
   const links = ['Dashboard', 'My List', 'Add New']
 
@@ -112,7 +181,7 @@ function Navbar({ activePage, onNavigate }) {
         background: `linear-gradient(to right, transparent, ${C.goldBright}88, transparent)`,
       }} />
 
-      {/* Logo */}
+      {/* Logo — left */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div style={{
           fontFamily: '"Cinzel", serif',
@@ -121,10 +190,7 @@ function Navbar({ activePage, onNavigate }) {
           color: C.gold,
           userSelect: 'none',
         }}>ᛗ</div>
-        <div style={{
-          width: '1px', height: '20px',
-          background: C.borderGold,
-        }} />
+        <div style={{ width: '1px', height: '20px', background: C.borderGold }} />
         <span style={{
           fontFamily: '"Cinzel", serif',
           fontSize: '16px',
@@ -146,15 +212,34 @@ function Navbar({ activePage, onNavigate }) {
         </div>
       </div>
 
-      {/* Nav links */}
+      {/* Nav links — center */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '4px' }}>
         {links.map(link => (
-          <NavLink key={link} label={link} active={activePage === link} onClick={() => onNavigate(link)} />
+          <NavLink
+            key={link}
+            label={link}
+            active={activePage === link}
+            onClick={() => onNavigate(link)}
+          />
         ))}
       </div>
 
-      {/* Home */}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Right: Search bar + Yggdrasil button */}
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+
+        {/* NEW: Search bar */}
+        <SearchBar onSearch={onSearch} />
+
+        {/* Rune separator */}
+        <div style={{
+          fontFamily: '"Cinzel", serif',
+          fontSize: '10px',
+          color: C.borderGold,
+          userSelect: 'none',
+          letterSpacing: '0.1em',
+        }}>᛭</div>
+
+        {/* Yggdrasil home button */}
         <button
           onClick={() => navigate('/')}
           style={{
@@ -236,16 +321,12 @@ function StatCard({ label, value, color, rune }) {
       }}
     >
       <Corners color={hovered ? color : C.gold} size={10} opacity={hovered ? 0.8 : 0.3} />
-
-      {/* Top glow line */}
       <div style={{
         position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px',
         background: `linear-gradient(to right, transparent, ${color}, transparent)`,
         opacity: hovered ? 0.8 : 0.25,
         transition: 'opacity 0.35s',
       }} />
-
-      {/* Rune */}
       <div style={{
         fontFamily: '"Cinzel", serif',
         fontSize: '14px',
@@ -256,8 +337,6 @@ function StatCard({ label, value, color, rune }) {
       }}>
         {rune}
       </div>
-
-      {/* Value */}
       <div style={{
         fontSize: 'clamp(28px, 3vw, 40px)',
         fontWeight: 700,
@@ -270,8 +349,6 @@ function StatCard({ label, value, color, rune }) {
       }}>
         {value}
       </div>
-
-      {/* Label */}
       <div style={{
         fontSize: '10px',
         letterSpacing: '0.25em',
@@ -314,8 +391,6 @@ function DramaCard({ drama }) {
           ? <img src={drama.coverImage} alt={drama.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '32px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>📺</div>
         }
-
-        {/* Type badge */}
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
           padding: '3px 8px',
@@ -327,20 +402,14 @@ function DramaCard({ drama }) {
         }}>
           {drama.type}
         </div>
-
-        {/* Hover overlay */}
         <div style={{
           position: 'absolute', inset: 0,
           background: `linear-gradient(to top, ${C.electric}22, transparent)`,
           opacity: hovered ? 1 : 0,
           transition: 'opacity 0.3s',
         }} />
-
-        {/* Corner ornaments on hover */}
         {hovered && <Corners color={C.electric} size={10} opacity={0.7} />}
       </div>
-
-      {/* Progress bar */}
       {progress !== null && (
         <div style={{ height: '2px', background: C.borderGold, marginTop: '6px', overflow: 'hidden' }}>
           <div style={{
@@ -351,7 +420,6 @@ function DramaCard({ drama }) {
           }} />
         </div>
       )}
-
       <div style={{
         marginTop: '8px', fontSize: '12px', fontWeight: 600,
         color: hovered ? C.text : C.textMuted,
@@ -401,15 +469,12 @@ function RecentCard({ drama }) {
         overflow: 'hidden',
       }}
     >
-      {/* Hover shimmer */}
       {hovered && (
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: `linear-gradient(90deg, ${sc}08, transparent)`,
         }} />
       )}
-
-      {/* Cover */}
       <div style={{
         width: '38px', height: '54px', flexShrink: 0,
         background: C.surface,
@@ -422,8 +487,6 @@ function RecentCard({ drama }) {
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '14px' }}>📺</div>
         }
       </div>
-
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: '14px', fontWeight: 600,
@@ -442,8 +505,6 @@ function RecentCard({ drama }) {
           {drama.genres?.[0] && <span>{drama.genres[0]}</span>}
         </div>
       </div>
-
-      {/* Status */}
       <div style={{
         fontSize: '10px', letterSpacing: '0.1em',
         color: sc,
@@ -455,8 +516,6 @@ function RecentCard({ drama }) {
       }}>
         {drama.status}
       </div>
-
-      {/* Rating */}
       {drama.rating && (
         <div style={{
           fontSize: '14px', fontWeight: 700,
@@ -573,16 +632,14 @@ function Dashboard({ onNavigate }) {
 
   return (
     <div>
-      {/* Stats */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-        <StatCard label="Total"        value={stats.total}       color={C.electric}   rune="ᛏ" />
-        <StatCard label="Watching"     value={stats.watching}    color={C.electric}   rune="ᚹ" />
-        <StatCard label="Completed"    value={stats.completed}   color="#22C55E"      rune="ᚲ" />
-        <StatCard label="Plan to Watch" value={stats.planToWatch} color={C.violet}    rune="ᛈ" />
-        <StatCard label="Avg Rating"   value={stats.avgRating}   color={C.goldBright} rune="★" />
+        <StatCard label="Total"         value={stats.total}       color={C.electric}   rune="ᛏ" />
+        <StatCard label="Watching"      value={stats.watching}    color={C.electric}   rune="ᚹ" />
+        <StatCard label="Completed"     value={stats.completed}   color="#22C55E"      rune="ᚲ" />
+        <StatCard label="Plan to Watch" value={stats.planToWatch} color={C.violet}     rune="ᛈ" />
+        <StatCard label="Avg Rating"    value={stats.avgRating}   color={C.goldBright} rune="★" />
       </div>
 
-      {/* Currently Watching */}
       <div style={{ marginBottom: '52px' }}>
         <SectionHeader title="Currently Watching" rune="ᚹ" count={watching.length} />
         {loading
@@ -597,7 +654,6 @@ function Dashboard({ onNavigate }) {
         }
       </div>
 
-      {/* Recently Added */}
       <div>
         <SectionHeader title="Recently Added" rune="ᚾ" count={recent.length} />
         {loading
@@ -615,15 +671,24 @@ function Dashboard({ onNavigate }) {
   )
 }
 
+
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 function Midgard() {
   const [activePage, setActivePage] = useState('Dashboard')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDramaId, setSelectedDramaId] = useState(null)
+
+  const handleNavigate = (page, payload = '') => {
+    if (page === 'Search') setSearchQuery(payload)
+    if (page === 'Info')   setSelectedDramaId(payload)
+    setActivePage(page)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" />
 
-      {/* Vegvisir watermark */}
       <VegvisirWatermark />
 
       {/* Ember edge glow — bottom */}
@@ -647,7 +712,12 @@ function Midgard() {
         pointerEvents: 'none', zIndex: 0,
       }} />
 
-      <Navbar activePage={activePage} onNavigate={setActivePage} />
+      {/* CHANGED: pass onSearch to Navbar */}
+      <Navbar
+        activePage={activePage}
+        onNavigate={handleNavigate}
+        onSearch={(q) => handleNavigate('Search', q)}
+      />
 
       <main style={{
         position: 'relative', zIndex: 1,
@@ -671,22 +741,53 @@ function Midgard() {
             margin: 0,
             textShadow: `0 0 40px ${C.electric}33`,
           }}>
-            {activePage.toUpperCase()}
+            {/* CHANGED: show query in header when on search page */}
+            {activePage === 'Search' ? `SEARCH` : activePage.toUpperCase()}
           </h1>
+          {/* CHANGED: show query subtitle under header on search page */}
+          {activePage === 'Search' && searchQuery && (
+            <div style={{
+              fontSize: '12px',
+              letterSpacing: '0.2em',
+              color: C.textMuted,
+              marginTop: '6px',
+              fontFamily: '"Cinzel", serif',
+            }}>
+              ᛭ results for <span style={{ color: C.electric }}>"{searchQuery}"</span>
+            </div>
+          )}
           <div style={{
             height: '1px', marginTop: '16px',
             background: `linear-gradient(to right, ${C.ember}88, ${C.electric}44, transparent)`,
           }} />
         </div>
 
-        {activePage === 'Dashboard' && <Dashboard onNavigate={setActivePage} />}
+        {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
         {activePage === 'My List' && (
           <div style={{ color: C.textMuted, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', fontSize: '13px' }}>
             My List — coming soon
           </div>
         )}
         {activePage === 'Add New' && (
-          <AddNew onSaved={() => setActivePage('Dashboard')} />
+          <AddNew onSaved={() => handleNavigate('Dashboard')} />
+        )}
+        {/* Search page */}
+        {activePage === 'Search' && (
+          <SearchPage
+            query={searchQuery}
+            onSelectDrama={(item) => {
+              // Step 3: navigate to Info page with this item
+              // For now, log so we can confirm click works
+              console.log('Selected:', item.id, item.name)
+              handleNavigate('Info', item.id)
+            }}
+          />
+        )}
+        {/* Info page placeholder — Step 3 */}
+        {activePage === 'Info' && (
+          <div style={{ color: C.textMuted, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', fontSize: '13px' }}>
+            Info page coming in Step 3 — TMDB ID: <span style={{ color: C.electric }}>{selectedDramaId}</span>
+          </div>
         )}
       </main>
     </div>
