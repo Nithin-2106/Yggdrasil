@@ -103,7 +103,6 @@ function ResultCard({ item, onSelect }) {
   const type = detectType(item)
   const year = item.first_air_date ? item.first_air_date.split('-')[0] : null
   const rating = item.vote_average ? item.vote_average.toFixed(1) : null
-  const overview = item.overview || ''
 
   return (
     <div
@@ -178,43 +177,6 @@ function ResultCard({ item, onSelect }) {
             ★ {rating}
           </div>
         )}
-
-        {/* Hover overlay with overview */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: `linear-gradient(to top, rgba(8,13,26,0.97) 0%, rgba(8,13,26,0.7) 50%, transparent 100%)`,
-          opacity: hovered ? 1 : 0,
-          transition: 'opacity 0.3s ease',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          padding: '14px 12px',
-        }}>
-          {overview && (
-            <p style={{
-              fontSize: '11px',
-              color: 'rgba(232,237,245,0.85)',
-              lineHeight: 1.6,
-              margin: 0,
-              display: '-webkit-box',
-              WebkitLineClamp: 5,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}>
-              {overview}
-            </p>
-          )}
-          <div style={{
-            marginTop: '10px',
-            fontSize: '10px',
-            letterSpacing: '0.2em',
-            color: type.color,
-            fontFamily: '"Cinzel", serif',
-            textTransform: 'uppercase',
-          }}>
-            View Details →
-          </div>
-        </div>
 
         {/* Corner ornaments on hover */}
         {hovered && (

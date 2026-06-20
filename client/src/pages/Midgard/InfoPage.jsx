@@ -66,12 +66,76 @@ function Corners({ color = C.goldBright, size = 12, opacity = 0.5 }) {
   )
 }
 
+function SkeletonBlock({ w = '100%', h = '16px', style = {} }) {
+  return (
+    <div style={{
+      width: w, height: h,
+      background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
+      backgroundSize: '200% 100%',
+      animation: 'shimmer 1.4s infinite',
+      borderRadius: '2px',
+      ...style,
+    }} />
+  )
+}
+
 function Spinner() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: '20px' }}>
-      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', color: '#CA8A04', letterSpacing: '0.4em', animation: 'pulse 1.5s ease-in-out infinite' }}>ᛟ</div>
-      <div style={{ fontSize: '11px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase' }}>Loading...</div>
-      <style>{`@keyframes pulse{0%,100%{opacity:0.2}50%{opacity:1}}`}</style>
+    <div style={{ padding: '0 0 60px' }}>
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      `}</style>
+      {/* Back button skeleton */}
+      <SkeletonBlock w="120px" h="14px" style={{ marginBottom: '36px' }} />
+
+      {/* Hero skeleton */}
+      <div style={{ display: 'flex', gap: '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
+        {/* Poster */}
+        <SkeletonBlock w="230px" h="335px" style={{ flexShrink: 0, marginLeft: '4%' }} />
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <SkeletonBlock w="80px" h="26px" />
+            <SkeletonBlock w="80px" h="26px" />
+          </div>
+          <SkeletonBlock w="70%" h="44px" />
+          <SkeletonBlock w="40%" h="20px" />
+          <div style={{ display: 'flex', gap: '36px' }}>
+            <SkeletonBlock w="80px" h="60px" />
+            <SkeletonBlock w="80px" h="60px" />
+          </div>
+          <div style={{ display: 'flex', gap: '28px' }}>
+            <SkeletonBlock w="70px" h="40px" />
+            <SkeletonBlock w="70px" h="40px" />
+            <SkeletonBlock w="70px" h="40px" />
+          </div>
+          <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+            {[90, 70, 110, 80].map((w, i) => <SkeletonBlock key={i} w={`${w}px`} h="26px" />)}
+          </div>
+        </div>
+      </div>
+
+      {/* Synopsis skeleton */}
+      <SkeletonBlock w="160px" h="14px" style={{ marginBottom: '16px' }} />
+      <SkeletonBlock w="100%" h="90px" style={{ marginBottom: '56px' }} />
+
+      {/* Overview skeleton */}
+      <SkeletonBlock w="130px" h="14px" style={{ marginBottom: '16px' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px', marginBottom: '56px' }}>
+        {Array(6).fill(0).map((_, i) => <SkeletonBlock key={i} h="64px" />)}
+      </div>
+
+      {/* Cast skeleton */}
+      <SkeletonBlock w="100px" h="14px" style={{ marginBottom: '16px' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px 12px' }}>
+        {Array(12).fill(0).map((_, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <SkeletonBlock w="100px" h="134px" />
+            <SkeletonBlock w="80%" h="12px" />
+            <SkeletonBlock w="60%" h="10px" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -170,6 +234,9 @@ function AddToListModal({ tmdbData, existingEntry, onClose, onSaved, onDeleted }
   const [deleting, setDeleting]   = useState(false)
   const [error, setError]         = useState('')
 
+  // Track focus state per field with a single object
+  const [focusedField, setFocusedField] = useState('')
+
   const set   = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const setEp = (k, v) => setForm(f => ({ ...f, episodes: { ...f.episodes, [k]: v === '' ? null : Number(v) } }))
   const coverSrc = coverOverride || form.coverImage
@@ -210,173 +277,291 @@ function AddToListModal({ tmdbData, existingEntry, onClose, onSaved, onDeleted }
     }
   }
 
-  const inpStyle = (focused) => ({
-    width: '100%', padding: '9px 12px',
+  const getInputStyle = (fieldName) => ({
+    width: '100%',
+    padding: '9px 12px',
     background: C.input,
-    border: `1px solid ${focused ? C.electric + '99' : C.borderGold}`,
-    color: C.text, fontSize: '13px', fontFamily: 'inherit',
-    outline: 'none', boxSizing: 'border-box',
+    border: `1px solid ${focusedField === fieldName ? C.electric + '99' : C.borderGold}`,
+    color: C.text,
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxSizing: 'border-box',
     transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: focused ? `0 0 12px rgba(56,189,248,0.1)` : 'none',
+    boxShadow: focusedField === fieldName ? `0 0 12px rgba(56,189,248,0.1)` : 'none',
+    // Hide number spinners
+    MozAppearance: 'textfield',
   })
 
-  function FInput({ style, ...props }) {
-    const [f, setF] = useState(false)
-    return <input {...props} onFocus={e => { setF(true); props.onFocus?.(e) }} onBlur={e => { setF(false); props.onBlur?.(e) }} style={{ ...inpStyle(f), ...style }} />
+  const lbl = {
+    fontSize: '10px',
+    letterSpacing: '0.25em',
+    color: C.textMuted,
+    textTransform: 'uppercase',
+    fontFamily: '"Cinzel", serif',
+    marginBottom: '6px',
+    display: 'block',
   }
-  function FSelect({ children, style, ...props }) {
-    const [f, setF] = useState(false)
-    return <select {...props} onFocus={() => setF(true)} onBlur={() => setF(false)} style={{ ...inpStyle(f), cursor: 'pointer', ...style }}>{children}</select>
-  }
-  function FTextarea({ style, ...props }) {
-    const [f, setF] = useState(false)
-    return <textarea {...props} onFocus={() => setF(true)} onBlur={() => setF(false)} style={{ ...inpStyle(f), resize: 'vertical', minHeight: '80px', ...style }} />
-  }
-
-  const lbl = { fontSize: '10px', letterSpacing: '0.25em', color: C.textMuted, textTransform: 'uppercase', fontFamily: '"Cinzel", serif', marginBottom: '6px', display: 'block' }
 
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(5,10,20,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
-    >
-      <div style={{ background: C.surface, border: `1px solid ${C.borderGold}`, width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto', position: 'relative', boxShadow: '0 0 80px rgba(0,0,0,0.8)' }}>
-        <Corners color={C.goldBright} size={12} opacity={0.4} />
+    <>
+      <style>{`
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .modal-scroll::-webkit-scrollbar { display: none; }
+        .modal-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+      <div
+        onClick={e => { if (e.target === e.currentTarget) onClose() }}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 500,
+          background: 'rgba(5,10,20,0.88)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          paddingTop: '80px', // clear the 64px navbar
+        }}
+      >
+        <div style={{
+          background: C.surface,
+          border: `1px solid ${C.borderGold}`,
+          width: '100%',
+          maxWidth: '720px',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
+          position: 'relative',
+          boxShadow: '0 0 80px rgba(0,0,0,0.8)',
+        }} className="modal-scroll">
+          <Corners color={C.goldBright} size={12} opacity={0.4} />
 
-        {/* Header */}
-        <div style={{ padding: '20px 28px 16px', borderBottom: `1px solid ${C.borderGold}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontFamily: '"Cinzel", serif', fontSize: '14px', color: C.gold }}>ᛚ</span>
-            <span style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.goldBright, textTransform: 'uppercase', fontWeight: 700 }}>
-              {existingEntry ? 'Edit Entry' : 'Add to My List'}
-            </span>
+          {/* Header */}
+          <div style={{
+            padding: '20px 28px 16px',
+            borderBottom: `1px solid ${C.borderGold}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            position: 'sticky', top: 0, background: C.surface, zIndex: 10,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontFamily: '"Cinzel", serif', fontSize: '14px', color: C.gold }}>ᛚ</span>
+              <span style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.goldBright, textTransform: 'uppercase', fontWeight: 700 }}>
+                {existingEntry ? 'Edit Entry' : 'Add to My List'}
+              </span>
+            </div>
+            <button onClick={onClose}
+              style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
+              onMouseEnter={e => e.currentTarget.style.color = C.text}
+              onMouseLeave={e => e.currentTarget.style.color = C.textDim}
+            >×</button>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '0 4px' }}
-            onMouseEnter={e => e.currentTarget.style.color = C.text}
-            onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-          >×</button>
-        </div>
 
-        {/* Body */}
-        <div style={{ padding: '28px', display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+          {/* Body */}
+          <div style={{ padding: '28px', display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
 
-          {/* Left — poster */}
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ maxWidth: '160px' }}>
-              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
-                {tmdbData.name || tmdbData.original_name}
+            {/* Left — poster */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ maxWidth: '160px' }}>
+                <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
+                  {tmdbData.name || tmdbData.original_name}
+                </div>
+                {year && <div style={{ fontSize: '11px', color: C.goldBright, fontFamily: '"Cinzel", serif', marginTop: '4px', letterSpacing: '0.1em' }}>{year}</div>}
               </div>
-              {year && <div style={{ fontSize: '11px', color: C.goldBright, fontFamily: '"Cinzel", serif', marginTop: '4px', letterSpacing: '0.1em' }}>{year}</div>}
-            </div>
-            <div style={{ width: '160px', height: '230px', background: C.bg, border: `1px solid ${C.borderGold}`, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
-              <Corners color={C.gold} size={10} opacity={0.35} />
-              {coverSrc
-                ? <img src={coverSrc} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>📺</div>
-              }
-            </div>
-            <div>
-              <label style={lbl}>ᛈ Cover URL</label>
-              <FInput placeholder="Paste image URL..." value={coverOverride} onChange={e => setCover(e.target.value)} style={{ width: '160px', fontSize: '11px', boxSizing: 'border-box' }} />
-            </div>
-          </div>
-
-          {/* Right — fields */}
-          <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-            <div>
-              <label style={lbl}>ᛊ Status</label>
-              <FSelect value={form.status} onChange={e => set('status', e.target.value)}>
-                <option>Watching</option>
-                <option>Completed</option>
-                <option>Dropped</option>
-                <option>Plan to Watch</option>
-                <option>On Hold</option>
-              </FSelect>
-            </div>
-
-            <div>
-              <label style={lbl}>ᚹ Episodes</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <FInput type="number" min="0" value={form.episodes?.current ?? ''} onChange={e => setEp('current', e.target.value)} placeholder="Current" style={{ flex: 1 }} />
-                <span style={{ color: C.textDim, fontSize: '14px', flexShrink: 0 }}>/</span>
-                <FInput type="number" min="0" value={form.episodes?.total ?? ''} onChange={e => setEp('total', e.target.value)} placeholder="Total" style={{ flex: 1 }} />
-              </div>
-            </div>
-
-            <div>
-              <label style={lbl}>ᚲ Rewatch Count</label>
-              <FInput type="number" min="0" value={form.rewatchCount ?? 0} onChange={e => set('rewatchCount', Number(e.target.value))} style={{ maxWidth: '120px' }} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={lbl}>ᛞ Date Started</label>
-                <FInput type="date" value={form.dateStarted?.split('T')[0] ?? ''} onChange={e => set('dateStarted', e.target.value)} />
+              <div style={{ width: '160px', height: '230px', background: C.bg, border: `1px solid ${C.borderGold}`, overflow: 'hidden', position: 'relative', flexShrink: 0 }}>
+                <Corners color={C.gold} size={10} opacity={0.35} />
+                {coverSrc
+                  ? <img src={coverSrc} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>📺</div>
+                }
               </div>
               <div>
-                <label style={lbl}>ᛞ Date Completed</label>
-                <FInput type="date" value={form.dateCompleted?.split('T')[0] ?? ''} onChange={e => set('dateCompleted', e.target.value)} />
+                <label style={lbl}>ᛈ Cover URL</label>
+                <input
+                  placeholder="Paste image URL..."
+                  value={coverOverride}
+                  onChange={e => setCover(e.target.value)}
+                  onFocus={() => setFocusedField('cover')}
+                  onBlur={() => setFocusedField('')}
+                  style={{ ...getInputStyle('cover'), width: '160px', fontSize: '11px', boxSizing: 'border-box' }}
+                />
               </div>
             </div>
 
-            <div>
-              <label style={lbl}>★ My Rating</label>
-              <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
-            </div>
+            {/* Right — fields */}
+            <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-            <div>
-              <label style={lbl}>ᛚ Where to Watch</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {(form.platforms || []).map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: C.input, border: `1px solid ${C.borderGold}` }}>
-                    <span style={{ flex: 1, fontSize: '12px', color: C.text }}>{p.name}</span>
-                    {p.url && <span style={{ fontSize: '10px', color: C.textDim, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.url}</span>}
-                    <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
-                  </div>
-                ))}
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <FInput placeholder="Platform" value={platName} onChange={e => setPlatName(e.target.value)} style={{ flex: 1 }} />
-                  <FInput placeholder="URL (optional)" value={platUrl} onChange={e => setPlatUrl(e.target.value)} style={{ flex: 2 }} />
-                  <button onClick={addPlat} style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add</button>
+              <div>
+                <label style={lbl}>ᛊ Status</label>
+                <select
+                  value={form.status}
+                  onChange={e => set('status', e.target.value)}
+                  onFocus={() => setFocusedField('status')}
+                  onBlur={() => setFocusedField('')}
+                  style={{ ...getInputStyle('status'), cursor: 'pointer' }}
+                >
+                  <option>Watching</option>
+                  <option>Completed</option>
+                  <option>Dropped</option>
+                  <option>Plan to Watch</option>
+                  <option>On Hold</option>
+                </select>
+              </div>
+
+              {/* Episodes + Rewatch on same row */}
+              <div>
+                <label style={lbl}>ᚹ Episodes & Rewatch</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Current"
+                    value={form.episodes?.current ?? ''}
+                    onChange={e => setEp('current', e.target.value)}
+                    onFocus={() => setFocusedField('epCurrent')}
+                    onBlur={() => setFocusedField('')}
+                    style={{ ...getInputStyle('epCurrent'), width: '72px', flexShrink: 0 }}
+                  />
+                  <span style={{ color: C.textDim, fontSize: '14px', flexShrink: 0 }}>/</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Total"
+                    value={form.episodes?.total ?? ''}
+                    onChange={e => setEp('total', e.target.value)}
+                    onFocus={() => setFocusedField('epTotal')}
+                    onBlur={() => setFocusedField('')}
+                    style={{ ...getInputStyle('epTotal'), width: '72px', flexShrink: 0 }}
+                  />
+                  <span style={{ color: C.textDim, fontSize: '11px', letterSpacing: '0.15em', fontFamily: '"Cinzel", serif', flexShrink: 0, marginLeft: '6px' }}>ᚲ</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Rewatch"
+                    value={form.rewatchCount ?? 0}
+                    onChange={e => set('rewatchCount', e.target.value === '' ? 0 : Number(e.target.value))}
+                    onFocus={() => setFocusedField('rewatch')}
+                    onBlur={() => setFocusedField('')}
+                    style={{ ...getInputStyle('rewatch'), width: '80px', flexShrink: 0 }}
+                  />
                 </div>
               </div>
-            </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={lbl}>ᛞ Date Started</label>
+                  <input
+                    type="date"
+                    value={form.dateStarted?.split('T')[0] ?? ''}
+                    onChange={e => set('dateStarted', e.target.value)}
+                    onFocus={() => setFocusedField('dateStart')}
+                    onBlur={() => setFocusedField('')}
+                    style={getInputStyle('dateStart')}
+                  />
+                </div>
+                <div>
+                  <label style={lbl}>ᛞ Date Completed</label>
+                  <input
+                    type="date"
+                    value={form.dateCompleted?.split('T')[0] ?? ''}
+                    onChange={e => set('dateCompleted', e.target.value)}
+                    onFocus={() => setFocusedField('dateEnd')}
+                    onBlur={() => setFocusedField('')}
+                    style={getInputStyle('dateEnd')}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={lbl}>★ My Rating</label>
+                <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
+              </div>
+
+              <div>
+                <label style={lbl}>ᛚ Where to Watch</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {(form.platforms || []).map((p, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: C.input, border: `1px solid ${C.borderGold}` }}>
+                      <span style={{ flex: 1, fontSize: '12px', color: C.text }}>{p.name}</span>
+                      {p.url && <span style={{ fontSize: '10px', color: C.textDim, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.url}</span>}
+                      <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      placeholder="Platform"
+                      value={platName}
+                      onChange={e => setPlatName(e.target.value)}
+                      onFocus={() => setFocusedField('platName')}
+                      onBlur={() => setFocusedField('')}
+                      style={{ ...getInputStyle('platName'), flex: 1 }}
+                    />
+                    <input
+                      placeholder="URL (optional)"
+                      value={platUrl}
+                      onChange={e => setPlatUrl(e.target.value)}
+                      onFocus={() => setFocusedField('platUrl')}
+                      onBlur={() => setFocusedField('')}
+                      style={{ ...getInputStyle('platUrl'), flex: 2 }}
+                    />
+                    <button onClick={addPlat}
+                      style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >+ Add</button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style={lbl}>ᚾ Review / Notes</label>
+                <textarea
+                  value={form.review}
+                  onChange={e => set('review', e.target.value)}
+                  onFocus={() => setFocusedField('review')}
+                  onBlur={() => setFocusedField('')}
+                  placeholder="Your thoughts on this drama..."
+                  style={{
+                    ...getInputStyle('review'),
+                    resize: 'vertical',
+                    minHeight: '80px',
+                  }}
+                />
+              </div>
+
+              {error && <div style={{ fontSize: '12px', color: C.red, letterSpacing: '0.05em' }}>{error}</div>}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{
+            padding: '16px 28px 24px',
+            borderTop: `1px solid ${C.borderGold}`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            position: 'sticky', bottom: 0, background: C.surface,
+          }}>
             <div>
-              <label style={lbl}>ᚾ Review / Notes</label>
-              <FTextarea value={form.review} onChange={e => set('review', e.target.value)} placeholder="Your thoughts on this drama..." />
+              {existingEntry && (
+                <button onClick={handleDelete} disabled={deleting}
+                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
+                >{deleting ? 'Deleting...' : '✕ Delete'}</button>
+              )}
             </div>
-
-            {error && <div style={{ fontSize: '12px', color: C.red, letterSpacing: '0.05em' }}>{error}</div>}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '16px 28px 24px', borderTop: `1px solid ${C.borderGold}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            {existingEntry && (
-              <button onClick={handleDelete} disabled={deleting}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
-              >{deleting ? 'Deleting...' : '✕ Delete'}</button>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={onClose}
-              style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderGold}`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
-              onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderGold }}
-            >Cancel</button>
-            <button onClick={handleSave} disabled={saving}
-              style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}55`, padding: '10px 28px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
-              onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(56,189,248,0.2)' }}
-              onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.electricSoft }}
-            >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={onClose}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderGold}`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
+                onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderGold }}
+              >Cancel</button>
+              <button onClick={handleSave} disabled={saving}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}55`, padding: '10px 28px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(56,189,248,0.2)' }}
+                onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.electricSoft }}
+              >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -602,7 +787,7 @@ export default function InfoPage({ tmdbId, onBack }) {
             </div>
 
             {/* 3. Ratings */}
-            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {tmdbRating && parseFloat(tmdbRating) > 0 && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ TMDB</div>
@@ -657,15 +842,6 @@ export default function InfoPage({ tmdbId, onBack }) {
               </div>
             )}
 
-            {/* My saved data pills */}
-            {existing && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '2px' }}>
-                {existing.dateStarted && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛞ</span>Started {existing.dateStarted.split('T')[0]}</div>}
-                {existing.dateCompleted && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛞ</span>Completed {existing.dateCompleted.split('T')[0]}</div>}
-                {existing.rewatchCount > 0 && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᚲ</span>Rewatched {existing.rewatchCount}×</div>}
-                {existing.platforms?.length > 0 && <div style={{ fontSize: '10px', color: C.textMuted, padding: '4px 11px', border: `1px solid ${C.borderGold}`, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}><span style={{ color: C.gold + '88', marginRight: '5px' }}>ᛚ</span>{existing.platforms.map(p => p.name).join(', ')}</div>}
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -706,18 +882,24 @@ export default function InfoPage({ tmdbId, onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
             {[
-              { label: 'Status',      value: data.status,                           rune: 'ᛊ' },
-              { label: 'First Aired', value: data.first_air_date,                   rune: 'ᛞ' },
-              { label: 'Last Aired',  value: data.last_air_date,                    rune: 'ᛞ' },
-              { label: 'Origin',      value: data.origin_country?.join(', '),       rune: 'ᚱ' },
-              { label: 'Language',    value: data.original_language?.toUpperCase(), rune: 'ᛚ' },
-              { label: 'Runtime',     value: runtime ? `${runtime} min/ep` : null,  rune: 'ᛏ' },
-            ].filter(r => r.value).map(row => (
-              <div key={row.label} style={{ padding: '14px 16px', background: C.surface, border: `1px solid ${C.borderGold}` }}>
-                <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span style={{ color: C.gold + '77', marginRight: '6px' }}>{row.rune}</span>{row.label}
+              { label: 'Status',         value: data.status,              rune: 'ᛊ' },
+              { label: 'First Aired',    value: data.first_air_date,      rune: 'ᛞ' },
+              { label: 'Last Aired',     value: data.last_air_date,       rune: 'ᛞ' },
+              { label: 'Runtime',        value: runtime ? `${runtime} min/ep` : null, rune: 'ᛏ' },
+              existing?.dateStarted     && { label: 'My Start Date',   value: existing.dateStarted.split('T')[0],   rune: 'ᛞ', highlight: true },
+              existing?.dateCompleted   && { label: 'My End Date',     value: existing.dateCompleted.split('T')[0], rune: 'ᛞ', highlight: true },
+              existing?.rewatchCount > 0 && { label: 'Rewatched',     value: `${existing.rewatchCount}×`,          rune: 'ᚲ', highlight: true },
+              existing?.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ', highlight: true },
+            ].filter(Boolean).filter(r => r.value).map(row => (
+              <div key={row.label} style={{
+                padding: '14px 16px',
+                background: row.highlight ? `${C.electric}08` : C.surface,
+                border: `1px solid ${row.highlight ? C.electric + '33' : C.borderGold}`,
+              }}>
+                <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: row.highlight ? C.electric + 'aa' : C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <span style={{ color: row.highlight ? C.electric + '88' : C.gold + '77', marginRight: '6px' }}>{row.rune}</span>{row.label}
                 </div>
-                <div style={{ fontSize: '13px', color: C.text, fontWeight: 600 }}>{row.value}</div>
+                <div style={{ fontSize: '13px', color: row.highlight ? C.text : C.text, fontWeight: 600 }}>{row.value}</div>
               </div>
             ))}
           </div>

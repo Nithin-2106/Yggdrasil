@@ -534,7 +534,7 @@ function RecentCard({ drama }) {
 // ── Section Header ────────────────────────────────────────────────────────────
 function SectionHeader({ title, rune, count }) {
   return (
-    <div style={{ marginBottom: '20px' }}>
+    <div style={{ marginBottom: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <span style={{
           fontFamily: '"Cinzel", serif',
@@ -725,8 +725,8 @@ function Midgard() {
         padding: '96px 36px 80px',
       }}>
         {/* Page header */}
-        <div style={{ marginBottom: '44px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '1px' }}>
             <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.gold + '66' }}>ᛗ</span>
             <div style={{ fontSize: '10px', letterSpacing: '0.45em', color: C.textDim, textTransform: 'uppercase', fontFamily: '"Cinzel", serif' }}>
               Realm of Mortals · Drama
