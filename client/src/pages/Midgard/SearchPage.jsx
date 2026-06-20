@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 
 const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
 
@@ -22,33 +23,10 @@ const C = {
   green:        '#22C55E',
 }
 
-// ── TMDB helpers ──────────────────────────────────────────────────────────────
-const TYPE_MAP = {
-  KR: { label: 'Kdrama', color: C.electric },
-  CN: { label: 'Cdrama', color: C.violet },
-  TW: { label: 'Cdrama', color: C.violet },
-  HK: { label: 'Cdrama', color: C.violet },
-  JP: { label: 'Jdrama', color: C.goldBright },
-}
-
 function detectType(item) {
-  const origin = (item.origin_country || []).map(c => c.toUpperCase())
-  for (const [code, info] of Object.entries(TYPE_MAP)) {
-    if (origin.includes(code)) return info
-  }
-  return { label: 'Drama', color: C.textMuted }
-}
-
-async function searchTMDB(query) {
-  const url = `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
-  const res = await fetch(url)
-  const data = await res.json()
-  const allowed = ['KR', 'CN', 'TW', 'HK', 'JP']
-  return (data.results || []).filter(item => {
-    const countries = (item.origin_country || []).map(c => c.toUpperCase())
-    const isAnimation = (item.genre_ids || []).includes(16)
-    return countries.some(c => allowed.includes(c)) && !isAnimation
-  })
+  const label = detectDramaType(item)
+  const colorMap = { Kdrama: C.electric, Cdrama: C.violet, Jdrama: C.goldBright }
+  return { label, color: colorMap[label] || C.textMuted }
 }
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
@@ -307,19 +285,19 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
   }, [results, activeFilter])
 
   const runSearch = async (q) => {
-    if (!q.trim()) return
-    setLoading(true)
-    setSearched(true)
-    setActiveFilter('All')
-    try {
-      const res = await searchTMDB(q)
-      setResults(res)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
+  if (!q.trim()) return
+  setLoading(true)
+  setSearched(true)
+  setActiveFilter('All')
+  try {
+    const res = await searchDramas(q)
+    setResults(res)
+  } catch {
+    setResults([])
+  } finally {
+    setLoading(false)
   }
+}
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') runSearch(query)

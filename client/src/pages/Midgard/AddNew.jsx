@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import axios from 'axios'
+import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
+
 
 const API = 'http://localhost:5000/api/drama'
 const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
@@ -129,18 +131,6 @@ function StyledTextarea({ style, ...props }) {
   )
 }
 
-// ── TMDB search ───────────────────────────────────────────────────────────────
-async function searchTMDB(query) {
-  const url = `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false`
-  const res = await fetch(url)
-  const data = await res.json()
-  const allowed = ['KR', 'CN', 'TW', 'HK', 'JP']
-  return (data.results || []).filter(item => {
-    const countries = (item.origin_country || []).map(c => c.toUpperCase())
-    const isAnimation = (item.genre_ids || []).includes(16)
-    return countries.some(c => allowed.includes(c)) && !isAnimation
-  })
-}
 
 async function fetchTMDBDetails(id) {
   const url = `https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_KEY}`
@@ -148,12 +138,10 @@ async function fetchTMDBDetails(id) {
   return res.json()
 }
 
+const searchTMDB = searchDramas
+
 function detectType(item) {
-  const origin = (item.origin_country || []).map(c => c.toUpperCase())
-  if (origin.includes('KR')) return 'Kdrama'
-  if (origin.includes('CN') || origin.includes('TW') || origin.includes('HK')) return 'Cdrama'
-  if (origin.includes('JP')) return 'Jdrama'
-  return 'Kdrama'
+  return detectDramaType(item)
 }
 
 // ── Search step ───────────────────────────────────────────────────────────────
@@ -562,7 +550,7 @@ function FormStep({ initial, onSave, onBack }) {
         <Field label="Rewatch Count" rune="ᚲ">
           <StyledInput
             type="number" min="0"
-            value={form.rewatchCount ?? 0}
+            vvalue={form.rewatchCount || ''}
             onChange={e => set('rewatchCount', Number(e.target.value))}
             style={{ maxWidth: '120px' }}
           />

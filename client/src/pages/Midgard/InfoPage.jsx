@@ -437,7 +437,7 @@ function AddToListModal({ tmdbData, existingEntry, onClose, onSaved, onDeleted }
                     type="number"
                     min="0"
                     placeholder="Rewatch"
-                    value={form.rewatchCount ?? 0}
+                    value={form.rewatchCount || ''}
                     onChange={e => set('rewatchCount', e.target.value === '' ? 0 : Number(e.target.value))}
                     onFocus={() => setFocusedField('rewatch')}
                     onBlur={() => setFocusedField('')}
@@ -888,7 +888,7 @@ export default function InfoPage({ tmdbId, onBack }) {
               { label: 'Runtime',        value: runtime ? `${runtime} min/ep` : null, rune: 'ᛏ' },
               existing?.dateStarted     && { label: 'My Start Date',   value: existing.dateStarted.split('T')[0],   rune: 'ᛞ', highlight: true },
               existing?.dateCompleted   && { label: 'My End Date',     value: existing.dateCompleted.split('T')[0], rune: 'ᛞ', highlight: true },
-              existing?.rewatchCount > 0 && { label: 'Rewatched',     value: `${existing.rewatchCount}×`,          rune: 'ᚲ', highlight: true },
+              existing?.rewatchCount > 0 && { label: 'Rewatched',     value: `${existing.rewatchCount}`,          rune: 'ᚲ', highlight: true },
               existing?.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ', highlight: true },
             ].filter(Boolean).filter(r => r.value).map(row => (
               <div key={row.label} style={{

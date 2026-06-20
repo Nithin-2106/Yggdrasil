@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
+import Counter from '../../components/Counter'
+
 
 const API = 'http://localhost:5000/api/drama'
 
@@ -301,6 +303,10 @@ function NavLink({ label, active, onClick }) {
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, color, rune }) {
   const [hovered, setHovered] = useState(false)
+  // Determine if value is a plain number or a string like "8.4"
+  const isNumeric = typeof value === 'number' || (typeof value === 'string' && !isNaN(parseFloat(value)) && value !== '—')
+  const numericValue = isNumeric ? parseFloat(value) : 0
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
@@ -337,18 +343,41 @@ function StatCard({ label, value, color, rune }) {
       }}>
         {rune}
       </div>
-      <div style={{
-        fontSize: 'clamp(28px, 3vw, 40px)',
-        fontWeight: 700,
-        color: hovered ? color : C.text,
-        fontFamily: '"Cinzel", serif',
-        textShadow: hovered ? `0 0 24px ${color}` : 'none',
-        transition: 'all 0.35s',
-        lineHeight: 1,
-        marginBottom: '10px',
-      }}>
-        {value}
+
+      {/* Animated counter or fallback */}
+      <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
+        {isNumeric ? (
+          <Counter
+            value={numericValue}
+            fontSize={36}
+            padding={4}
+            gap={1}
+            horizontalPadding={0}
+            borderRadius={0}
+            gradientHeight={0}
+            textColor={hovered ? color : C.text}
+            fontWeight={700}
+            counterStyle={{
+              fontFamily: '"Cinzel", serif',
+              textShadow: hovered ? `0 0 24px ${color}` : 'none',
+              transition: 'color 0.35s, text-shadow 0.35s',
+            }}
+          />
+        ) : (
+          <span style={{
+            fontSize: '36px',
+            fontWeight: 700,
+            color: hovered ? color : C.text,
+            fontFamily: '"Cinzel", serif',
+            textShadow: hovered ? `0 0 24px ${color}` : 'none',
+            transition: 'all 0.35s',
+            lineHeight: 1,
+          }}>
+            {value}
+          </span>
+        )}
       </div>
+
       <div style={{
         fontSize: '10px',
         letterSpacing: '0.25em',
