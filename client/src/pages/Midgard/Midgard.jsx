@@ -4,6 +4,7 @@ import axios from 'axios'
 import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
 import Counter from '../../components/Counter'
+import MyList from './MyList'
 
 
 const API = 'http://localhost:5000/api/drama'
@@ -793,10 +794,8 @@ function Midgard() {
 
         {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
         {activePage === 'My List' && (
-          <div style={{ color: C.textMuted, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', fontSize: '13px' }}>
-            My List — coming soon
-          </div>
-        )}
+  <MyList onNavigate={handleNavigate} />
+)}
         {/* Search page */}
         {activePage === 'Search' && (
           <SearchPage

@@ -7,6 +7,7 @@ const platformSchema = new mongoose.Schema({
 
 const dramaSchema = new mongoose.Schema({
   title:        { type: String, required: true },
+  tmdbId: { type: Number, default: null },
   coverImage:   { type: String, default: '' },
   status:       { type: String, enum: ['Watching', 'Completed', 'Dropped', 'Plan to Watch', 'On Hold'], required: true },
   type:         { type: String, enum: ['Kdrama', 'Cdrama', 'Jdrama'], required: true },

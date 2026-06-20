@@ -209,6 +209,7 @@ function AddToListModal({ tmdbData, existingEntry, onClose, onSaved, onDeleted }
   const poster = tmdbData.poster_path ? `${IMG_BASE}/w500${tmdbData.poster_path}` : ''
 
   const buildDefault = () => ({
+    tmdbId:       tmdbData.id, 
     title:        tmdbData.name || tmdbData.original_name || '',
     coverImage:   poster,
     status:       'Plan to Watch',

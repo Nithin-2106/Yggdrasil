@@ -167,28 +167,29 @@ function SearchStep({ onSelect, onSkip }) {
   }
 
   const handleSelect = async (item) => {
-    let details = item
-    try { details = await fetchTMDBDetails(item.id) } catch {}
-    const genres = (details.genres || []).map(g => g.name)
-    const cover = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : ''
-    onSelect({
-      title:         item.name || item.original_name || '',
-      coverImage:    cover,
-      year:          item.first_air_date ? parseInt(item.first_air_date.split('-')[0]) : null,
-      genres,
-      type:          detectType(item),
-      episodes:      { current: 0, total: details.number_of_episodes || null },
-      status:        'Plan to Watch',
-      format:        details.number_of_seasons > 1 ? 'Series' : 'Series',
-      rating:        null,
-      review:        '',
-      rewatchCount:  0,
-      dateStarted:   null,
-      dateCompleted: null,
-      platforms:     [],
-      customTags:    [],
-    })
-  }
+  let details = item
+  try { details = await fetchTMDBDetails(item.id) } catch {}
+  const genres = (details.genres || []).map(g => g.name)
+  const cover = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : ''
+  onSelect({
+    tmdbId:        item.id,        // ← ADD THIS LINE
+    title:         item.name || item.original_name || '',
+    coverImage:    cover,
+    year:          item.first_air_date ? parseInt(item.first_air_date.split('-')[0]) : null,
+    genres,
+    type:          detectType(item),
+    episodes:      { current: 0, total: details.number_of_episodes || null },
+    status:        'Plan to Watch',
+    format:        details.number_of_seasons > 1 ? 'Series' : 'Series',
+    rating:        null,
+    review:        '',
+    rewatchCount:  0,
+    dateStarted:   null,
+    dateCompleted: null,
+    platforms:     [],
+    customTags:    [],
+  })
+}
 
   return (
     <div>
@@ -642,6 +643,7 @@ function FormStep({ initial, onSave, onBack }) {
 
 // ── Add New main ──────────────────────────────────────────────────────────────
 const EMPTY = {
+  tmdbId: null,
   title: '', coverImage: '', status: 'Plan to Watch',
   type: 'Kdrama', format: 'Series', rating: null,
   episodes: { current: 0, total: null },
