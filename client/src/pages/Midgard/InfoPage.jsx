@@ -880,29 +880,62 @@ export default function InfoPage({ tmdbId, onBack }) {
       <div style={{ marginBottom: '56px' }}>
         <SectionDivider title="Overview" rune="ᚱ" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
-            {[
-              { label: 'Status',         value: data.status,              rune: 'ᛊ' },
-              { label: 'First Aired',    value: data.first_air_date,      rune: 'ᛞ' },
-              { label: 'Last Aired',     value: data.last_air_date,       rune: 'ᛞ' },
-              { label: 'Runtime',        value: runtime ? `${runtime} min/ep` : null, rune: 'ᛏ' },
-              existing?.dateStarted     && { label: 'My Start Date',   value: existing.dateStarted.split('T')[0],   rune: 'ᛞ', highlight: true },
-              existing?.dateCompleted   && { label: 'My End Date',     value: existing.dateCompleted.split('T')[0], rune: 'ᛞ', highlight: true },
-              existing?.rewatchCount > 0 && { label: 'Rewatched',     value: `${existing.rewatchCount}`,          rune: 'ᚲ', highlight: true },
-              existing?.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ', highlight: true },
-            ].filter(Boolean).filter(r => r.value).map(row => (
-              <div key={row.label} style={{
-                padding: '14px 16px',
-                background: row.highlight ? `${C.electric}08` : C.surface,
-                border: `1px solid ${row.highlight ? C.electric + '33' : C.borderGold}`,
-              }}>
-                <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: row.highlight ? C.electric + 'aa' : C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span style={{ color: row.highlight ? C.electric + '88' : C.gold + '77', marginRight: '6px' }}>{row.rune}</span>{row.label}
-                </div>
-                <div style={{ fontSize: '13px', color: row.highlight ? C.text : C.text, fontWeight: 600 }}>{row.value}</div>
-              </div>
-            ))}
+          {/* TMDB data grid */}
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+  {[
+    { label: 'Status',      value: data.status,                          rune: 'ᛊ' },
+    { label: 'First Aired', value: data.first_air_date,                  rune: 'ᛞ' },
+    { label: 'Last Aired',  value: data.last_air_date,                   rune: 'ᛞ' },
+    { label: 'Runtime',     value: runtime ? `${runtime} min/ep` : null, rune: 'ᛏ' },
+  ].filter(r => r.value).map(row => (
+    <div key={row.label} style={{
+      padding: '14px 16px',
+      background: C.surface,
+      border: `1px solid ${C.borderGold}`,
+    }}>
+      <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
+        <span style={{ color: C.gold + '77', marginRight: '6px' }}>{row.rune}</span>{row.label}
+      </div>
+      <div style={{ fontSize: '13px', color: C.text, fontWeight: 600 }}>{row.value}</div>
+    </div>
+  ))}
+</div>
+
+{/* My list data — only shown when entry exists */}
+{existing && (() => {
+  const myRows = [
+    existing.dateStarted   && { label: 'My Start Date',  value: existing.dateStarted.split('T')[0],              rune: 'ᛞ' },
+    existing.dateCompleted && { label: 'My End Date',     value: existing.dateCompleted.split('T')[0],            rune: 'ᛞ' },
+    existing.rewatchCount > 0 && { label: 'Rewatched',   value: `${existing.rewatchCount}×`,                     rune: 'ᚲ' },
+    existing.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ' },
+  ].filter(Boolean)
+
+  if (!myRows.length) return null
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column'}}>
+
+      {/* Divider */}
+      <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᛗ My Entry</div>
+      
+      {/* My data grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+        {myRows.map(row => (
+          <div key={row.label} style={{
+            padding: '14px 16px',
+            background: `${C.electric}08`,
+            border: `1px solid ${C.electric}33`,
+          }}>
+            <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.electric + 'aa', fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
+              <span style={{ color: C.electric + '88', marginRight: '6px' }}>{row.rune}</span>{row.label}
+            </div>
+            <div style={{ fontSize: '13px', color: C.text, fontWeight: 600 }}>{row.value}</div>
           </div>
+        ))}
+      </div>
+    </div>
+  )
+})()}
 
           {data.seasons?.filter(s => s.season_number > 0).length > 0 && (
             <div>
