@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import AddNew from './AddNew'
 import SearchPage from './SearchPage'
+import InfoPage from './InfoPage'
 
 const API = 'http://localhost:5000/api/drama'
 
@@ -163,7 +163,7 @@ function SearchBar({ onSearch }) {
 // CHANGED: accepts onSearch prop; right section now has SearchBar + Yggdrasil button
 function Navbar({ activePage, onNavigate, onSearch }) {
   const navigate = useNavigate()
-  const links = ['Dashboard', 'My List', 'Add New']
+  const links = ['Dashboard', 'My List']
 
   return (
     <nav style={{
@@ -601,7 +601,7 @@ function EmptyState({ onAdd }) {
         onMouseEnter={e => e.currentTarget.style.background = C.electricSoft}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
-        + Add Drama
+        ⌕ Search to Add
       </button>
     </div>
   )
@@ -645,7 +645,7 @@ function Dashboard({ onNavigate }) {
         {loading
           ? <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.1em' }}>Loading...</div>
           : watching.length === 0
-            ? <EmptyState onAdd={() => onNavigate('Add New')} />
+            ? <EmptyState onAdd={() => onNavigate('Search')} />
             : (
               <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '12px' }}>
                 {watching.map(d => <DramaCard key={d._id} drama={d} />)}
@@ -659,7 +659,7 @@ function Dashboard({ onNavigate }) {
         {loading
           ? <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.1em' }}>Loading...</div>
           : recent.length === 0
-            ? <EmptyState onAdd={() => onNavigate('Add New')} />
+            ? <EmptyState onAdd={() => onNavigate('Search')} />
             : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {recent.map(d => <RecentCard key={d._id} drama={d} />)}
@@ -742,7 +742,7 @@ function Midgard() {
             textShadow: `0 0 40px ${C.electric}33`,
           }}>
             {/* CHANGED: show query in header when on search page */}
-            {activePage === 'Search' ? `SEARCH` : activePage.toUpperCase()}
+            {activePage === 'Search' ? `SEARCH` : activePage === 'Info' ? 'DRAMA INFO' : activePage.toUpperCase()}
           </h1>
           {/* CHANGED: show query subtitle under header on search page */}
           {activePage === 'Search' && searchQuery && (
@@ -768,26 +768,19 @@ function Midgard() {
             My List — coming soon
           </div>
         )}
-        {activePage === 'Add New' && (
-          <AddNew onSaved={() => handleNavigate('Dashboard')} />
-        )}
         {/* Search page */}
         {activePage === 'Search' && (
           <SearchPage
             query={searchQuery}
-            onSelectDrama={(item) => {
-              // Step 3: navigate to Info page with this item
-              // For now, log so we can confirm click works
-              console.log('Selected:', item.id, item.name)
-              handleNavigate('Info', item.id)
-            }}
+            onSelectDrama={(item) => handleNavigate('Info', item.id)}
           />
         )}
-        {/* Info page placeholder — Step 3 */}
+        {/* Info / Detail page */}
         {activePage === 'Info' && (
-          <div style={{ color: C.textMuted, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', fontSize: '13px' }}>
-            Info page coming in Step 3 — TMDB ID: <span style={{ color: C.electric }}>{selectedDramaId}</span>
-          </div>
+          <InfoPage
+            tmdbId={selectedDramaId}
+            onBack={() => handleNavigate('Search', searchQuery)}
+          />
         )}
       </main>
     </div>
