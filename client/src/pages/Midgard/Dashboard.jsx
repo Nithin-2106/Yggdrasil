@@ -155,6 +155,7 @@ function StatCard({ label, value, color, rune }) {
             textColor={C.text} fontWeight={700}
             counterStyle={{
               fontFamily: '"Cinzel", serif',
+              
             }}
           />
         ) : (
