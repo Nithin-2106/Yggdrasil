@@ -6,23 +6,26 @@ import MyList from './MyList'
 import Dashboard from './Dashboard'
 
 const C = {
-  bg:           '#060B14',
-  surface:      '#0B1220',
-  surfaceHover: '#101A2E',
-  input:        '#080F1C',
-  primary:      '#7EB8F7',
-  primarySoft:  'rgba(126,184,247,0.12)',
-  aurora:       '#A78BFA',
-  auroraSoft:   'rgba(167,139,250,0.15)',
+  bg:           '#050C10',
+  surface:      '#0A1A20',
+  surfaceHover: '#0E2228',
+  input:        '#071318',
+  primary:      '#5EEAD4',
+  primarySoft:  'rgba(94,234,212,0.12)',
+  aurora:       '#C084FC',
+  auroraSoft:   'rgba(192,132,252,0.15)',
+  crystal:      '#67E8F9',
+  crystalSoft:  'rgba(103,232,249,0.12)',
   green:        '#34D399',
   greenSoft:    'rgba(52,211,153,0.12)',
-  gold:         '#FCD34D',
-  goldSoft:     'rgba(252,211,77,0.15)',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderPrimary:'rgba(126,184,247,0.2)',
-  borderAurora: 'rgba(167,139,250,0.15)',
+  gold:         '#A3E635',
+  goldSoft:     'rgba(163,230,53,0.15)',
+  red:          '#F87171',
+  text:         '#E0F7F4',
+  textMuted:    '#7ABFB8',
+  textDim:      '#2E5A56',
+  borderPrimary:'rgba(94,234,212,0.2)',
+  borderAurora: 'rgba(192,132,252,0.18)',
 }
 
 
@@ -40,8 +43,8 @@ function VegvisirWatermark() {
         zIndex: 0,
       }}
     >
-      <circle cx="100" cy="100" r="95" fill="none" stroke="#7EB8F7" strokeWidth="1"/>
-      <circle cx="100" cy="100" r="80" fill="none" stroke="#7EB8F7" strokeWidth="0.5"/>
+      <circle cx="100" cy="100" r="95" fill="none" stroke="#5EEAD4 " strokeWidth="1"/>
+      <circle cx="100" cy="100" r="80" fill="none" stroke="#5EEAD4 " strokeWidth="0.5"/>
       {[0,45,90,135,180,225,270,315].map((angle, i) => {
         const rad = (angle * Math.PI) / 180
         const x1 = 100 + 20 * Math.cos(rad)
@@ -60,7 +63,7 @@ function VegvisirWatermark() {
         const tip2x = b2x + 14 * Math.cos(rad)
         const tip2y = b2y + 14 * Math.sin(rad)
         return (
-          <g key={i} stroke="#7EB8F7" strokeWidth="1.5" fill="none">
+          <g key={i} stroke="#5EEAD4 " strokeWidth="1.5" fill="none">
             <line x1={x1} y1={y1} x2={x2} y2={y2}/>
             <line x1={b1x} y1={b1y} x2={tip1x} y2={tip1y}/>
             <line x1={b2x} y1={b2y} x2={tip2x} y2={tip2y}/>

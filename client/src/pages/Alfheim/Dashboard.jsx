@@ -7,24 +7,26 @@ const API     = 'http://localhost:5000/api/anime'
 const TOP10   = 'http://localhost:5000/api/animetop10'
 
 const C = {
-  bg:           '#060B14',
-  surface:      '#0B1220',
-  surfaceHover: '#101A2E',
-  input:        '#080F1C',
-  primary:      '#7EB8F7',
-  primarySoft:  'rgba(126,184,247,0.12)',
-  aurora:       '#A78BFA',
-  auroraSoft:   'rgba(167,139,250,0.15)',
+  bg:           '#050C10',
+  surface:      '#0A1A20',
+  surfaceHover: '#0E2228',
+  input:        '#071318',
+  primary:      '#5EEAD4',
+  primarySoft:  'rgba(94,234,212,0.12)',
+  aurora:       '#C084FC',
+  auroraSoft:   'rgba(192,132,252,0.15)',
+  crystal:      '#67E8F9',
+  crystalSoft:  'rgba(103,232,249,0.12)',
   green:        '#34D399',
   greenSoft:    'rgba(52,211,153,0.12)',
-  gold:         '#FCD34D',
-  goldSoft:     'rgba(252,211,77,0.15)',
+  gold:         '#A3E635',
+  goldSoft:     'rgba(163,230,53,0.15)',
   red:          '#F87171',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderPrimary:'rgba(126,184,247,0.2)',
-  borderAurora: 'rgba(167,139,250,0.15)',
+  text:         '#E0F7F4',
+  textMuted:    '#7ABFB8',
+  textDim:      '#2E5A56',
+  borderPrimary:'rgba(94,234,212,0.2)',
+  borderAurora: 'rgba(192,132,252,0.18)',
 }
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms))
@@ -97,9 +99,9 @@ function StatCard({ label, value, color, rune }) {
         background: hovered
           ? `linear-gradient(135deg, ${C.surfaceHover}, ${C.surface})`
           : `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-        border: `1px solid ${hovered ? color + '55' : C.borderPrimary}`,
+        border: `1px solid ${hovered ? color + 'cc' : C.borderGold}`,
         transition: 'all 0.35s ease',
-        boxShadow: hovered ? `0 0 40px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)` : 'none',
+        boxShadow: hovered ? `0 0 40px ${color}55, 0 0 120px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)` : 'none',
         cursor: 'default', position: 'relative', overflow: 'hidden', textAlign: 'center',
       }}
     >
@@ -107,7 +109,7 @@ function StatCard({ label, value, color, rune }) {
       <div style={{
         position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px',
         background: `linear-gradient(to right, transparent, ${color}, transparent)`,
-        opacity: hovered ? 0.8 : 0.25, transition: 'opacity 0.35s',
+        opacity: hovered ? 1 : 0.25, transition: 'opacity 0.35s',
       }} />
       <div style={{
         fontFamily: '"Cinzel", serif', fontSize: '14px',
