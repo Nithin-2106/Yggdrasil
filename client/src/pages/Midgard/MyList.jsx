@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { motion, useInView } from 'motion/react'
 import axios from 'axios'
 
 const API = 'http://localhost:5000/api/drama'
@@ -54,7 +55,7 @@ const COLUMNS = [
   { key: 'title',         label: 'Title',           sortable: true,  width: 'auto',  rune: 'ᛏ' },
   { key: 'country',       label: 'Country',         sortable: true,  width: '150px', rune: 'ᚱ' },
   { key: 'year',          label: 'Year',            sortable: true,  width: '90px',  rune: 'ᚢ' },
-  { key: 'dateCompleted', label: 'Date Completed',  sortable: true,  width: '150px', rune: 'ᛞ' },
+  { key: 'dateCompleted', label: 'Completed',       sortable: true,  width: '150px', rune: 'ᛞ' },
   { key: 'format',        label: 'Format',          sortable: true,  width: '100px', rune: 'ᚠ' },
   { key: 'rating',        label: 'My Score',        sortable: true,  width: '140px', rune: '★' },
 ]
@@ -69,7 +70,7 @@ function formatDate(iso) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function ScoreDisplay({ rating }) {
+function ScoreDisplay({ rating }) { 
   if (!rating) return (
     <span style={{ color: C.textDim, fontSize: '14px', fontFamily: '"Cinzel", serif' }}>—</span>
   )
@@ -208,8 +209,8 @@ function DramaRow({ drama, index, onNavigate }) {
         <div
           onClick={goToInfo}
           style={{
-            width: '90px',
-            height: '125px',
+            width: '95px',
+            height: '140px',
             background: C.input,
             border: `1px solid ${hovered && canNavigate ? sc + '99' : C.borderGold}`,
             overflow: 'hidden',
