@@ -56,6 +56,13 @@ function getDramaType(item) {
   return 'Drama'
 }
 
+function typeLabel(type) {
+  if (type === 'Kdrama') return 'Korean'
+  if (type === 'Cdrama') return 'Chinese'
+  if (type === 'Jdrama') return 'Japanese'
+  return type
+}
+
 function typeColor(type) {
   if (type === 'Kdrama') return C.electric
   if (type === 'Cdrama') return C.violet
@@ -152,18 +159,19 @@ function StatCard({ label, value, color, rune }) {
           <Counter
             value={numericValue} fontSize={36} padding={4} gap={1}
             horizontalPadding={0} borderRadius={0} gradientHeight={0}
-            textColor={C.text} fontWeight={700}
+            textColor={hovered ? color : C.text} fontWeight={700}
             counterStyle={{
               fontFamily: '"Cinzel", serif',
-              
+              transition: 'color 0.35s',
             }}
           />
         ) : (
           <span style={{
             fontSize: '36px', fontWeight: 700,
-            color: C.text,
+            color: hovered ? color : C.text,
             fontFamily: '"Cinzel", serif',
             lineHeight: 1,
+            transition: 'color 0.35s',
           }}>{value}</span>
         )}
       </div>
@@ -249,7 +257,7 @@ function TrendingCard({ item, onNavigate }) {
           border: `1px solid ${tColor}66`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: tColor, fontFamily: '"Cinzel", serif',
-        }}>{type}</div>
+        }}>{typeLabel(type)}</div>
         {/* Rating badge */}
         {rating && parseFloat(rating) > 0 && (
           <div style={{
@@ -453,7 +461,7 @@ function WatchingCard({ drama, onNavigate }) {
           border: `1px solid ${C.gold}55`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: C.gold, fontFamily: '"Cinzel", serif',
-        }}>{drama.type}</div>
+        }}>{typeLabel(drama.type)}</div>
         <div style={{
           position: 'absolute', inset: 0,
           background: `linear-gradient(to top, ${C.electric}22, transparent)`,
@@ -745,7 +753,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
               border: `1px solid ${tColor}55`,
               fontSize: '9px', color: tColor,
               fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-            }}>{entry.type}</div>
+            }}>{typeLabel(entry.type)}</div>
             {/* Gradient overlay on hover */}
             <div style={{
               position: 'absolute', inset: 0,
@@ -1121,7 +1129,7 @@ function RecentlyAddedCard({ drama, onNavigate }) {
           fontSize: '11px', color: C.textDim, marginTop: '4px',
           display: 'flex', gap: '10px', letterSpacing: '0.05em',
         }}>
-          <span style={{ color: C.gold + 'aa', fontFamily: '"Cinzel", serif' }}>{drama.type}</span>
+          <span style={{ color: C.gold + 'aa', fontFamily: '"Cinzel", serif' }}>{typeLabel(drama.type)}</span>
           {drama.year && <span>{drama.year}</span>}
           {drama.genres?.[0] && <span>{drama.genres[0]}</span>}
         </div>

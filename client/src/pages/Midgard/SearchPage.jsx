@@ -29,6 +29,13 @@ function detectType(item) {
   return { label, color: colorMap[label] || C.textMuted }
 }
 
+function typeLabel(type) {
+  if (type === 'Kdrama') return 'Korean'
+  if (type === 'Cdrama') return 'Chinese'
+  if (type === 'Jdrama') return 'Japanese'
+  return type
+}
+
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
@@ -137,7 +144,7 @@ function ResultCard({ item, onSelect }) {
           fontFamily: '"Cinzel", serif',
           transition: 'border-color 0.25s',
         }}>
-          {type.label}
+          {typeLabel(type.label)}
         </div>
 
         {/* TMDB rating badge */}

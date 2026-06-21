@@ -155,7 +155,7 @@ function ResultCard({ item, onSelect }) {
           transition: 'color 0.25s', lineHeight: 1.35,
           overflow: 'hidden', display: '-webkit-box',
           WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        }}>{item.title || item.title_english}</div>
+        }}>{item.title_english || item.title}</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
           {item.episodes && (

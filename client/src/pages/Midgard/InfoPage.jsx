@@ -672,6 +672,7 @@ export default function InfoPage({ tmdbId, onBack }) {
 
   useEffect(() => {
     if (!tmdbId) return
+    window.scrollTo({ top: 0, behavior: 'instant' })
     setLoading(true)
     setShowModal(false)
     setShowAllCast(false)

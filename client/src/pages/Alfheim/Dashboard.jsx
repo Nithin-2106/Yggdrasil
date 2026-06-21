@@ -99,8 +99,8 @@ function StatCard({ label, value, color, rune }) {
         background: hovered
           ? `linear-gradient(135deg, ${C.surfaceHover}, ${C.surface})`
           : `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-        border: `1px solid ${hovered ? color + 'cc' : C.borderGold}`,
-        transition: 'all 0.35s ease',
+        border: `1px solid ${hovered ? color + 'cc' : C.borderPrimary}`,
+        transition: 'border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
         boxShadow: hovered ? `0 0 40px ${color}55, 0 0 120px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)` : 'none',
         cursor: 'default', position: 'relative', overflow: 'hidden', textAlign: 'center',
       }}
@@ -121,13 +121,19 @@ function StatCard({ label, value, color, rune }) {
           <Counter
             value={numericValue} fontSize={36} padding={4} gap={1}
             horizontalPadding={0} borderRadius={0} gradientHeight={0}
-            textColor={C.text} fontWeight={700}
-            counterStyle={{ fontFamily: '"Cinzel", serif' }}
+            textColor={hovered ? color : C.text} fontWeight={700}
+            counterStyle={{
+              fontFamily: '"Cinzel", serif',
+              transition: 'color 0.35s',
+            }}
           />
         ) : (
           <span style={{
-            fontSize: '36px', fontWeight: 700, color: C.text,
-            fontFamily: '"Cinzel", serif', lineHeight: 1,
+            fontSize: '36px', fontWeight: 700,
+            color: hovered ? color : C.text,
+            fontFamily: '"Cinzel", serif',
+            lineHeight: 1,
+            transition: 'color 0.35s',
           }}>{value}</span>
         )}
       </div>
@@ -191,7 +197,7 @@ function TrendingCard({ item, onNavigate }) {
         transition: 'all 0.3s ease',
       }}>
         {cover
-          ? <img src={cover} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={cover} alt={item.title_english || item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '32px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>✦</div>
         }
         <div style={{
@@ -220,7 +226,7 @@ function TrendingCard({ item, onNavigate }) {
           transition: 'color 0.25s', lineHeight: 1.35,
           overflow: 'hidden', display: '-webkit-box',
           WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        }}>{item.title}</div>
+        }}>{item.title_english || item.title}</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
           {item.episodes && (
@@ -688,12 +694,12 @@ function Top10SearchModal({ position, onClose, onSaved }) {
                   onMouseLeave={e => e.currentTarget.style.borderColor = C.borderPrimary}
                 >
                   {cover
-                    ? <img src={cover} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={cover} alt={item.title_english || item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim }}>✦</div>
                   }
                 </div>
                 <div style={{ marginTop: '6px', fontSize: '11px', color: C.textMuted, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {item.title}
+                  {item.title_english || item.title}
                 </div>
               </div>
             )

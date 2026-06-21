@@ -98,31 +98,20 @@ function ScoreDisplay({ rating }) {
   )
 }
 
-function SortIndicator({ priority, direction }) {
+function SortIndicator({ direction }) {
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '2px',
-      marginLeft: '6px', fontSize: '11px', color: C.electric,
-      fontFamily: '"Cinzel", serif',
+      display: 'inline-flex', alignItems: 'center',
+      marginLeft: '6px', fontSize: '13px', color: C.electric,
     }}>
-      {priority > 0 && (
-        <span style={{
-          fontSize: '9px', background: C.electric, color: C.bg,
-          borderRadius: '50%', width: '14px', height: '14px',
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700,
-        }}>{priority}</span>
-      )}
-      <span style={{ fontSize: '13px' }}>{direction === 'asc' ? '↑' : '↓'}</span>
+      {direction === 'asc' ? '↑' : '↓'}
     </span>
   )
 }
 
-function HeaderCell({ col, sortKeys, onSort }) {
+function HeaderCell({ col, sortKey, sortDir, onSort }) {
   const [hovered, setHovered] = useState(false)
-  const sortIndex = sortKeys.findIndex(s => s.key === col.key)
-  const isActive  = sortIndex !== -1
-  const direction = isActive ? sortKeys[sortIndex].dir : 'asc'
+  const isActive = sortKey === col.key
 
   return (
     <th
@@ -155,7 +144,7 @@ function HeaderCell({ col, sortKeys, onSort }) {
     >
       <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '13px' }}>{col.rune}</span>
       {col.label}
-      {isActive && <SortIndicator priority={sortIndex + 1} direction={direction} />}
+      {isActive && <SortIndicator direction={sortDir} />}
       {!isActive && col.sortable && hovered && (
         <span style={{ marginLeft: '6px', fontSize: '12px', color: C.textDim, opacity: 0.5 }}>↕</span>
       )}
@@ -425,7 +414,8 @@ export default function MyList({ onNavigate }) {
   const [activeTab, setActiveTab] = useState('All')
   const [searchQuery, setSearch]  = useState('')
   const [focused, setFocused]     = useState(false)
-  const [sortKeys, setSortKeys]   = useState([{ key: 'title', dir: 'asc' }])
+  const [sortKey, setSortKey]   = useState('createdAt')
+  const [sortDir, setSortDir]   = useState('desc')
 
   useEffect(() => {
     axios.get(API)
@@ -443,12 +433,12 @@ export default function MyList({ onNavigate }) {
   }, [dramas])
 
   const handleSort = (key) => {
-    setSortKeys(prev => {
-      const idx = prev.findIndex(s => s.key === key)
-      if (idx === -1) return [...prev, { key, dir: 'asc' }]
-      if (prev[idx].dir === 'asc') return prev.map((s, i) => i === idx ? { ...s, dir: 'desc' } : s)
-      return prev.filter((_, i) => i !== idx)
-    })
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
   }
 
   const filtered = useMemo(() => {
@@ -463,32 +453,31 @@ export default function MyList({ onNavigate }) {
       list = list.filter(d => d.title?.toLowerCase().includes(q))
     }
 
-    if (sortKeys.length > 0) {
-      list = [...list].sort((a, b) => {
-        for (const { key, dir } of sortKeys) {
-          let aVal, bVal
-          if (key === 'country') {
-            aVal = getCountry(a); bVal = getCountry(b)
-          } else if (key === 'rating') {
-            aVal = a.rating ?? -1; bVal = b.rating ?? -1
-          } else if (key === 'dateCompleted') {
-            aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
-            bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0
-          } else if (key === 'year') {
-            aVal = a.year ?? 0; bVal = b.year ?? 0
-          } else {
-            aVal = (a[key] || '').toString().toLowerCase()
-            bVal = (b[key] || '').toString().toLowerCase()
-          }
-          if (aVal < bVal) return dir === 'asc' ? -1 : 1
-          if (aVal > bVal) return dir === 'asc' ? 1 : -1
-        }
-        return 0
-      })
-    }
+    list = [...list].sort((a, b) => {
+      let aVal, bVal
+      if (sortKey === 'country') {
+        aVal = getCountry(a); bVal = getCountry(b)
+      } else if (sortKey === 'rating') {
+        aVal = a.rating ?? -1; bVal = b.rating ?? -1
+      } else if (sortKey === 'dateCompleted') {
+        aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
+        bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0
+      } else if (sortKey === 'year') {
+        aVal = a.year ?? 0; bVal = b.year ?? 0
+      } else if (sortKey === 'createdAt') {
+        aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      } else {
+        aVal = (a[sortKey] || '').toString().toLowerCase()
+        bVal = (b[sortKey] || '').toString().toLowerCase()
+      }
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
 
     return list
-  }, [dramas, activeTab, searchQuery, sortKeys])
+  }, [dramas, activeTab, searchQuery, sortKey, sortDir])
 
   return (
     <div>
@@ -548,56 +537,11 @@ export default function MyList({ onNavigate }) {
         </div>
       </div>
 
-      {/* ── Sort indicators + count ── */}
+      {/* ── Count row ── */}
       <div style={{
         display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', padding: '10px 0 0',
+        justifyContent: 'flex-end', padding: '10px 0 0',
       }}>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {sortKeys.length > 0 && (
-            <>
-              <span style={{
-                fontSize: '11px', color: C.textDim,
-                fontFamily: '"Cinzel", serif', letterSpacing: '0.2em',
-              }}>SORTED BY</span>
-              {sortKeys.map((s, i) => (
-                <span key={s.key} style={{
-                  fontSize: '11px', color: C.electric,
-                  fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-                  padding: '2px 8px',
-                  border: `1px solid ${C.electric}44`,
-                  background: C.electricSoft,
-                  display: 'flex', gap: '4px', alignItems: 'center',
-                }}>
-                  {i + 1}. {COLUMNS.find(c => c.key === s.key)?.label} {s.dir === 'asc' ? '↑' : '↓'}
-                  <button
-                    onClick={() => setSortKeys(prev => prev.filter((_, idx) => idx !== i))}
-                    style={{
-                      background: 'none', border: 'none', color: C.textDim,
-                      cursor: 'pointer', fontSize: '12px', padding: '0 0 0 2px', lineHeight: 1,
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.color = C.red}
-                    onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-                  >×</button>
-                </span>
-              ))}
-              {sortKeys.length > 1 && (
-                <button
-                  onClick={() => setSortKeys([{ key: 'title', dir: 'asc' }])}
-                  style={{
-                    fontSize: '10px', letterSpacing: '0.15em',
-                    color: C.textDim, background: 'transparent',
-                    border: `1px solid ${C.borderGold}`,
-                    padding: '2px 8px', cursor: 'pointer',
-                    fontFamily: '"Cinzel", serif', transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.color = C.red; e.currentTarget.style.borderColor = C.red + '55' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = C.textDim; e.currentTarget.style.borderColor = C.borderGold }}
-                >RESET</button>
-              )}
-            </>
-          )}
-        </div>
         <span style={{
           fontSize: '13px', color: C.textDim,
           fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
@@ -627,7 +571,7 @@ export default function MyList({ onNavigate }) {
             <thead>
               <tr style={{ background: `linear-gradient(180deg, ${C.surface}, ${C.bg})` }}>
                 {COLUMNS.map(col => (
-                  <HeaderCell key={col.key} col={col} sortKeys={sortKeys} onSort={handleSort} />
+                  <HeaderCell key={col.key} col={col} sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                 ))}
               </tr>
             </thead>
