@@ -5,7 +5,7 @@ import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
 import Counter from '../../components/Counter'
 import MyList from './MyList'
-import Dashboad from './Dashboard'
+import Dashboard from './Dashboard'
 
 const API = 'http://localhost:5000/api/drama'
 
@@ -636,72 +636,6 @@ function EmptyState({ onAdd }) {
     </div>
   )
 }
-
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-function Dashboard({ onNavigate }) {
-  const [dramas, setDramas] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    axios.get(API)
-      .then(r => setDramas(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
-
-  const rated = dramas.filter(d => d.rating)
-  const stats = {
-    total:       dramas.length,
-    watching:    dramas.filter(d => d.status === 'Watching').length,
-    completed:   dramas.filter(d => d.status === 'Completed').length,
-    planToWatch: dramas.filter(d => d.status === 'Plan to Watch').length,
-    avgRating:   rated.length ? (rated.reduce((s, d) => s + d.rating, 0) / rated.length).toFixed(1) : '—',
-  }
-  const watching = dramas.filter(d => d.status === 'Watching')
-  const recent   = [...dramas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8)
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-        <StatCard label="Total"         value={stats.total}       color={C.electric}   rune="ᛏ" />
-        <StatCard label="Watching"      value={stats.watching}    color={C.electric}   rune="ᚹ" />
-        <StatCard label="Completed"     value={stats.completed}   color="#22C55E"      rune="ᚲ" />
-        <StatCard label="Plan to Watch" value={stats.planToWatch} color={C.violet}     rune="ᛈ" />
-        <StatCard label="Avg Rating"    value={stats.avgRating}   color={C.goldBright} rune="★" />
-      </div>
-
-      <div style={{ marginBottom: '52px' }}>
-        <SectionHeader title="Currently Watching" rune="ᚹ" count={watching.length} />
-        {loading
-          ? <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.1em' }}>Loading...</div>
-          : watching.length === 0
-            ? <EmptyState onAdd={() => onNavigate('Search')} />
-            : (
-              <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '12px' }}>
-                {watching.map(d => <DramaCard key={d._id} drama={d} />)}
-              </div>
-            )
-        }
-      </div>
-
-      <div>
-        <SectionHeader title="Recently Added" rune="ᚾ" count={recent.length} />
-        {loading
-          ? <div style={{ color: C.textDim, fontSize: '13px', letterSpacing: '0.1em' }}>Loading...</div>
-          : recent.length === 0
-            ? <EmptyState onAdd={() => onNavigate('Search')} />
-            : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {recent.map(d => <RecentCard key={d._id} drama={d} />)}
-              </div>
-            )
-        }
-      </div>
-    </div>
-  )
-}
-
-
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 function Midgard() {

@@ -152,20 +152,17 @@ function StatCard({ label, value, color, rune }) {
           <Counter
             value={numericValue} fontSize={36} padding={4} gap={1}
             horizontalPadding={0} borderRadius={0} gradientHeight={0}
-            textColor={hovered ? color : C.text} fontWeight={700}
+            textColor={C.text} fontWeight={700}
             counterStyle={{
               fontFamily: '"Cinzel", serif',
-              textShadow: hovered ? `0 0 24px ${color}` : 'none',
-              transition: 'color 0.35s, text-shadow 0.35s',
             }}
           />
         ) : (
           <span style={{
             fontSize: '36px', fontWeight: 700,
-            color: hovered ? color : C.text,
+            color: C.text,
             fontFamily: '"Cinzel", serif',
-            textShadow: hovered ? `0 0 24px ${color}` : 'none',
-            transition: 'all 0.35s', lineHeight: 1,
+            lineHeight: 1,
           }}>{value}</span>
         )}
       </div>
@@ -335,8 +332,8 @@ function HorizontalScroll({ children }) {
           overflowX: 'auto', paddingBottom: '12px',
           scrollbarWidth: 'none', msOverflowStyle: 'none',
         }}
+        className="hide-scroll"
       >
-        <style>{`.hscroll::-webkit-scrollbar{display:none}`}</style>
         {children}
       </div>
       {/* Right arrow */}
@@ -365,14 +362,25 @@ function TrendingSection({ onNavigate }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${TMDB_BASE}/trending/tv/week?api_key=${TMDB_KEY}`)
-      .then(r => r.json())
-      .then(d => {
-        const filtered = (d.results || []).filter(isValidDrama).slice(0, 20)
-        setItems(filtered)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const countries = ['KR', 'CN', 'JP', 'TW']
+    const fetches = countries.flatMap(country =>
+      [1, 2, 3].map(page =>
+        fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
+          .then(r => r.json())
+          .then(d => d.results || [])
+          .catch(() => [])
+      )
+    )
+    Promise.all(fetches).then(pages => {
+      const seen = new Set()
+      const filtered = pages.flat().filter(item => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        const genres = item.genre_ids || []
+        return item.poster_path && !genres.some(g => BLOCKED_GENRES.has(g))
+      }).sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 20)
+      setItems(filtered)
+    }).finally(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -643,11 +651,22 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
 }
 
 function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
-  const [hovered, setHovered]   = useState(false)
+  const [hovered, setHovered]         = useState(false)
   const [showActions, setShowActions] = useState(false)
-  const isEmpty   = !entry.tmdbId
-  const tColor    = entry.type ? typeColor(entry.type) : C.textDim
-  const numStr    = String(index + 1)
+  const isEmpty  = !entry.tmdbId
+  const tColor   = entry.type ? typeColor(entry.type) : C.textDim
+  const numStr   = String(index + 1)
+
+  // Rank colours: gold for 1-3, electric for 4-6, violet for 7-10
+  const rankColor = index === 0
+    ? '#FFD700'
+    : index === 1
+      ? '#E8C04A'
+      : index === 2
+        ? '#C9963A'
+        : index <= 5
+          ? C.electric
+          : C.violet
 
   return (
     <div
@@ -658,19 +677,19 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
       {/* Big rank number */}
       <div style={{
         fontFamily: '"Cinzel Decorative", "Cinzel", serif',
-        fontSize: 'clamp(80px, 10vw, 120px)',
+        fontSize: 'clamp(100px, 12vw, 150px)',
         fontWeight: 900,
         lineHeight: 1,
         color: 'transparent',
-        WebkitTextStroke: `2px ${isEmpty ? C.textDim + '33' : C.textDim + '55'}`,
+        WebkitTextStroke: `3px ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
+        textShadow: hovered && !isEmpty
+          ? `0 0 60px ${rankColor}44, 0 0 120px ${rankColor}22`
+          : 'none',
         userSelect: 'none',
-        marginRight: '-18px',
+        marginRight: '-22px',
         zIndex: 1,
-        transition: 'all 0.3s',
-        ...(hovered && !isEmpty ? {
-          WebkitTextStroke: `2px ${tColor}88`,
-          textShadow: `0 0 40px ${tColor}22`,
-        } : {}),
+        transition: 'all 0.3s ease',
+        letterSpacing: '-0.05em',
       }}>{numStr}</div>
 
       {/* Poster card */}
@@ -688,6 +707,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
             : isEmpty ? C.borderGold + '88' : C.borderGold}`,
           overflow: 'hidden', cursor: 'pointer',
           transform: hovered ? 'translateY(-10px) scale(1.03)' : 'translateY(0) scale(1)',
+          transformOrigin: 'bottom center',
           transition: 'all 0.3s ease',
           boxShadow: hovered && !isEmpty
             ? `0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px ${tColor}44`
@@ -840,7 +860,9 @@ function Top10Section({ onNavigate }) {
           ))}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', paddingBottom: '44px' }}>
+        <div style={{ overflowX: 'auto', paddingBottom: '44px', paddingTop: '16px' }}
+          className="hide-scroll"
+        >
           <div style={{ display: 'flex', gap: '4px', minWidth: 'max-content' }}>
             {entries.map((entry, i) => (
               <Top10Card
@@ -874,14 +896,26 @@ function RecentlyReleasedSection({ onNavigate }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${TMDB_BASE}/tv/on_the_air?api_key=${TMDB_KEY}&page=1`)
-      .then(r => r.json())
-      .then(d => {
-        const filtered = (d.results || []).filter(isValidDrama).slice(0, 18)
-        setItems(filtered)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const countries = ['KR', 'CN', 'JP', 'TW']
+    const fetches = countries.flatMap(country =>
+      [1, 2].map(page =>
+        fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`)
+          .then(r => r.json())
+          .then(d => d.results || [])
+          .catch(() => [])
+      )
+    )
+    Promise.all(fetches).then(pages => {
+      const seen = new Set()
+      const filtered = pages.flat().filter(item => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        const genres = item.genre_ids || []
+        return item.poster_path && !genres.some(g => BLOCKED_GENRES.has(g))
+      }).sort((a, b) => (b.first_air_date || '').localeCompare(a.first_air_date || '')).slice(0, 20)
+      setItems(filtered)
+    }).finally(() => setLoading(false))
   }, [])
 
   if (loading) return (
@@ -917,36 +951,59 @@ function RecentlyReleasedSection({ onNavigate }) {
 
 // ── 6. EXPLORE NEW (random 6 with refresh) ───────────────────────────────────
 function ExploreSection({ onNavigate }) {
-  const [pool, setPool]       = useState([])
-  const [shown, setShown]     = useState([])
-  const [loading, setLoading] = useState(true)
+  const [pool, setPool]         = useState([])
+  const [shown, setShown]       = useState([])
+  const [loading, setLoading]   = useState(true)
   const [spinning, setSpinning] = useState(false)
+  const shownIds = useRef(new Set())
 
   const loadPool = async () => {
     setLoading(true)
     try {
-      const pages = await Promise.all([1, 2, 3].map(p =>
-        fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&with_origin_country=KR|CN|TW|JP&sort_by=popularity.desc&page=${p}`)
-          .then(r => r.json())
-          .then(d => d.results || [])
-      ))
-      const all = pages.flat().filter(isValidDrama)
+      const queries = [
+        `with_origin_country=KR&sort_by=popularity.desc`,
+        `with_origin_country=KR&sort_by=vote_average.desc&vote_count.gte=100`,
+        `with_origin_country=CN&sort_by=popularity.desc`,
+        `with_origin_country=TW&sort_by=popularity.desc`,
+        `with_origin_country=JP&sort_by=popularity.desc`,
+        `with_origin_country=KR&sort_by=first_air_date.desc`,
+      ]
+      const pages = await Promise.all(
+        queries.flatMap(q => [1, 2].map(p =>
+          fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&${q}&page=${p}`)
+            .then(r => r.json())
+            .then(d => d.results || [])
+            .catch(() => [])
+        ))
+      )
+      const seen = new Set()
+      const all = pages.flat().filter(item => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return item.poster_path && isValidDrama(item)
+      })
       setPool(all)
-      setShown(pick6(all))
+      const initial = pick6(all, new Set())
+      shownIds.current = new Set(initial.map(i => i.id))
+      setShown(initial)
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
 
   useEffect(() => { loadPool() }, [])
 
-  function pick6(arr) {
-    const shuffled = [...arr].sort(() => Math.random() - 0.5)
+  function pick6(arr, excludeIds) {
+    const available = arr.filter(i => !excludeIds.has(i.id))
+    const source = available.length >= 6 ? available : arr
+    const shuffled = [...source].sort(() => Math.random() - 0.5)
     return shuffled.slice(0, 6)
   }
 
   const refresh = () => {
     setSpinning(true)
-    setShown(pick6(pool))
+    const next = pick6(pool, shownIds.current)
+    shownIds.current = new Set(next.map(i => i.id))
+    setShown(next)
     setTimeout(() => setSpinning(false), 400)
   }
 
@@ -1089,7 +1146,19 @@ function RecentlyAddedCard({ drama, onNavigate }) {
   )
 }
 
-function RecentlyAddedSection({ dramas, onNavigate }) {
+function RecentlyAddedSection({ onNavigate }) {
+  const [dramas, setDramas] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    axios.get(API)
+      .then(r => setDramas(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return null
+
   const recent = [...dramas]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 10)
@@ -1127,6 +1196,8 @@ export default function Dashboard({ onNavigate }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* 1. Stats */}
@@ -1147,8 +1218,8 @@ export default function Dashboard({ onNavigate }) {
       {/* 6. Explore New */}
       <ExploreSection onNavigate={onNavigate} />
 
-      {/* 7. Recently Added */}
-      {!loading && <RecentlyAddedSection dramas={dramas} onNavigate={onNavigate} />}
+      {/* 7. Recently Added — fetches its own data */}
+      <RecentlyAddedSection onNavigate={onNavigate} />
     </div>
   )
 }
