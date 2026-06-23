@@ -22,24 +22,27 @@ const C = {
 
 const BLOCKED_GENRES = new Set([16, 10764, 10767, 10763, 10766])
 
-// How many TMDB pages to pre-fetch per query on initial load
-// TMDB returns 20 items/page, cap is 500 pages
-// We fetch 25 pages = up to 500 raw items per query
-// For "All" with a combined country query that's 500 globally sorted items upfront
-const INITIAL_PAGES = 25
-const PAGE_SIZE     = 24  // cards revealed per infinite scroll step
+// How many TMDB pages to fetch on initial load per country query
+// TMDB max is 500 pages × 20 items = 10,000 items per query
+// We fetch 25 pages upfront (500 items) and expand in background
+const INITIAL_PAGES   = 25
+const EXPAND_PAGES    = 15   // pages fetched per background expansion
+const PAGE_SIZE       = 24   // cards revealed per infinite scroll step
+const MAX_TMDB_PAGES  = 500  // hard TMDB limit
 
 const SORT_MODES = [
-  { key: 'popularity', label: 'Popularity',       rune: 'ᚦ' },
-  { key: 'toprated',   label: 'Top Rated',         rune: '★' },
-  { key: 'recent',     label: 'Recently Released', rune: 'ᚾ' },
+  { key: 'mostwatched', label: 'Most Watched',      rune: 'ᚦ' },
+  { key: 'toprated',    label: 'Top Rated',         rune: '★' },
+  { key: 'popularity',  label: 'Popularity',        rune: 'ᛏ' },
+  { key: 'recent',      label: 'Recently Released', rune: 'ᚾ' },
 ]
 
+// Each type maps to one or more TMDB origin_country values
+// We run a SEPARATE query per country code and merge results
 const TYPE_FILTERS = [
-  { key: 'All',    label: 'All',      color: C.electric },
-  { key: 'Kdrama', label: 'Korean',   color: C.electric },
-  { key: 'Cdrama', label: 'Chinese',  color: C.violet },
-  { key: 'Jdrama', label: 'Japanese', color: C.goldBright },
+  { key: 'Kdrama', label: 'Korean',   color: C.electric,   countries: ['KR'] },
+  { key: 'Cdrama', label: 'Chinese',  color: C.violet,     countries: ['CN', 'TW', 'HK'] },
+  { key: 'Jdrama', label: 'Japanese', color: C.goldBright, countries: ['JP'] },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,13 +66,15 @@ function typeLabel(type) {
   if (type === 'Jdrama') return 'Japanese'
   return type
 }
-function isValidItem(item, typeFilter) {
+function isValidItem(item, typeKey, sortMode) {
   if (!item.poster_path) return false
   const type = getDramaType(item)
   if (!type) return false
-  if (typeFilter !== 'All' && type !== typeFilter) return false
+  if (typeKey && type !== typeKey) return false
   const genres = item.genre_ids || []
   if (genres.some(g => BLOCKED_GENRES.has(g))) return false
+  // Drop entries with fewer than 10 votes to avoid noise in both popularity and top rated
+  if ((item.vote_count || 0) < 10) return false
   return true
 }
 function dedupeById(items) {
@@ -81,99 +86,98 @@ function dedupeById(items) {
   })
 }
 
-// ── Country param ─────────────────────────────────────────────────────────────
-// For "All": use a single combined query with all countries pipe-separated.
-// TMDB will sort this unified result set, giving us a true global ranking.
-// For a specific type: query only that country (or countries for Cdrama).
-function getCountryParam(typeFilter) {
-  if (typeFilter === 'All')    return 'KR|CN|TW|HK|JP'
-  if (typeFilter === 'Kdrama') return 'KR'
-  if (typeFilter === 'Cdrama') return 'CN|TW|HK'
-  if (typeFilter === 'Jdrama') return 'JP'
-  return 'KR|CN|TW|HK|JP'
-}
-
-// ── Sort param ────────────────────────────────────────────────────────────────
 function getSortParam(sortMode) {
-  if (sortMode === 'toprated')   return 'vote_average.desc'
-  if (sortMode === 'recent')     return 'first_air_date.desc'
+  if (sortMode === 'toprated')    return 'vote_average.desc'
+  if (sortMode === 'recent')      return 'first_air_date.desc'
+  if (sortMode === 'mostwatched') return 'vote_count.desc'
+  // popularity: TMDB's own algorithmic score (recency + trending weighted)
   return 'popularity.desc'
 }
-
-// ── Extra filter params ───────────────────────────────────────────────────────
 function getExtraParams(sortMode) {
-  if (sortMode === 'toprated') {
-    // Require meaningful vote count so obscure 10.0/1vote titles don't dominate
-    return '&vote_count.gte=150'
-  }
+  // No server-side vote_count filter for toprated — it artificially caps results
+  // because many legitimate dramas have < 50 votes on TMDB.
+  // We apply a minimal client-side guard (vote_count >= 3) in isValidItem instead.
   if (sortMode === 'recent') {
-    // Last 2 years
-    const cutoff = new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
+    const cutoff = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000)
       .toISOString().split('T')[0]
     return `&first_air_date.gte=${cutoff}`
   }
   return ''
 }
 
-// ── Core pool builder ─────────────────────────────────────────────────────────
-// Fetches INITIAL_PAGES pages from a SINGLE unified TMDB query (not per-country),
-// so TMDB's own sorting applies to the combined result set.
-// This means page 1 = true global top 20, page 2 = true global 21-40, etc.
-// We then just filter client-side (poster, type, genres) and dedupe.
-// No client-side re-sorting needed — TMDB already sorted it correctly.
-async function buildPool(sortMode, typeFilter) {
-  const countryParam = getCountryParam(typeFilter)
-  const sortParam    = getSortParam(sortMode)
-  const extraParams  = getExtraParams(sortMode)
+// Fetch a range of pages for a SINGLE country code
+async function fetchPagesForCountry(country, sortMode, startPage, count) {
+  const sortParam  = getSortParam(sortMode)
+  const extraParam = getExtraParams(sortMode)
+  const end = Math.min(startPage + count - 1, MAX_TMDB_PAGES)
+  if (startPage > end) return []
 
-  // Fetch all pages in parallel
-  const fetches = Array.from({ length: INITIAL_PAGES }, (_, i) =>
+  const fetches = Array.from({ length: end - startPage + 1 }, (_, i) =>
     fetch(
       `${TMDB_BASE}/discover/tv` +
       `?api_key=${TMDB_KEY}` +
-      `&with_origin_country=${countryParam}` +
+      `&with_origin_country=${country}` +
       `&sort_by=${sortParam}` +
-      `${extraParams}` +
-      `&page=${i + 1}`
-    )
-      .then(r => r.json())
-      .then(d => ({ results: d.results || [], totalPages: d.total_pages || 0 }))
-      .catch(() => ({ results: [], totalPages: 0 }))
-  )
-
-  const pages = await Promise.all(fetches)
-
-  // Flatten in page order — TMDB order is preserved, which IS the correct sort
-  const allItems = pages.flatMap(p => p.results)
-
-  // Filter but DO NOT re-sort — TMDB already sorted this correctly
-  const filtered = allItems.filter(item => isValidItem(item, typeFilter))
-
-  return dedupeById(filtered)
-}
-
-// ── Fetch next batch of pages (for background pool expansion) ─────────────────
-async function fetchMorePages(sortMode, typeFilter, startPage, count) {
-  const countryParam = getCountryParam(typeFilter)
-  const sortParam    = getSortParam(sortMode)
-  const extraParams  = getExtraParams(sortMode)
-
-  const fetches = Array.from({ length: count }, (_, i) =>
-    fetch(
-      `${TMDB_BASE}/discover/tv` +
-      `?api_key=${TMDB_KEY}` +
-      `&with_origin_country=${countryParam}` +
-      `&sort_by=${sortParam}` +
-      `${extraParams}` +
+      `${extraParam}` +
       `&page=${startPage + i}`
     )
       .then(r => r.json())
       .then(d => d.results || [])
       .catch(() => [])
   )
-
   const pages = await Promise.all(fetches)
   return pages.flat()
+}
+
+// Build initial pool: fetch INITIAL_PAGES for each country in the type filter,
+// then merge + dedupe + sort by the primary metric so the combined list is
+// in a sensible order (not just KR first, then CN, then HK…)
+async function buildPool(typeKey, sortMode) {
+  const filterDef = TYPE_FILTERS.find(f => f.key === typeKey)
+  if (!filterDef) return []
+
+  // Fetch pages for all country codes in parallel
+  const perCountryFetches = filterDef.countries.map(country =>
+    fetchPagesForCountry(country, sortMode, 1, INITIAL_PAGES)
+  )
+  const perCountryResults = await Promise.all(perCountryFetches)
+  const allRaw = perCountryResults.flat()
+
+  // Filter
+  const filtered = allRaw.filter(item => isValidItem(item, typeKey, sortMode))
+  const deduped  = dedupeById(filtered)
+
+  // Re-sort the merged set so the combined list is globally ranked
+  // (since we interleaved pages from multiple country queries)
+  return sortPool(deduped, sortMode)
+}
+
+function sortPool(items, sortMode) {
+  if (sortMode === 'toprated') {
+    return [...items].sort((a, b) => {
+      // Primary: vote_average desc
+      const ratingDiff = (b.vote_average || 0) - (a.vote_average || 0)
+      if (ratingDiff !== 0) return ratingDiff
+      // Tiebreak: vote_count desc (more votes = more trustworthy rating)
+      return (b.vote_count || 0) - (a.vote_count || 0)
+    })
+  }
+  if (sortMode === 'recent') {
+    return [...items].sort((a, b) => {
+      // Primary: first_air_date desc
+      const dateDiff = (b.first_air_date || '').localeCompare(a.first_air_date || '')
+      if (dateDiff !== 0) return dateDiff
+      // Tiebreak: popularity desc
+      return (b.popularity || 0) - (a.popularity || 0)
+    })
+  }
+  // popularity: sort by vote_count desc — "most voted = most watched"
+  // Tiebreak: vote_average desc so equally-voted shows surface the better-rated one
+  return [...items].sort((a, b) => {
+    const countDiff = (b.vote_count || 0) - (a.vote_count || 0)
+    if (countDiff !== 0) return countDiff
+    return (b.vote_average || 0) - (a.vote_average || 0)
+  })
 }
 
 // ── UI Components ─────────────────────────────────────────────────────────────
@@ -235,20 +239,11 @@ function DramaCard({ item, onNavigate }) {
           : '0 4px 16px rgba(0,0,0,0.4)',
         transition: 'all 0.25s ease',
       }}>
-        {item.poster_path ? (
-          <img
-            src={`${IMG_BASE}/w300${item.poster_path}`}
-            alt={item.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: C.textDim, fontSize: '32px',
-            background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-          }}>📺</div>
-        )}
+        <img
+          src={`${IMG_BASE}/w300${item.poster_path}`}
+          alt={item.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
 
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
@@ -339,7 +334,7 @@ function TypePill({ filter, active, onClick }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: '6px 16px', cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
       }}
     >
       {filter.label}
@@ -347,7 +342,7 @@ function TypePill({ filter, active, onClick }) {
   )
 }
 
-// Infinite scroll sentinel — fires onVisible when scrolled into view
+// Infinite scroll sentinel
 function ScrollSentinel({ onVisible }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -355,7 +350,7 @@ function ScrollSentinel({ onVisible }) {
     if (!el) return
     const observer = new IntersectionObserver(
       entries => { if (entries[0].isIntersecting) onVisible() },
-      { rootMargin: '500px' }
+      { rootMargin: '600px' }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -366,83 +361,129 @@ function ScrollSentinel({ onVisible }) {
 // ── Main BrowsePage ───────────────────────────────────────────────────────────
 export default function BrowsePage({ onNavigate }) {
   const [sortMode,   setSortMode]   = useState('popularity')
-  const [typeFilter, setTypeFilter] = useState('All')
+  const [typeFilter, setTypeFilter] = useState('Kdrama')
 
-  // Globally sorted pool — built once per sort+filter combination
-  const pool         = useRef([])
-  const nextTmdbPage = useRef(INITIAL_PAGES + 1) // next TMDB page to fetch if pool runs low
-  const poolExhausted = useRef(false)             // true when TMDB has no more pages
+  // Pool state — stored in refs so scroll callbacks don't go stale
+  const pool            = useRef([])           // all fetched + filtered items
+  const nextPageMap     = useRef({})           // { countryCode: nextPageToFetch }
+  const exhaustedMap    = useRef({})           // { countryCode: true } when no more pages
+  const currentKey      = useRef('')           // tracks active sort+type combo to cancel stale updates
 
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const [loading,      setLoading]      = useState(true)
-  const [poolReady,    setPoolReady]    = useState(false)
-  const [expanding,    setExpanding]    = useState(false) // background pool expansion
+  const [visibleCount,  setVisibleCount]  = useState(PAGE_SIZE)
+  const [loading,       setLoading]       = useState(true)
+  const [poolReady,     setPoolReady]     = useState(false)
+  const [expanding,     setExpanding]     = useState(false)
+  const [poolSize,      setPoolSize]      = useState(0)  // reactive pool size for display
 
-  // ── Build pool on sort/filter change ─────────────────────────────────────
+  // ── Build initial pool on sort/filter change ──────────────────────────────
   useEffect(() => {
-    pool.current      = []
-    nextTmdbPage.current  = INITIAL_PAGES + 1
-    poolExhausted.current = false
+    const key = `${typeFilter}__${sortMode}`
+    currentKey.current = key
+
+    pool.current        = []
+    nextPageMap.current = {}
+    exhaustedMap.current = {}
     setVisibleCount(PAGE_SIZE)
     setPoolReady(false)
+    setPoolSize(0)
     setLoading(true)
 
-    buildPool(sortMode, typeFilter)
-      .then(sorted => {
-        pool.current = sorted
-        setPoolReady(true)
-      })
-      .catch(() => {
-        pool.current = []
-        setPoolReady(true)
-      })
-      .finally(() => setLoading(false))
+    const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter)
+    if (!filterDef) { setLoading(false); return }
+
+    // Initialise next-page pointer for each country
+    filterDef.countries.forEach(c => {
+      nextPageMap.current[c] = INITIAL_PAGES + 1
+    })
+
+    buildPool(typeFilter, sortMode).then(sorted => {
+      if (currentKey.current !== key) return // stale, discard
+      pool.current = sorted
+      setPoolSize(sorted.length)
+      setPoolReady(true)
+    }).catch(() => {
+      if (currentKey.current !== key) return
+      pool.current = []
+      setPoolReady(true)
+    }).finally(() => {
+      if (currentKey.current === key) setLoading(false)
+    })
   }, [sortMode, typeFilter])
 
-  // ── Expand pool in the background when user nears the end ────────────────
+  // ── Expand pool in background ─────────────────────────────────────────────
   const expandPool = useCallback(async () => {
-    if (expanding || poolExhausted.current) return
+    if (expanding) return
+
+    const key = currentKey.current
+    const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter)
+    if (!filterDef) return
+
+    // Check if all countries are exhausted
+    const allExhausted = filterDef.countries.every(c => exhaustedMap.current[c])
+    if (allExhausted) return
+
     setExpanding(true)
     try {
-      const newItems = await fetchMorePages(
-        sortMode, typeFilter, nextTmdbPage.current, 10
-      )
-      if (newItems.length === 0) {
-        poolExhausted.current = true
-      } else {
-        const filtered = newItems.filter(item => isValidItem(item, typeFilter))
-        const existingIds = new Set(pool.current.map(i => i.id))
-        const fresh = filtered.filter(item => !existingIds.has(item.id))
-        // Append in TMDB order — since TMDB sorts these, appending preserves order
-        pool.current = [...pool.current, ...fresh]
-        nextTmdbPage.current += 10
-      }
-    } catch {
-      poolExhausted.current = true
-    } finally {
-      setExpanding(false)
-    }
-  }, [sortMode, typeFilter, expanding])
+      // Fetch next batch for each non-exhausted country in parallel
+      const fetches = filterDef.countries
+        .filter(c => !exhaustedMap.current[c])
+        .map(async country => {
+          const startPage = nextPageMap.current[country] || INITIAL_PAGES + 1
+          if (startPage > MAX_TMDB_PAGES) {
+            exhaustedMap.current[country] = true
+            return []
+          }
+          const results = await fetchPagesForCountry(country, sortMode, startPage, EXPAND_PAGES)
+          if (results.length === 0) {
+            exhaustedMap.current[country] = true
+          } else {
+            nextPageMap.current[country] = startPage + EXPAND_PAGES
+          }
+          return results
+        })
 
-  // ── Infinite scroll handler ───────────────────────────────────────────────
+      const batches = await Promise.all(fetches)
+      if (currentKey.current !== key) return // stale
+
+      const newRaw     = batches.flat()
+      const filtered   = newRaw.filter(item => isValidItem(item, typeFilter, sortMode))
+      const existingIds = new Set(pool.current.map(i => i.id))
+      const fresh       = filtered.filter(item => !existingIds.has(item.id))
+
+      if (fresh.length > 0) {
+        // Merge and re-sort so new items slot into the correct position
+        const merged = sortPool([...pool.current, ...fresh], sortMode)
+        pool.current = merged
+        setPoolSize(merged.length)
+      }
+    } catch (err) {
+      console.error('Pool expansion error:', err)
+    } finally {
+      if (currentKey.current === key) setExpanding(false)
+    }
+  }, [typeFilter, sortMode, expanding])
+
+  // ── Infinite scroll ───────────────────────────────────────────────────────
   const onSentinelVisible = useCallback(() => {
     if (!poolReady || loading) return
 
-    const newCount = visibleCount + PAGE_SIZE
+    setVisibleCount(prev => {
+      const next = Math.min(prev + PAGE_SIZE, pool.current.length)
+      // Expand pool if within 72 cards of the end
+      if (next >= pool.current.length - 72) {
+        expandPool()
+      }
+      return next
+    })
+  }, [poolReady, loading, expandPool])
 
-    // Reveal more from pool
-    setVisibleCount(prev => Math.min(prev + PAGE_SIZE, pool.current.length))
-
-    // If we're within 48 cards of the pool end, expand the pool in background
-    if (newCount >= pool.current.length - 48 && !poolExhausted.current) {
-      expandPool()
-    }
-  }, [poolReady, loading, visibleCount, expandPool])
-
-  const displayed = pool.current.slice(0, visibleCount)
-  const hasMore   = poolReady && (
-    visibleCount < pool.current.length || !poolExhausted.current
-  )
+  const filterDef  = TYPE_FILTERS.find(f => f.key === typeFilter)
+  const tColor     = filterDef?.color || C.electric
+  const displayed  = pool.current.slice(0, visibleCount)
+  const allExhausted = filterDef
+    ? filterDef.countries.every(c => exhaustedMap.current[c])
+    : true
+  const hasMore    = poolReady && (visibleCount < poolSize || !allExhausted)
 
   return (
     <>
@@ -476,7 +517,7 @@ export default function BrowsePage({ onNavigate }) {
         <span style={{
           fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
           fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
-        }}>Filter</span>
+        }}>Realm</span>
         <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
         {TYPE_FILTERS.map(f => (
           <TypePill
@@ -486,26 +527,40 @@ export default function BrowsePage({ onNavigate }) {
           />
         ))}
 
-        <span style={{
-          marginLeft: 'auto', fontSize: '11px', color: C.textDim,
+        {/* Stats */}
+        <div style={{
+          marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px',
+          fontSize: '11px', color: C.textDim,
           fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
         }}>
-          {loading
-            ? <span style={{ color: C.textDim }}>Fetching realm…</span>
-            : <>
-                <span style={{ color: C.electric }}>{displayed.length}</span>
-                {' shown · '}
-                <span style={{ color: C.textMuted }}>{pool.current.length}</span>
-                {' loaded'}
-              </>
-          }
-        </span>
+          {loading ? (
+            <span style={{ color: C.textDim }}>Fetching realm…</span>
+          ) : (
+            <>
+              <span>
+                <span style={{ color: tColor }}>{displayed.length}</span>
+                <span style={{ color: C.textDim }}> shown</span>
+              </span>
+              <span style={{ color: C.borderGold }}>·</span>
+              <span>
+                <span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span>
+                <span style={{ color: C.textDim }}> loaded</span>
+              </span>
+              {expanding && (
+                <>
+                  <span style={{ color: C.borderGold }}>·</span>
+                  <span style={{ color: C.gold + '88' }}>expanding…</span>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Divider ── */}
       <div style={{
         height: '1px', marginBottom: '32px',
-        background: `linear-gradient(to right, ${C.ember}66, ${C.electric}33, transparent)`,
+        background: `linear-gradient(to right, ${C.ember}66, ${tColor}44, transparent)`,
       }} />
 
       {/* ── Grid ── */}
@@ -524,7 +579,7 @@ export default function BrowsePage({ onNavigate }) {
       </div>
 
       {/* ── Empty state ── */}
-      {!loading && pool.current.length === 0 && (
+      {!loading && poolSize === 0 && (
         <div style={{
           padding: '64px 24px', textAlign: 'center',
           border: `1px dashed ${C.borderGold}`,
@@ -545,20 +600,8 @@ export default function BrowsePage({ onNavigate }) {
         <ScrollSentinel onVisible={onSentinelVisible} />
       )}
 
-      {/* ── Expanding indicator ── */}
-      {expanding && (
-        <div style={{
-          display: 'flex', justifyContent: 'center',
-          padding: '16px 0 32px',
-          fontSize: '11px', letterSpacing: '0.3em',
-          color: C.textDim, fontFamily: '"Cinzel", serif',
-        }}>
-          ᚱ Expanding the realm…
-        </div>
-      )}
-
       {/* ── End of results ── */}
-      {!loading && poolReady && !hasMore && pool.current.length > 0 && (
+      {!loading && poolReady && !hasMore && poolSize > 0 && (
         <div style={{
           textAlign: 'center', padding: '32px 0 64px',
           fontSize: '11px', letterSpacing: '0.3em',
