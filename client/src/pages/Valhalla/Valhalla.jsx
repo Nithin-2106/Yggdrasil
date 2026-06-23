@@ -5,6 +5,11 @@ import InfoPage from './InfoPage'
 import MyList from './MyList'
 import Dashboard from './Dashboard'
 import BrowsePage from './BrowsePage'
+import ProfileIcon from '../../components/ProfileIcon'
+import { useAuth } from '../../context/AuthContext'
+
+
+const { user } = useAuth()
 
 const C = {
   bg:           '#0A0810',
@@ -213,6 +218,9 @@ function Navbar({ activePage, onNavigate, onSearch }) {
         ))}
       </div>
 
+      <ProfileIcon borderColor="rgba(167,139,250,0.35)" size={34} />
+
+
       {/* Right: search + home */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
         <SearchBar onSearch={onSearch} />
@@ -253,6 +261,7 @@ export default function Valhalla() {
   const [selectedMangaId, setSelectedMangaId] = useState(null)
 
   const handleNavigate = (page, payload = '') => {
+    if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)
     if (page === 'Info')   setSelectedMangaId(payload)
     setActivePage(page)

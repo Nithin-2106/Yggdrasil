@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ProfileIcon from '../../components/ProfileIcon'
 
 function Yggdrasil() {
   const navigate = useNavigate()
@@ -66,6 +67,11 @@ function Yggdrasil() {
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&display=swap"
       />
+
+      {/* Profile icon — top right */}
+      <div style={{ position: 'absolute', top: '20px', right: '24px', zIndex: 10 }}>
+        <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={36} />
+      </div>
 
       {/* Background image */}
       <div style={{

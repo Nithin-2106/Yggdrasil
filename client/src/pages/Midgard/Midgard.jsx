@@ -6,6 +6,8 @@ import Counter from '../../components/Counter'
 import MyList from './MyList'
 import Dashboard from './Dashboard'
 import BrowsePage from './BrowsePage'
+import ProfileIcon from '../../components/ProfileIcon'
+import { useAuth } from '../../context/AuthContext'
 
 const C = {
   bg:           '#080D1A',
@@ -231,6 +233,8 @@ function Navbar({ activePage, onNavigate, onSearch }) {
         {/* NEW: Search bar */}
         <SearchBar onSearch={onSearch} />
 
+        <ProfileIcon borderColor="rgba(202,138,4,0.35)" size={34} />
+
         {/* Rune separator */}
         <div style={{
           fontFamily: '"Cinzel", serif',
@@ -299,6 +303,8 @@ function NavLink({ label, active, onClick }) {
   )
 }
 
+const { user } = useAuth()
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 function Midgard() {
   const [activePage, setActivePage] = useState('Dashboard')
@@ -306,6 +312,7 @@ function Midgard() {
   const [selectedDramaId, setSelectedDramaId] = useState(null)
 
   const handleNavigate = (page, payload = '') => {
+    if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)
     if (page === 'Info')   setSelectedDramaId(payload)
     setActivePage(page)

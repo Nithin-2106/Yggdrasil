@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import { fetchMangaDetail, detectMangaType, detectMangaFormat, getTitle, getYear, getCover, formatScore, formatStatus } from '../../utils/anilistSearch'
 
 const API = 'http://localhost:5000/api/manga'
-
+const navigate = useNavigate()
+const { user } = useAuth()
 const C = {
   bg:           '#0A0810',
   surface:      '#120F1E',
@@ -890,8 +893,10 @@ export default function InfoPage({ anilistId, onBack }) {
 
             {/* Add / Edit button */}
             <div style={{ width: '230px' }}>
-              <button
-                onClick={() => setShowModal(true)}
+              onClick={() => {
+                  if (!user) { navigate('/profile'); return }
+                  setShowModal(true)
+                }}
                 style={{
                   width: '100%',
                   fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em',

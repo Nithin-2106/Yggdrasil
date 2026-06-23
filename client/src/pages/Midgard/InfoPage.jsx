@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
 const TMDB_BASE = 'https://api.themoviedb.org/3'
@@ -30,6 +32,9 @@ const C = {
   borderGold:   'rgba(202,138,4,0.25)',
   borderElec:   'rgba(56,189,248,0.2)',
 }
+
+const navigate = useNavigate()
+const { user } = useAuth()
 
 const STATUS_CONFIG = {
   'Watching':      { color: '#38BDF8', icon: '▶', rune: 'ᚹ' },
@@ -758,7 +763,10 @@ export default function InfoPage({ tmdbId, onBack }) {
                 onMouseLeave={e => { if (!showTrailers) e.currentTarget.style.background = showTrailers ? C.electric : C.electricSoft }}
               >▶ Trailers {trailerCount > 0 && <span style={{ fontSize: '10px', opacity: 0.7 }}>({trailerCount})</span>}</button>
 
-              <button onClick={() => setShowModal(true)}
+              <button onClick={() => {
+                if (!user) { navigate('/profile'); return }
+                setShowModal(true)
+              }}
                 style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.goldBright, background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(202,138,4,0.12)', border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}

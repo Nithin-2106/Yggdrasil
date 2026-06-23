@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 const JIKAN = 'https://api.jikan.moe/v4'
 const API   = 'http://localhost:5000/api/anime'
-
+const navigate = useNavigate()
+const { user } = useAuth()
 const C = {
   bg:           '#050C10',
   surface:      '#0A1A20',
@@ -960,7 +963,10 @@ export default function InfoPage({ malId, onBack }) {
               </button>
 
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => {
+                  if (!user) { navigate('/profile'); return }
+                  setShowModal(true)
+                }}
                 style={{
                   fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em',
                   color: existing ? (statusCfg?.color || C.green) : C.gold,
