@@ -4,6 +4,7 @@ import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
 import MyList from './MyList'
 import Dashboard from './Dashboard'
+import BrowsePage from './BrowsePage'
 
 const C = {
   bg:           '#050C10',
@@ -162,8 +163,7 @@ function NavLink({ label, active, onClick }) {
 
 function Navbar({ activePage, onNavigate, onSearch }) {
   const navigate = useNavigate()
-  const links = ['Dashboard', 'My List']
-
+  const links = ['Dashboard', 'Browse', 'My List']
   return (
     <nav style={{
       position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
@@ -308,8 +308,9 @@ export default function Alfheim() {
             textShadow: `0 0 40px ${C.primary}33`,
           }}>
             {activePage === 'Search' ? 'SEARCH'
-              : activePage === 'Info' ? 'ANIME INFO'
-              : activePage.toUpperCase()}
+  : activePage === 'Info' ? 'ANIME INFO'
+  : activePage === 'Browse' ? 'BROWSE'
+  : activePage.toUpperCase()}
           </h1>
           {activePage === 'Search' && searchQuery && (
             <div style={{
@@ -327,6 +328,7 @@ export default function Alfheim() {
         </div>
 
         {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
+        {activePage === 'Browse' && <BrowsePage onNavigate={handleNavigate} />}
         {activePage === 'My List'   && <MyList onNavigate={handleNavigate} />}
         {activePage === 'Search'    && (
           <SearchPage

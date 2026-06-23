@@ -4,6 +4,7 @@ import SearchPage from './SearchPage'
 import InfoPage from './InfoPage'
 import MyList from './MyList'
 import Dashboard from './Dashboard'
+import BrowsePage from './BrowsePage'
 
 const C = {
   bg:           '#0A0810',
@@ -164,7 +165,7 @@ function NavLink({ label, active, onClick }) {
 // ── Navbar ────────────────────────────────────────────────────────────────────
 function Navbar({ activePage, onNavigate, onSearch }) {
   const navigate = useNavigate()
-  const links = ['Dashboard', 'My List']
+  const links = ['Dashboard', 'Browse', 'My List']
 
   return (
     <nav style={{
@@ -314,8 +315,9 @@ export default function Valhalla() {
             textShadow: `0 0 40px ${C.primary}33`,
           }}>
             {activePage === 'Search' ? 'SEARCH'
-              : activePage === 'Info' ? 'MANGA INFO'
-              : activePage.toUpperCase()}
+  : activePage === 'Info' ? 'ANIME INFO'
+  : activePage === 'Browse' ? 'BROWSE'
+  : activePage.toUpperCase()}
           </h1>
           {activePage === 'Search' && searchQuery && (
             <div style={{
@@ -333,6 +335,7 @@ export default function Valhalla() {
         </div>
 
         {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
+        {activePage === 'Browse' && <BrowsePage onNavigate={handleNavigate} />}
         {activePage === 'My List'   && <MyList onNavigate={handleNavigate} />}
         {activePage === 'Search'    && (
           <SearchPage
