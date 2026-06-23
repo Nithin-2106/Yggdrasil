@@ -41,15 +41,15 @@ const STATUS_CONFIG = {
 
 function detectType(item) {
   const origin = (item.origin_country || []).map(c => c.toUpperCase())
-  if (origin.includes('KR')) return 'Kdrama'
-  if (origin.includes('CN') || origin.includes('TW') || origin.includes('HK')) return 'Cdrama'
-  if (origin.includes('JP')) return 'Jdrama'
-  return 'Kdrama'
+  if (origin.includes('KR')) return 'Korean'
+  if (origin.includes('CN') || origin.includes('TW') || origin.includes('HK')) return 'Chinese'
+  if (origin.includes('JP')) return 'Japanese'
+  return 'Korean'
 }
 function typeColor(type) {
-  if (type === 'Kdrama') return C.electric
-  if (type === 'Cdrama') return C.violet
-  if (type === 'Jdrama') return C.goldBright
+  if (type === 'Korean') return C.electric
+  if (type === 'Chinese') return C.violet
+  if (type === 'Japanese') return C.goldBright
   return C.electric
 }
 
@@ -663,12 +663,12 @@ export default function InfoPage({ tmdbId, onBack }) {
   const [showTrailers, setShowTrailers] = useState(false)
 
   const fetchExisting = async (d) => {
-    try {
-      const r = await axios.get(API)
-      const found = r.data.find(e => e.title?.toLowerCase() === (d.name || '').toLowerCase())
-      setExisting(found || null)
-    } catch {}
-  }
+  try {
+    const r = await axios.get(API)
+    const found = r.data.find(e => e.tmdbId === d.id)
+    setExisting(found || null)
+  } catch {}
+}
 
   useEffect(() => {
     if (!tmdbId) return

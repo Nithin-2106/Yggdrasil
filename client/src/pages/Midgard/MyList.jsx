@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { motion, useInView } from 'motion/react'
 import axios from 'axios'
 
 const API = 'http://localhost:5000/api/drama'
@@ -38,7 +37,7 @@ const STATUS_COLOR = {
 }
 
 const TYPE_COUNTRY = {
-  'Kdrama': 'South Korea',
+  'Kdrama': 'Korea',
   'Cdrama': 'China',
   'Jdrama': 'Japan',
 }

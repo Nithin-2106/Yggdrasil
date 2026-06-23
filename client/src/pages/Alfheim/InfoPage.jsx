@@ -800,13 +800,12 @@ export default function InfoPage({ malId, onBack }) {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 
   const fetchExisting = async (d) => {
-    try {
-      const r = await axios.get(API)
-      const title = d.title_english || d.title || ''
-      const found = r.data.find(e => e.title?.toLowerCase() === title.toLowerCase())
-      setExisting(found || null)
-    } catch {}
-  }
+  try {
+    const r = await axios.get(API)
+    const found = r.data.find(e => e.malId === d.mal_id)
+    setExisting(found || null)
+  } catch {}
+}
 
   useEffect(() => {
     if (!malId) return

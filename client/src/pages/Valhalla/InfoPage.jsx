@@ -761,13 +761,12 @@ export default function InfoPage({ anilistId, onBack }) {
   const [showAllChars, setShowAllChars] = useState(false)
 
   const fetchExisting = async (d) => {
-    try {
-      const r     = await axios.get(API)
-      const title = getTitle(d)
-      const found = r.data.find(e => e.title?.toLowerCase() === title.toLowerCase())
-      setExisting(found || null)
-    } catch {}
-  }
+  try {
+    const r = await axios.get(API)
+    const found = r.data.find(e => e.anilistId === d.id)
+    setExisting(found || null)
+  } catch {}
+}
 
   useEffect(() => {
     if (!anilistId) return
