@@ -11,6 +11,7 @@ const animeTop10EntrySchema = new mongoose.Schema({
 
 const animeTop10Schema = new mongoose.Schema({
   entries: [animeTop10EntrySchema],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('AnimeTop10', animeTop10Schema);

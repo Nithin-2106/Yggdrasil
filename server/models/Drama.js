@@ -24,7 +24,8 @@ const dramaSchema = new mongoose.Schema({
   dateStarted:  { type: Date, default: null },
   dateCompleted:{ type: Date, default: null },
   platforms:    [platformSchema],
-  customTags:   [{ type: String }]
+  customTags:   [{ type: String }],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Drama', dramaSchema);

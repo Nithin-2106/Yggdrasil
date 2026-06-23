@@ -1,15 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const auth       = require('../middleware/auth');
 const Top10 = require('../models/Top10');
+
+router.use(auth);
 
 // GET a region's top 10
 router.get('/:region', async (req, res) => {
   try {
-    let doc = await Top10.findOne({ region: req.params.region });
+    let doc = await Top10.findOne({ region: req.params.region,userId: req.user._id });
     if (!doc) {
       // Auto-create empty slots 1-10
       doc = await Top10.create({
         region: req.params.region,
+        userId: req.user._id,
         entries: Array.from({ length: 10 }, (_, i) => ({
           position: i + 1, tmdbId: null, title: '', coverImage: '', year: null, type: ''
         }))
@@ -25,7 +29,7 @@ router.get('/:region', async (req, res) => {
 router.put('/:region/:position', async (req, res) => {
   try {
     const pos = parseInt(req.params.position);
-    const doc = await Top10.findOne({ region: req.params.region });
+    const doc = await Top10.findOne({ region: req.params.region,userId: req.user._id });
     if (!doc) return res.status(404).json({ message: 'Region not found' });
     const idx = doc.entries.findIndex(e => e.position === pos);
     if (idx === -1) return res.status(404).json({ message: 'Slot not found' });
@@ -42,7 +46,7 @@ router.put('/:region/:position', async (req, res) => {
 router.delete('/:region/:position', async (req, res) => {
   try {
     const pos = parseInt(req.params.position);
-    const doc = await Top10.findOne({ region: req.params.region });
+    const doc = await Top10.findOne({ region: req.params.region,userId: req.user._id });
     if (!doc) return res.status(404).json({ message: 'Region not found' });
     const idx = doc.entries.findIndex(e => e.position === pos);
     if (idx !== -1) {

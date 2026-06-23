@@ -12,6 +12,7 @@ const mangaTop10EntrySchema = new mongoose.Schema({
 
 const mangaTop10Schema = new mongoose.Schema({
   entries: [mangaTop10EntrySchema],
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('MangaTop10', mangaTop10Schema);

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const auth    = require('../middleware/auth');
 const { getAll, getOne, create, update, remove } = require('../controllers/dramaController');
+
+router.use(auth);   // all drama routes require login
 
 router.get('/', getAll);
 router.get('/:id', getOne);
