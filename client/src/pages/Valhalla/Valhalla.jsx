@@ -9,7 +9,6 @@ import ProfileIcon from '../../components/ProfileIcon'
 import { useAuth } from '../../context/AuthContext'
 
 
-const { user } = useAuth()
 
 const C = {
   bg:           '#0A0810',
@@ -256,6 +255,7 @@ function Navbar({ activePage, onNavigate, onSearch }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Valhalla() {
+  const { user } = useAuth()
   const [activePage, setActivePage] = useState('Dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMangaId, setSelectedMangaId] = useState(null)

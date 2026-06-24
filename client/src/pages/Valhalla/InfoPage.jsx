@@ -5,8 +5,6 @@ import { useAuth } from '../../context/AuthContext'
 import { fetchMangaDetail, detectMangaType, detectMangaFormat, getTitle, getYear, getCover, formatScore, formatStatus } from '../../utils/anilistSearch'
 
 const API = 'http://localhost:5000/api/manga'
-const navigate = useNavigate()
-const { user } = useAuth()
 const C = {
   bg:           '#0A0810',
   surface:      '#120F1E',
@@ -757,6 +755,8 @@ function RelationCard({ edge }) {
 
 // ── Main InfoPage ─────────────────────────────────────────────────────────────
 export default function InfoPage({ anilistId, onBack }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [data, setData]           = useState(null)
   const [existing, setExisting]   = useState(null)
   const [loading, setLoading]     = useState(true)
@@ -893,6 +893,7 @@ export default function InfoPage({ anilistId, onBack }) {
 
             {/* Add / Edit button */}
             <div style={{ width: '230px' }}>
+              <button
               onClick={() => {
                   if (!user) { navigate('/profile'); return }
                   setShowModal(true)

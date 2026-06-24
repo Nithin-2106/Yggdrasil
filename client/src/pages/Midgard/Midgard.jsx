@@ -303,10 +303,10 @@ function NavLink({ label, active, onClick }) {
   )
 }
 
-const { user } = useAuth()
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 function Midgard() {
+  const { user } = useAuth()
   const [activePage, setActivePage] = useState('Dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDramaId, setSelectedDramaId] = useState(null)

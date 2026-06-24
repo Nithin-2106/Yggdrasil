@@ -33,8 +33,6 @@ const C = {
   borderElec:   'rgba(56,189,248,0.2)',
 }
 
-const navigate = useNavigate()
-const { user } = useAuth()
 
 const STATUS_CONFIG = {
   'Watching':      { color: '#38BDF8', icon: '▶', rune: 'ᚹ' },
@@ -656,6 +654,8 @@ function TrailerSection({ videos }) {
 }
 
 export default function InfoPage({ tmdbId, onBack }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [data, setData]         = useState(null)
   const [credits, setCredits]   = useState(null)
   const [images, setImages]     = useState(null)

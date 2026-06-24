@@ -31,7 +31,6 @@ const C = {
   borderAurora: 'rgba(192,132,252,0.18)',
 }
 
-const { user } = useAuth()
 
 function VegvisirWatermark() {
   return (
@@ -250,6 +249,7 @@ function Navbar({ activePage, onNavigate, onSearch }) {
 }
 
 export default function Alfheim() {
+  const { user } = useAuth()
   const [activePage, setActivePage] = useState('Dashboard')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAnimeId, setSelectedAnimeId] = useState(null)

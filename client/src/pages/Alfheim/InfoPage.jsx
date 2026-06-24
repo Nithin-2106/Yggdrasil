@@ -5,8 +5,6 @@ import { useAuth } from '../../context/AuthContext'
 
 const JIKAN = 'https://api.jikan.moe/v4'
 const API   = 'http://localhost:5000/api/anime'
-const navigate = useNavigate()
-const { user } = useAuth()
 const C = {
   bg:           '#050C10',
   surface:      '#0A1A20',
@@ -789,6 +787,8 @@ function TrailerSection({ trailer, promos }) {
 
 // ── Main InfoPage ─────────────────────────────────────────────────────────────
 export default function InfoPage({ malId, onBack }) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [data, setData]           = useState(null)
   const [characters, setChars]    = useState([])
   const [pictures, setPictures]   = useState([])
