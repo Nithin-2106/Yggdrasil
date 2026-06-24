@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import Counter from '../../components/Counter'
 
 const JIKAN   = 'https://api.jikan.moe/v4'
@@ -812,6 +814,8 @@ function Top10Section({ onNavigate }) {
   const [entries, setEntries]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [modalSlot, setModalSlot] = useState(null)
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -830,11 +834,18 @@ function Top10Section({ onNavigate }) {
   useEffect(() => { load() }, [load])
 
   const clearSlot = async (pos) => {
-    try {
-      await axios.delete(`${TOP10}/${pos}`)
-      load()
-    } catch (err) { console.error(err) }
+  if (!user) {
+    navigate('/profile')
+    return
   }
+
+  try {
+    await axios.delete(`${TOP10}/${pos}`)
+    load()
+  } catch (err) {
+    console.error(err)
+  }
+}
 
   return (
     <div style={{ marginBottom: '72px' }}>
@@ -854,7 +865,14 @@ function Top10Section({ onNavigate }) {
             {entries.map((entry, i) => (
               <Top10Card
                 key={entry.position} entry={entry} index={i}
-                onEdit={() => setModalSlot(entry.position)}
+                onEdit={() => {
+  if (!user) {
+    navigate('/profile')
+    return
+  }
+
+  setModalSlot(entry.position)
+}}
                 onClear={() => clearSlot(entry.position)}
                 onNavigate={onNavigate}
               />

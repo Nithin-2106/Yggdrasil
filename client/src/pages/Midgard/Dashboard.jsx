@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
+import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
 const TMDB_BASE = 'https://api.themoviedb.org/3'
@@ -807,6 +809,8 @@ function Top10Section({ onNavigate }) {
   const [entries, setEntries]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [modalSlot, setModalSlot] = useState(null)
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
   const load = useCallback(async (r) => {
     setLoading(true)
@@ -825,11 +829,18 @@ function Top10Section({ onNavigate }) {
   useEffect(() => { load(region) }, [region, load])
 
   const clearSlot = async (pos) => {
-    try {
-      await axios.delete(`${TOP10_API}/${region}/${pos}`)
-      load(region)
-    } catch (err) { console.error(err) }
+  if (!user) {
+    navigate('/profile')
+    return
   }
+
+  try {
+    await axios.delete(`${TOP10}/${pos}`)
+    load()
+  } catch (err) {
+    console.error(err)
+  }
+}
 
   const regionTabColor = { Korean: C.electric, Chinese: C.violet, Japanese: C.goldBright }
 
@@ -878,7 +889,14 @@ function Top10Section({ onNavigate }) {
                 key={entry.position}
                 entry={entry}
                 index={i}
-                onEdit={() => setModalSlot(entry.position)}
+                onEdit={() => {
+  if (!user) {
+    navigate('/profile')
+    return
+  }
+
+  setModalSlot(entry.position)
+}}
                 onClear={() => clearSlot(entry.position)}
                 onNavigate={onNavigate}
               />
