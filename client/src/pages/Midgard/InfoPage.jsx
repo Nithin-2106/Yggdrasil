@@ -3,8 +3,7 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
-const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
-const TMDB_BASE = 'https://api.themoviedb.org/3'
+const TMDB_BASE = 'http://localhost:5000/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
 const API       = 'http://localhost:5000/api/drama'
 
@@ -684,11 +683,11 @@ export default function InfoPage({ tmdbId, onBack }) {
     setShowTrailers(false)
 
     Promise.all([
-      fetch(`${TMDB_BASE}/tv/${tmdbId}?api_key=${TMDB_KEY}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/credits?api_key=${TMDB_KEY}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/images?api_key=${TMDB_KEY}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/videos?api_key=${TMDB_KEY}`).then(r => r.json()),
-      fetch(`${TMDB_BASE}/tv/${tmdbId}/keywords?api_key=${TMDB_KEY}`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/tv/${tmdbId}?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/tv/${tmdbId}/credits?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/tv/${tmdbId}/images?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/tv/${tmdbId}/videos?`).then(r => r.json()),
+      fetch(`${TMDB_BASE}/tv/${tmdbId}/keywords?`).then(r => r.json()),
     ]).then(async ([d, c, img, v, kw]) => {
       setData(d)
       setCredits(c)

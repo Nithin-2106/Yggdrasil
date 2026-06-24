@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const TMDB_KEY  = import.meta.env.VITE_TMDB_KEY
-const TMDB_BASE = 'https://api.themoviedb.org/3'
+const TMDB_BASE = 'http://localhost:5000/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
 
 const C = {
@@ -115,7 +114,7 @@ async function fetchPagesForCountry(country, sortMode, startPage, count) {
   const fetches = Array.from({ length: end - startPage + 1 }, (_, i) =>
     fetch(
       `${TMDB_BASE}/discover/tv` +
-      `?api_key=${TMDB_KEY}` +
+      `?` +
       `&with_origin_country=${country}` +
       `&sort_by=${sortParam}` +
       `${extraParam}` +

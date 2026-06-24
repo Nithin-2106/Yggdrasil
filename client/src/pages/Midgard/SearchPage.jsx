@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 
-const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
 
 const C = {
   bg:           '#080D1A',

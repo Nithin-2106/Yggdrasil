@@ -1,8 +1,7 @@
 // client/src/utils/tmdbSearch.js
 // Robust TMDB drama search with fallback, scoring, and typo tolerance
 
-const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
-const BASE = 'https://api.themoviedb.org/3'
+const BASE = 'http://localhost:5000/api/tmdb'
 
 // ── Country / language allowlist ──────────────────────────────────────────────
 const ALLOWED_COUNTRIES  = new Set(['KR', 'CN', 'TW', 'HK', 'JP'])
@@ -32,7 +31,7 @@ async function safeFetch(url, timeoutMs = 6000) {
 async function fetchPage(query, page = 1) {
   try {
     const data = await safeFetch(
-      `${BASE}/search/tv?api_key=${TMDB_KEY}&query=${encodeURIComponent(query)}&include_adult=false&page=${page}`
+      `${BASE}/search/tv?query=${encodeURIComponent(query)}&include_adult=false&page=${page}`
     )
     return data.results || []
   } catch {

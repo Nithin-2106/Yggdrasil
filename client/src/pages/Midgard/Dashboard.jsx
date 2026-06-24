@@ -4,8 +4,7 @@ import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
-const TMDB_KEY = import.meta.env.VITE_TMDB_KEY
-const TMDB_BASE = 'https://api.themoviedb.org/3'
+const TMDB_BASE = 'http://localhost:5000/api/tmdb'
 const IMG_BASE = 'https://image.tmdb.org/t/p'
 const API = 'http://localhost:5000/api/drama'
 const TOP10_API = 'http://localhost:5000/api/top10'
@@ -376,7 +375,7 @@ function TrendingSection({ onNavigate }) {
     const countries = ['KR', 'CN', 'JP', 'TW']
     const fetches = countries.flatMap(country =>
       [1, 2, 3].map(page =>
-        fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
+        fetch(`${TMDB_BASE}/discover/tv?with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
@@ -927,7 +926,7 @@ function RecentlyReleasedSection({ onNavigate }) {
     const countries = ['KR', 'CN', 'JP', 'TW']
     const fetches = countries.flatMap(country =>
       [1, 2].map(page =>
-        fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`)
+        fetch(`${TMDB_BASE}/discover/tv?with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
@@ -997,7 +996,7 @@ function ExploreSection({ onNavigate }) {
       ]
       const pages = await Promise.all(
         queries.flatMap(q => [1, 2].map(p =>
-          fetch(`${TMDB_BASE}/discover/tv?api_key=${TMDB_KEY}&${q}&page=${p}`)
+          fetch(`${TMDB_BASE}/discover/tv?${q}&page=${p}`)
             .then(r => r.json())
             .then(d => d.results || [])
             .catch(() => [])
