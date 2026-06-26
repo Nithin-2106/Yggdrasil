@@ -27,9 +27,25 @@ const region = params[0];
 
   // GET /api/top10/[region]
   if (!position && req.method === 'GET') {
-    let doc = await Top10.findOne({ region, userId: user._id })
-    if (!doc) doc = await Top10.create({ region, userId: user._id, entries: emptySlots() })
-    return res.json(doc)
+    let doc = await Top10.findOne({ region, userId: user._id });
+
+if (!doc) {
+  try {
+    doc = await Top10.create({
+      region,
+      userId: user._id,
+      entries: emptySlots(),
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      doc = await Top10.findOne({ region, userId: user._id });
+    } else {
+      throw err;
+    }
+  }
+}
+
+return res.json(doc);
   }
 
   // PUT /api/top10/[region]/[position]
