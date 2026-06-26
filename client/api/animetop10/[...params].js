@@ -20,10 +20,13 @@ const params = Array.isArray(rawParams)
     ? [rawParams]
     : []
 
-const position = params[0] ? parseInt(params[0]) : null
+const first = params[0];
+
+const isList = first === "list";
+const position = isList ? null : (first ? parseInt(first) : null);
 
   // GET /api/animetop10
-  if (!position && req.method === 'GET') {
+  if (isList && req.method === "GET") {
     let doc = await AnimeTop10.findOne({ userId: user._id })
     if (!doc) doc = await AnimeTop10.create({ userId: user._id, entries: emptySlots() })
     return res.json(doc)

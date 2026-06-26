@@ -18,7 +18,7 @@ import {
 } from '../../utils/anilistSearch'
 
 const API      = '/api/manga'
-const TOP10    = '/api/mangatop10'
+const TOP10 = '/api/mangatop10/list'
 
 const C = {
   bg:           '#0A0810',

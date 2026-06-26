@@ -6,7 +6,7 @@ import Counter from '../../components/Counter'
 
 const JIKAN   = 'https://api.jikan.moe/v4'
 const API     = '/api/anime'
-const TOP10   = '/api/animetop10'
+const TOP10 = '/api/animetop10'
 
 const C = {
   bg:           '#050C10',
