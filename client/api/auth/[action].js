@@ -2,6 +2,9 @@ import { connectDB } from '../_lib/mongodb.js'
 import User from '../_lib/models/User.js'
 import jwt from 'jsonwebtoken'
 
+console.log("Authorization header:", req.headers.authorization);
+console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
+
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
 
