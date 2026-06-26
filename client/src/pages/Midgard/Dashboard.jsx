@@ -808,7 +808,7 @@ function Top10Section({ onNavigate }) {
   const [entries, setEntries]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [modalSlot, setModalSlot] = useState(null)
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const load = useCallback(async (r) => {
@@ -1177,11 +1177,13 @@ function RecentlyAddedSection({ onNavigate }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get(API)
-      .then(r => setDramas(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  if (authLoading) return
+
+  axios.get(API)
+    .then(r => setDramas(r.data))
+    .catch(console.error)
+    .finally(() => setLoading(false))
+}, [authLoading])
 
   if (loading) return null
 
