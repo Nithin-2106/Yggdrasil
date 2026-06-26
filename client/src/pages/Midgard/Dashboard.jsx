@@ -372,8 +372,8 @@ function TrendingSection({ onNavigate }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const countries = ['KR', 'CN', 'JP', 'TW']
-    const fetches = countries.flatMap(country =>
+  console.log('Fetching trending from TMDB via:', TMDB_BASE)
+  const countries = ['KR', 'CN', 'JP', 'TW']
       [1, 2, 3].map(page =>
         fetch(`${TMDB_BASE}/discover/tv?with_origin_country=${country}&sort_by=popularity.desc&page=${page}`)
           .then(r => r.json())
@@ -1177,11 +1177,17 @@ function RecentlyAddedSection({ onNavigate }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get(API)
-      .then(r => setDramas(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  console.log('Fetching dramas from:', API)
+  axios.get(API)
+    .then(r => {
+      console.log('Dramas response:', r.data)
+      setDramas(r.data)
+    })
+    .catch(err => {
+      console.error('Dramas error:', err.response?.status, err.response?.data, err.message)
+    })
+    .finally(() => setLoading(false))
+}, [])
 
   if (loading) return null
 
