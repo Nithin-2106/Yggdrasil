@@ -12,8 +12,15 @@ export default async function handler(req, res) {
   const { user, error, status } = await requireAuth(req)
   if (error) return res.status(status).json({ message: error })
 
-  const params = req.query.params || []
-  const position = params[0] ? parseInt(params[0]) : null
+  const rawParams = req.query.params ?? req.query["...params"]
+
+const params = Array.isArray(rawParams)
+  ? rawParams
+  : rawParams
+    ? [rawParams]
+    : []
+
+const position = params[0] ? parseInt(params[0]) : null
 
   // GET /api/mangatop10
   if (!position && req.method === 'GET') {

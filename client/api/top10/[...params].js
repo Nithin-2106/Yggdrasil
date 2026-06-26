@@ -12,8 +12,15 @@ export default async function handler(req, res) {
   const { user, error, status } = await requireAuth(req)
   if (error) return res.status(status).json({ message: error })
 
-  const params = req.query.params || []
-  const region = params[0]
+  const rawParams = req.query.params ?? req.query["...params"];
+
+const params = Array.isArray(rawParams)
+  ? rawParams
+  : rawParams
+    ? [rawParams]
+    : [];
+
+const region = params[0];
   const position = params[1] ? parseInt(params[1]) : null
 
   if (!region) return res.status(400).json({ message: 'Region required' })
