@@ -666,7 +666,7 @@ function Top10Section({ onNavigate }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res   = await axios.get(TOP10)
+      const res   = await axios.get(`${TOP10}/list`)
       const slots = Array.from({ length: 10 }, (_, i) => {
         const found = res.data.entries?.find(e => e.position === i + 1)
         return found || { position: i + 1, anilistId: null, title: '', coverImage: '', year: null, type: '', format: '' }
@@ -798,7 +798,6 @@ function ExploreSection({ onNavigate }) {
     const timer = setTimeout(() => {
       fetchPopular(100)
         .then(data => {
-          const valid = data.filter(i => ['KR', 'CN'].includes(i.countryOfOrigin))
           setPool(valid)
           const initial = pick6(valid, new Set())
           shownIds.current = new Set(initial.map(i => i.id))

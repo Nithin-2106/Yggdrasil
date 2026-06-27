@@ -302,15 +302,18 @@ function HorizontalScroll({ children }) {
 
 // ── shared fetch helper ───────────────────────────────────────────────────────
 async function jikanFetch(url) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 1200 * attempt))
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 2000 * attempt))
     try {
       const res = await fetch(url)
-      if (res.status === 429) { await new Promise(r => setTimeout(r, 2000)); continue }
+      if (res.status === 429) {
+        await new Promise(r => setTimeout(r, 3000 * (attempt + 1)))
+        continue
+      }
       if (!res.ok) throw new Error(`${res.status}`)
       const json = await res.json()
       return json.data || []
-    } catch { if (attempt === 2) return [] }
+    } catch { if (attempt === 4) return [] }
   }
   return []
 }
@@ -445,7 +448,7 @@ function ExploreSection({ onNavigate }) {
           setLoading(false)
         })
         .catch(() => setLoading(false))
-    }, 1600)
+    }, 3200)
     return () => clearTimeout(timer)
   }, [])
 
