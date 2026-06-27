@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
 const top10EntrySchema = new mongoose.Schema({
-  position:   { type: Number, required: true },
+  position:   { type: Number, required: true }, 
   tmdbId:     { type: Number, default: null },
   title:      { type: String, default: '' },
   coverImage: { type: String, default: '' },

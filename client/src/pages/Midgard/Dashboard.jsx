@@ -519,6 +519,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [saving, setSaving] = useState(false);
 
   const search = async () => {
     if (!query.trim()) return
@@ -531,18 +532,31 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
   }
 
   const select = async (item) => {
-    try {
-      await axios.put(`${TOP10_API}/${region}/${position}`, {
-        tmdbId:     item.id,
-        title:      item.name || item.original_name || '',
-        coverImage: item.poster_path ? `${IMG_BASE}/w500${item.poster_path}` : '',
-        year:       item.first_air_date ? parseInt(item.first_air_date.split('-')[0]) : null,
-        type:       getDramaType(item),
-      })
-      onSaved()
-      onClose();
-    } catch (err) { console.error(err) }
+  if (saving) return;
+
+  setSaving(true);
+
+  try {
+    await axios.put(`${TOP10_API}/${region}/${position}`, {
+      tmdbId: item.id,
+      title: item.name || item.original_name || "",
+      coverImage: item.poster_path
+        ? `${IMG_BASE}/w500${item.poster_path}`
+        : "",
+      year: item.first_air_date
+        ? parseInt(item.first_air_date.split("-")[0])
+        : null,
+      type: getDramaType(item),
+    });
+
+    onSaved();
+    onClose();
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setSaving(false);
   }
+};
 
   return (
     <div
@@ -609,7 +623,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
             />
           </div>
           <button
-            onClick={search} disabled={loading}
+            onClick={search} disabled={loading || saving}
             style={{
               fontFamily: '"Cinzel", serif', fontSize: '11px',
               letterSpacing: '0.15em', color: C.electric,
@@ -618,7 +632,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
               padding: '0 20px', cursor: 'pointer',
               opacity: loading ? 0.6 : 1,
             }}
-          >{loading ? '...' : 'Search'}</button>
+          >{loading ? 'Searching...' : saving ? 'Saving...' : 'Search'}</button>
         </div>
 
         {/* Results */}
@@ -632,10 +646,14 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
             const tc = typeColor(getDramaType(item))
             return (
               <div
-                key={item.id}
-                onClick={() => select(item)}
-                style={{ cursor: 'pointer' }}
-              >
+  key={item.id}
+  onClick={() => !saving && select(item)}
+  style={{
+    cursor: saving ? 'not-allowed' : 'pointer',
+    opacity: saving ? 0.6 : 1,
+    pointerEvents: saving ? 'none' : 'auto',
+  }}
+>
                 <div style={{
                   height: '150px', background: C.bg,
                   border: `1px solid ${C.borderGold}`,
