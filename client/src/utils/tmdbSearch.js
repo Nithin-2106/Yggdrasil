@@ -31,8 +31,8 @@ async function safeFetch(url, timeoutMs = 6000) {
 async function fetchPage(query, page = 1) {
   try {
     const data = await safeFetch(
-      `${BASE}/search/tv?query=${encodeURIComponent(query)}&include_adult=false&page=${page}`
-    )
+  `${BASE}?path=search/tv&query=${encodeURIComponent(query)}&include_adult=false&page=${page}`
+)
     return data.results || []
   } catch {
     return []   // silently return empty on network failure
