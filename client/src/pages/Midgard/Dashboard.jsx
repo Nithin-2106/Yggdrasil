@@ -540,6 +540,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
         type:       getDramaType(item),
       })
       onSaved()
+      onClose();
     } catch (err) { console.error(err) }
   }
 
