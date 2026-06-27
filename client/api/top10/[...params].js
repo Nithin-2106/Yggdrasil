@@ -50,8 +50,15 @@ return res.json(doc);
 
   // PUT /api/top10/[region]/[position]
   if (position && req.method === 'PUT') {
-    let doc = await Top10.findOne({ region, userId: user._id })
-    if (!doc) return res.status(404).json({ message: 'Region not found' })
+    let doc = await Top10.findOne({ region, userId: user._id });
+
+if (!doc) {
+  doc = await Top10.create({
+    region,
+    userId: user._id,
+    entries: emptySlots(),
+  });
+}
     const idx = doc.entries.findIndex(e => e.position === position)
     if (idx === -1) return res.status(404).json({ message: 'Slot not found' })
     doc.entries[idx] = { position, ...req.body }
@@ -62,8 +69,15 @@ return res.json(doc);
 
   // DELETE /api/top10/[region]/[position]
   if (position && req.method === 'DELETE') {
-    const doc = await Top10.findOne({ region, userId: user._id })
-    if (!doc) return res.status(404).json({ message: 'Region not found' })
+    let doc = await Top10.findOne({ region, userId: user._id });
+
+if (!doc) {
+  doc = await Top10.create({
+    region,
+    userId: user._id,
+    entries: emptySlots(),
+  });
+}
     const idx = doc.entries.findIndex(e => e.position === position)
     if (idx !== -1) {
       doc.entries[idx] = { position, tmdbId: null, title: '', coverImage: '', year: null, type: '' }
