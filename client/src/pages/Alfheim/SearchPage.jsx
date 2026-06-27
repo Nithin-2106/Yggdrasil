@@ -1,3 +1,4 @@
+// client/src/pages/Alfheim/SearchPage.jsx
 import { useState, useEffect, useRef } from 'react'
 import { searchAnime, detectAnimeFormat, getAnimeYear } from '../../utils/jikanSearch'
 
@@ -9,28 +10,30 @@ const C = {
   primary:      '#5EEAD4',
   primarySoft:  'rgba(94,234,212,0.12)',
   aurora:       '#C084FC',
-  auroraSoft:   'rgba(192,132,252,0.15)',
-  crystal:      '#67E8F9',
-  crystalSoft:  'rgba(103,232,249,0.12)',
   green:        '#34D399',
-  greenSoft:    'rgba(52,211,153,0.12)',
   gold:         '#A3E635',
-  goldSoft:     'rgba(163,230,53,0.15)',
-  red:          '#F87171',
   text:         '#E0F7F4',
   textMuted:    '#7ABFB8',
   textDim:      '#2E5A56',
   borderPrimary:'rgba(94,234,212,0.2)',
-  borderAurora: 'rgba(192,132,252,0.18)',
 }
 
-function formatColor(format) {
-  if (format === 'Movie')   return C.gold
-  if (format === 'OVA')     return C.aurora
-  if (format === 'Special') return C.green
-  return C.primary
+const FORMAT_COLOR = {
+  Movie:   '#A3E635',
+  OVA:     '#C084FC',
+  Special: '#34D399',
+  Series:  '#5EEAD4',
 }
 
+const FILTERS = [
+  { label: 'All',     color: C.primary },
+  { label: 'Series',  color: C.primary },
+  { label: 'Movie',   color: C.gold    },
+  { label: 'OVA',     color: C.aurora  },
+  { label: 'Special', color: C.green   },
+]
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -47,9 +50,9 @@ function SkeletonCard() {
   )
 }
 
-function FilterPill({ label, active, color, onClick }) {
+// ── Filter pill ───────────────────────────────────────────────────────────────
+function FilterPill({ label, color, active, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const c = color || C.primary
   return (
     <button
       onClick={onClick}
@@ -57,22 +60,28 @@ function FilterPill({ label, active, color, onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em',
+        fontSize: '10px',
+        letterSpacing: '0.2em',
         textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? c : C.textMuted,
-        background: active ? c : hovered ? `${c}18` : 'transparent',
-        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
-        padding: '6px 16px', cursor: 'pointer',
-        transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+        color: active ? C.bg : hovered ? color : C.textMuted,
+        background: active ? color : hovered ? `${color}18` : 'transparent',
+        border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
+        padding: '6px 16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        whiteSpace: 'nowrap',
       }}
-    >{label}</button>
+    >
+      {label}
+    </button>
   )
 }
 
+// ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ item, onSelect }) {
   const [hovered, setHovered] = useState(false)
   const format = detectAnimeFormat(item)
-  const fColor = formatColor(format)
+  const fColor = FORMAT_COLOR[format] || C.primary
   const year   = getAnimeYear(item)
   const rating = item.score ? item.score.toFixed(1) : null
   const cover  = item.images?.jpg?.large_image_url || item.images?.jpg?.image_url
@@ -84,13 +93,15 @@ function ResultCard({ item, onSelect }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         cursor: 'pointer',
-        display: 'flex', flexDirection: 'column',
+        display: 'flex',
+        flexDirection: 'column',
         transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
         transition: 'transform 0.25s ease',
       }}
     >
       <div style={{
-        position: 'relative', height: '240px',
+        position: 'relative',
+        height: '240px',
         background: C.surface,
         border: `1px solid ${hovered ? fColor + '99' : C.borderPrimary}`,
         overflow: 'hidden',
@@ -100,18 +111,22 @@ function ResultCard({ item, onSelect }) {
         transition: 'all 0.25s ease',
       }}>
         {cover ? (
-          <img src={cover} alt={item.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img
+            src={cover}
+            alt={item.title_english || item.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
         ) : (
           <div style={{
             width: '100%', height: '100%',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            color: C.textDim, gap: '8px',
-            background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
+            gap: '8px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
           }}>
-            <div style={{ fontSize: '36px' }}>✦</div>
-            <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>No Cover</div>
+            <div style={{ fontSize: '36px', color: C.textDim }}>✦</div>
+            <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>
+              No Cover
+            </div>
           </div>
         )}
 
@@ -123,7 +138,9 @@ function ResultCard({ item, onSelect }) {
           border: `1px solid ${fColor}66`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: fColor, fontFamily: '"Cinzel", serif',
-        }}>{format}</div>
+        }}>
+          {format}
+        </div>
 
         {/* Score badge */}
         {rating && parseFloat(rating) > 0 && (
@@ -134,16 +151,27 @@ function ResultCard({ item, onSelect }) {
             border: `1px solid ${C.gold}55`,
             fontSize: '10px', color: C.gold,
             fontFamily: '"Cinzel", serif', fontWeight: 700,
-          }}>★ {rating}</div>
+          }}>
+            ★ {rating}
+          </div>
         )}
 
-        {/* Corner ornaments on hover */}
+        {/* Hover gradient */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `linear-gradient(to top, ${fColor}33, transparent 60%)`,
+          opacity: hovered ? 1 : 0,
+          transition: 'opacity 0.25s',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Corner ornaments */}
         {hovered && (
           <>
-            <div style={{ position: 'absolute', top: 6, left: 6, width: 10, height: 10, borderTop: `1px solid ${fColor}`, borderLeft: `1px solid ${fColor}` }} />
-            <div style={{ position: 'absolute', top: 6, right: 6, width: 10, height: 10, borderTop: `1px solid ${fColor}`, borderRight: `1px solid ${fColor}` }} />
-            <div style={{ position: 'absolute', bottom: 6, left: 6, width: 10, height: 10, borderBottom: `1px solid ${fColor}`, borderLeft: `1px solid ${fColor}` }} />
-            <div style={{ position: 'absolute', bottom: 6, right: 6, width: 10, height: 10, borderBottom: `1px solid ${fColor}`, borderRight: `1px solid ${fColor}` }} />
+            <div style={{ position: 'absolute', top: 6, left: 6, width: 10, height: 10, borderTop: `1px solid ${fColor}`, borderLeft: `1px solid ${fColor}`, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: 6, right: 6, width: 10, height: 10, borderTop: `1px solid ${fColor}`, borderRight: `1px solid ${fColor}`, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 6, left: 6, width: 10, height: 10, borderBottom: `1px solid ${fColor}`, borderLeft: `1px solid ${fColor}`, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: 6, right: 6, width: 10, height: 10, borderBottom: `1px solid ${fColor}`, borderRight: `1px solid ${fColor}`, pointerEvents: 'none' }} />
           </>
         )}
       </div>
@@ -152,13 +180,18 @@ function ResultCard({ item, onSelect }) {
         <div style={{
           fontSize: '13px', fontWeight: 600,
           color: hovered ? C.text : C.textMuted,
-          transition: 'color 0.25s', lineHeight: 1.35,
-          overflow: 'hidden', display: '-webkit-box',
-          WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        }}>{item.title_english || item.title}</div>
+          transition: 'color 0.25s',
+          lineHeight: 1.35,
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}>
+          {item.title_english || item.title}
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
-          {item.episodes && (
+          {item.episodes > 0 && (
             <span style={{ fontSize: '9px', color: fColor + 'aa', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
               {item.episodes} eps
             </span>
@@ -169,75 +202,70 @@ function ResultCard({ item, onSelect }) {
   )
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyResults({ query }) {
+  const corners = [
+    { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+    { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+    { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+    { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+  ]
   return (
     <div style={{
-      gridColumn: '1 / -1', padding: '64px 24px',
+      gridColumn: '1 / -1',
+      padding: '64px 24px',
       textAlign: 'center',
       border: `1px dashed ${C.borderPrimary}`,
       position: 'relative',
     }}>
-      {[
-        { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-        { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-        { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-        { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-      ].map((s, i) => (
+      {corners.map((s, i) => (
         <div key={i} style={{ position: 'absolute', width: 12, height: 12, ...s }} />
       ))}
-      <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: '24px',
-        color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px',
-      }}>ᚨ</div>
-      <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: '13px',
-        letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px',
-      }}>No results found</div>
-      <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.05em' }}>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '24px', color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px' }}>ᚨ</div>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px' }}>
+        No results found
+      </div>
+      <div style={{ fontSize: '12px', color: C.textDim }}>
         No anime found for <span style={{ color: C.primary }}>"{query}"</span> — try a different title
       </div>
     </div>
   )
 }
 
-const FILTERS = [
-  { label: 'All',     color: C.primary },
-  { label: 'Series',  color: C.primary },
-  { label: 'Movie',   color: C.gold    },
-  { label: 'OVA',     color: C.aurora  },
-  { label: 'Special', color: C.green   },
-]
-
+// ── Main SearchPage ───────────────────────────────────────────────────────────
 export default function SearchPage({ query: initialQuery, onSelectAnime }) {
-  const [query, setQuery]       = useState(initialQuery || '')
-  const [results, setResults]   = useState([])
-  const [filtered, setFiltered] = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [searched, setSearched] = useState(false)
-  const [activeFilter, setActiveFilter] = useState('All')
-  const [focused, setFocused]   = useState(false)
+  const [query, setQuery]           = useState(initialQuery || '')
+  const [results, setResults]       = useState([])
+  const [filtered, setFiltered]     = useState([])
+  const [loading, setLoading]       = useState(false)
+  const [searched, setSearched]     = useState(false)
+  const [activeFilter, setFilter]   = useState('All')
+  const [focused, setFocused]       = useState(false)
   const inputRef = useRef(null)
 
+  // Run initial search if query passed from nav bar
   useEffect(() => {
     if (initialQuery) {
       setQuery(initialQuery)
       runSearch(initialQuery)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery])
 
+  // Apply format filter whenever results or filter changes
   useEffect(() => {
     if (activeFilter === 'All') {
       setFiltered(results)
     } else {
-      setFiltered(results.filter(item => detectAnimeFormat(item) === activeFilter))
+      setFiltered(results.filter((item) => detectAnimeFormat(item) === activeFilter))
     }
   }, [results, activeFilter])
 
   const runSearch = async (q) => {
-    if (!q.trim()) return
+    if (!q?.trim()) return
     setLoading(true)
     setSearched(true)
-    setActiveFilter('All')
+    setFilter('All')
     try {
       const res = await searchAnime(q)
       setResults(res)
@@ -273,19 +301,22 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Search for an anime title..."
             style={{
-              width: '100%', padding: '13px 14px 13px 44px',
+              width: '100%',
+              padding: '13px 14px 13px 44px',
               background: C.input,
               border: `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
-              color: C.text, fontSize: '14px',
-              fontFamily: 'inherit', outline: 'none',
+              color: C.text,
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              outline: 'none',
               boxSizing: 'border-box',
-              boxShadow: focused ? `0 0 20px rgba(126,184,247,0.12)` : 'none',
+              boxShadow: focused ? '0 0 20px rgba(94,234,212,0.1)' : 'none',
               transition: 'all 0.25s ease',
             }}
           />
@@ -295,42 +326,42 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
           disabled={loading}
           style={{
             fontFamily: '"Cinzel", serif',
-            fontSize: '11px', letterSpacing: '0.2em',
-            color: C.primary, background: C.primarySoft,
+            fontSize: '11px',
+            letterSpacing: '0.2em',
+            color: C.primary,
+            background: C.primarySoft,
             border: `1px solid ${C.primary}55`,
-            padding: '0 28px', height: '48px',
+            padding: '0 28px',
+            height: '48px',
             cursor: loading ? 'wait' : 'pointer',
-            transition: 'all 0.25s', whiteSpace: 'nowrap',
+            transition: 'all 0.25s',
+            whiteSpace: 'nowrap',
             opacity: loading ? 0.6 : 1,
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(126,184,247,0.2)' }}
-          onMouseLeave={e => { if (!loading) e.currentTarget.style.background = C.primarySoft }}
-        >{loading ? 'Searching...' : 'Search'}</button>
+          onMouseEnter={(e) => { if (!loading) e.currentTarget.style.background = 'rgba(94,234,212,0.2)' }}
+          onMouseLeave={(e) => { if (!loading) e.currentTarget.style.background = C.primarySoft }}
+        >
+          {loading ? 'Searching...' : 'Search'}
+        </button>
       </div>
 
-      {/* Filter pills */}
+      {/* Filter pills — only shown after search with results */}
       {searched && !loading && results.length > 0 && (
-        <div style={{
-          display: 'flex', gap: '8px', marginBottom: '28px',
-          alignItems: 'center', flexWrap: 'wrap',
-        }}>
-          <span style={{
-            fontSize: '10px', letterSpacing: '0.25em',
-            color: C.textDim, fontFamily: '"Cinzel", serif',
-            marginRight: '4px', textTransform: 'uppercase',
-          }}>Filter</span>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>
+            Filter
+          </span>
           <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
-          {FILTERS.map(f => (
+          {FILTERS.map((f) => (
             <FilterPill
-              key={f.label} label={f.label} color={f.color}
+              key={f.label}
+              label={f.label}
+              color={f.color}
               active={activeFilter === f.label}
-              onClick={() => setActiveFilter(f.label)}
+              onClick={() => setFilter(f.label)}
             />
           ))}
-          <span style={{
-            marginLeft: 'auto', fontSize: '11px',
-            color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-          }}>
+          <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
             <span style={{ color: C.primary }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -352,7 +383,7 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
       }}>
         {loading && Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
         {!loading && searched && filtered.length === 0 && <EmptyResults query={query} />}
-        {!loading && filtered.map(item => (
+        {!loading && filtered.map((item) => (
           <ResultCard key={item.mal_id} item={item} onSelect={onSelectAnime} />
         ))}
       </div>
@@ -364,14 +395,10 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
           alignItems: 'center', justifyContent: 'center',
           minHeight: '35vh', gap: '16px',
         }}>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '40px',
-            color: C.primary + '22', letterSpacing: '0.3em',
-          }}>ᚨ</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '12px',
-            letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase',
-          }}>Search the realm of light elves</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '40px', color: C.primary + '22', letterSpacing: '0.3em' }}>ᚨ</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
+            Search the realm of light elves
+          </div>
         </div>
       )}
     </>
