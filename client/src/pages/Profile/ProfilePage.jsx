@@ -15,7 +15,6 @@ const C = {
   goldSoft:     'rgba(201,168,76,0.12)',
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.10)',
-  violet:       '#7C3AED',
   green:        '#22C55E',
   red:          '#EF4444',
   redSoft:      'rgba(239,68,68,0.12)',
@@ -26,60 +25,79 @@ const C = {
   borderElec:   'rgba(56,189,248,0.18)',
 }
 
+// ── Corner ornaments ──────────────────────────────────────────────────────────
 function Corners({ color = C.gold, size = 12, opacity = 0.5 }) {
-  const s = { position: 'absolute', width: size, height: size, opacity }
+  const base = { position: 'absolute', width: size, height: size, opacity }
   const b = `1px solid ${color}`
   return (
     <>
-      <div style={{ ...s, top: 8, left: 8,    borderTop: b, borderLeft: b }} />
-      <div style={{ ...s, top: 8, right: 8,   borderTop: b, borderRight: b }} />
-      <div style={{ ...s, bottom: 8, left: 8,  borderBottom: b, borderLeft: b }} />
-      <div style={{ ...s, bottom: 8, right: 8, borderBottom: b, borderRight: b }} />
+      <div style={{ ...base, top: 8,    left: 8,   borderTop: b,    borderLeft: b   }} />
+      <div style={{ ...base, top: 8,    right: 8,  borderTop: b,    borderRight: b  }} />
+      <div style={{ ...base, bottom: 8, left: 8,   borderBottom: b, borderLeft: b   }} />
+      <div style={{ ...base, bottom: 8, right: 8,  borderBottom: b, borderRight: b  }} />
     </>
   )
 }
 
+// ── Vegvisir watermark ────────────────────────────────────────────────────────
 function VegvisirWatermark() {
+  const spokes = [0, 45, 90, 135, 180, 225, 270, 315]
   return (
-    <svg viewBox="0 0 200 200" style={{
-      position: 'fixed', top: '50%', left: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: '700px', height: '700px',
-      opacity: 0.04, pointerEvents: 'none', zIndex: 0,
-    }}>
-      <circle cx="100" cy="100" r="95" fill="none" stroke="#C9A84C" strokeWidth="1"/>
-      <circle cx="100" cy="100" r="80" fill="none" stroke="#C9A84C" strokeWidth="0.5"/>
-      {[0,45,90,135,180,225,270,315].map((angle, i) => {
+    <svg
+      viewBox="0 0 200 200"
+      style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 700, height: 700,
+        opacity: 0.04, pointerEvents: 'none', zIndex: 0,
+      }}
+    >
+      <circle cx="100" cy="100" r="95" fill="none" stroke="#C9A84C" strokeWidth="1" />
+      <circle cx="100" cy="100" r="80" fill="none" stroke="#C9A84C" strokeWidth="0.5" />
+      {spokes.map((angle, i) => {
         const rad = (angle * Math.PI) / 180
-        const x1 = 100 + 20 * Math.cos(rad), y1 = 100 + 20 * Math.sin(rad)
-        const x2 = 100 + 80 * Math.cos(rad), y2 = 100 + 80 * Math.sin(rad)
-        const bx = 100 + 55 * Math.cos(rad), by = 100 + 55 * Math.sin(rad)
+        const cos = Math.cos(rad), sin = Math.sin(rad)
+        const x1 = 100 + 20 * cos, y1 = 100 + 20 * sin
+        const x2 = 100 + 80 * cos, y2 = 100 + 80 * sin
+        const bx = 100 + 55 * cos, by = 100 + 55 * sin
         const pr = rad + Math.PI / 2
-        const b1x = bx + 10*Math.cos(pr), b1y = by + 10*Math.sin(pr)
-        const b2x = bx - 10*Math.cos(pr), b2y = by - 10*Math.sin(pr)
-        const t1x = b1x + 14*Math.cos(rad), t1y = b1y + 14*Math.sin(rad)
-        const t2x = b2x + 14*Math.cos(rad), t2y = b2y + 14*Math.sin(rad)
+        const cosp = Math.cos(pr), sinp = Math.sin(pr)
+        const b1x = bx + 10 * cosp, b1y = by + 10 * sinp
+        const b2x = bx - 10 * cosp, b2y = by - 10 * sinp
+        const t1x = b1x + 14 * cos,  t1y = b1y + 14 * sin
+        const t2x = b2x + 14 * cos,  t2y = b2y + 14 * sin
         return (
           <g key={i} stroke="#C9A84C" strokeWidth="1.5" fill="none">
-            <line x1={x1} y1={y1} x2={x2} y2={y2}/>
-            <line x1={b1x} y1={b1y} x2={t1x} y2={t1y}/>
-            <line x1={b2x} y1={b2y} x2={t2x} y2={t2y}/>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} />
+            <line x1={b1x} y1={b1y} x2={t1x} y2={t1y} />
+            <line x1={b2x} y1={b2y} x2={t2x} y2={t2y} />
           </g>
         )
       })}
-      <circle cx="100" cy="100" r="20" fill="none" stroke="#C9A84C" strokeWidth="1"/>
-      <circle cx="100" cy="100" r="6" fill="#C9A84C" opacity="0.5"/>
+      <circle cx="100" cy="100" r="20" fill="none" stroke="#C9A84C" strokeWidth="1" />
+      <circle cx="100" cy="100" r="6"  fill="#C9A84C" opacity="0.5" />
     </svg>
   )
 }
 
-// ── Shared input style ────────────────────────────────────────────────────────
-function useInputStyle(focused, fieldName) {
-  return (name) => ({
+// ── Shared label style ────────────────────────────────────────────────────────
+const labelStyle = {
+  fontSize: '9px',
+  letterSpacing: '0.3em',
+  color: C.textMuted,
+  textTransform: 'uppercase',
+  fontFamily: '"Cinzel", serif',
+  marginBottom: '7px',
+  display: 'block',
+}
+
+// ── Shared input style factory ────────────────────────────────────────────────
+function inputStyle(focusedField, thisField, extra = {}) {
+  return {
     width: '100%',
     padding: '11px 14px',
     background: C.input,
-    border: `1px solid ${focused === name ? C.electric + 'aa' : C.borderGold}`,
+    border: `1px solid ${focusedField === thisField ? C.electric + 'aa' : C.borderGold}`,
     color: C.text,
     fontSize: '14px',
     fontFamily: '"Cinzel", serif',
@@ -87,8 +105,9 @@ function useInputStyle(focused, fieldName) {
     outline: 'none',
     boxSizing: 'border-box',
     transition: 'border-color 0.25s, box-shadow 0.25s',
-    boxShadow: focused === name ? `0 0 18px rgba(56,189,248,0.12)` : 'none',
-  })
+    boxShadow: focusedField === thisField ? '0 0 18px rgba(56,189,248,0.12)' : 'none',
+    ...extra,
+  }
 }
 
 // ── Login Form ────────────────────────────────────────────────────────────────
@@ -96,19 +115,21 @@ function LoginForm({ onSwitch }) {
   const { login } = useAuth()
   const navigate  = useNavigate()
 
-  const [email, setEmail]       = useState('')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [focused, setFocused]   = useState('')
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-
-  const inputStyle = useInputStyle(focused)
+  const [focused,  setFocused]  = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [error,    setError]    = useState('')
 
   const handleSubmit = async () => {
     if (!email.trim() || !password) { setError('Please fill in all fields'); return }
-    setError(''); setLoading(true)
+    setError('')
+    setLoading(true)
     try {
-      const res = await axios.post(`${AUTH_API}/login`, { email: email.trim().toLowerCase(), password })
+      const res = await axios.post(`${AUTH_API}/login`, {
+        email: email.trim().toLowerCase(),
+        password,
+      })
       login(res.data.token, res.data.user)
       navigate('/')
     } catch (err) {
@@ -118,16 +139,10 @@ function LoginForm({ onSwitch }) {
     }
   }
 
-  const lbl = {
-    fontSize: '9px', letterSpacing: '0.3em', color: C.textMuted,
-    textTransform: 'uppercase', fontFamily: '"Cinzel", serif',
-    marginBottom: '7px', display: 'block',
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
-        <label style={lbl}>ᛖ Email</label>
+        <label style={labelStyle}>ᛖ Email</label>
         <input
           type="email"
           value={email}
@@ -136,13 +151,13 @@ function LoginForm({ onSwitch }) {
           onBlur={() => setFocused('')}
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           placeholder="your@email.com"
-          style={inputStyle('email')}
+          style={inputStyle(focused, 'email')}
           autoComplete="email"
         />
       </div>
 
       <div>
-        <label style={lbl}>ᚲ Password</label>
+        <label style={labelStyle}>ᚲ Password</label>
         <input
           type="password"
           value={password}
@@ -151,7 +166,7 @@ function LoginForm({ onSwitch }) {
           onBlur={() => setFocused('')}
           onKeyDown={e => e.key === 'Enter' && handleSubmit()}
           placeholder="••••••••"
-          style={inputStyle('password')}
+          style={inputStyle(focused, 'password')}
           autoComplete="current-password"
         />
       </div>
@@ -161,7 +176,9 @@ function LoginForm({ onSwitch }) {
           fontSize: '12px', color: C.red, letterSpacing: '0.05em',
           padding: '10px 14px', background: C.redSoft,
           border: `1px solid ${C.red}33`,
-        }}>{error}</div>
+        }}>
+          {error}
+        </div>
       )}
 
       <button
@@ -176,13 +193,13 @@ function LoginForm({ onSwitch }) {
           cursor: loading ? 'wait' : 'pointer',
           textTransform: 'uppercase',
           transition: 'all 0.25s',
-          boxShadow: loading ? 'none' : `0 0 20px rgba(201,168,76,0.12)`,
+          boxShadow: loading ? 'none' : '0 0 20px rgba(201,168,76,0.12)',
           marginTop: '4px',
         }}
         onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'rgba(201,168,76,0.2)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(201,168,76,0.22)' }}}
         onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = C.goldSoft; e.currentTarget.style.boxShadow = '0 0 20px rgba(201,168,76,0.12)' }}}
       >
-        {loading ? 'Entering the realm...' : 'ᛟ Enter the Realm'}
+        {loading ? 'Entering the realm…' : 'ᛟ Enter the Realm'}
       </button>
 
       <div style={{ textAlign: 'center', paddingTop: '8px' }}>
@@ -194,10 +211,12 @@ function LoginForm({ onSwitch }) {
           style={{
             fontSize: '12px', color: C.electric, background: 'none', border: 'none',
             cursor: 'pointer', letterSpacing: '0.08em', padding: 0,
-            fontFamily: 'inherit', textDecoration: 'underline', textDecorationColor: C.electric + '55',
-            textUnderlineOffset: '3px',
+            fontFamily: 'inherit', textDecoration: 'underline',
+            textDecorationColor: C.electric + '55', textUnderlineOffset: '3px',
           }}
-        >Create an account</button>
+        >
+          Create an account
+        </button>
       </div>
     </div>
   )
@@ -208,16 +227,14 @@ function RegisterForm({ onSwitch }) {
   const { login } = useAuth()
   const navigate  = useNavigate()
 
-  const [username, setUsername]     = useState('')
-  const [email, setEmail]           = useState('')
-  const [password, setPassword]     = useState('')
-  const [confirm, setConfirm]       = useState('')
-  const [profileImage, setProfile]  = useState('')
-  const [focused, setFocused]       = useState('')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState('')
-
-  const inputStyle = useInputStyle(focused)
+  const [username,     setUsername]     = useState('')
+  const [email,        setEmail]        = useState('')
+  const [password,     setPassword]     = useState('')
+  const [confirm,      setConfirm]      = useState('')
+  const [profileImage, setProfileImage] = useState('')
+  const [focused,      setFocused]      = useState('')
+  const [loading,      setLoading]      = useState(false)
+  const [error,        setError]        = useState('')
 
   const handleSubmit = async () => {
     if (!username.trim() || !email.trim() || !password) {
@@ -225,11 +242,12 @@ function RegisterForm({ onSwitch }) {
     }
     if (password !== confirm) { setError('Passwords do not match'); return }
     if (password.length < 6)  { setError('Password must be at least 6 characters'); return }
-    setError(''); setLoading(true)
+    setError('')
+    setLoading(true)
     try {
       const res = await axios.post(`${AUTH_API}/register`, {
-        username: username.trim(),
-        email:    email.trim().toLowerCase(),
+        username:     username.trim(),
+        email:        email.trim().toLowerCase(),
         password,
         profileImage: profileImage.trim(),
       })
@@ -242,29 +260,25 @@ function RegisterForm({ onSwitch }) {
     }
   }
 
-  const lbl = {
-    fontSize: '9px', letterSpacing: '0.3em', color: C.textMuted,
-    textTransform: 'uppercase', fontFamily: '"Cinzel", serif',
-    marginBottom: '7px', display: 'block',
-  }
+  const passwordMismatch = confirm && confirm !== password
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       <div>
-        <label style={lbl}>ᚢ Username</label>
+        <label style={labelStyle}>ᚢ Username</label>
         <input
           value={username}
           onChange={e => setUsername(e.target.value)}
           onFocus={() => setFocused('username')}
           onBlur={() => setFocused('')}
           placeholder="Your chosen name"
-          style={inputStyle('username')}
+          style={inputStyle(focused, 'username')}
           autoComplete="username"
         />
       </div>
 
       <div>
-        <label style={lbl}>ᛖ Email</label>
+        <label style={labelStyle}>ᛖ Email</label>
         <input
           type="email"
           value={email}
@@ -272,14 +286,14 @@ function RegisterForm({ onSwitch }) {
           onFocus={() => setFocused('email')}
           onBlur={() => setFocused('')}
           placeholder="your@email.com"
-          style={inputStyle('email')}
+          style={inputStyle(focused, 'email')}
           autoComplete="email"
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div>
-          <label style={lbl}>ᚲ Password</label>
+          <label style={labelStyle}>ᚲ Password</label>
           <input
             type="password"
             value={password}
@@ -287,12 +301,12 @@ function RegisterForm({ onSwitch }) {
             onFocus={() => setFocused('password')}
             onBlur={() => setFocused('')}
             placeholder="Min. 6 characters"
-            style={inputStyle('password')}
+            style={inputStyle(focused, 'password')}
             autoComplete="new-password"
           />
         </div>
         <div>
-          <label style={lbl}>ᚲ Confirm</label>
+          <label style={labelStyle}>ᚲ Confirm</label>
           <input
             type="password"
             value={confirm}
@@ -300,38 +314,45 @@ function RegisterForm({ onSwitch }) {
             onFocus={() => setFocused('confirm')}
             onBlur={() => setFocused('')}
             placeholder="Repeat password"
-            style={{
-              ...inputStyle('confirm'),
-              borderColor: confirm && confirm !== password
+            style={inputStyle(focused, 'confirm', {
+              borderColor: passwordMismatch
                 ? C.red + 'aa'
                 : focused === 'confirm' ? C.electric + 'aa' : C.borderGold,
-            }}
+            })}
             autoComplete="new-password"
           />
         </div>
       </div>
 
       <div>
-        <label style={lbl}>ᛈ Profile Image URL <span style={{ color: C.textDim, fontSize: '8px', letterSpacing: '0.1em' }}>(optional)</span></label>
+        <label style={labelStyle}>
+          ᛈ Profile Image URL{' '}
+          <span style={{ color: C.textDim, fontSize: '8px', letterSpacing: '0.1em' }}>(optional)</span>
+        </label>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <input
             value={profileImage}
-            onChange={e => setProfile(e.target.value)}
+            onChange={e => setProfileImage(e.target.value)}
             onFocus={() => setFocused('profileImage')}
             onBlur={() => setFocused('')}
-            placeholder="https://..."
-            style={{ ...inputStyle('profileImage'), flex: 1 }}
+            placeholder="https://…"
+            style={{ ...inputStyle(focused, 'profileImage'), flex: 1 }}
           />
           {/* Live preview */}
           <div style={{
-            width: '40px', height: '40px', flexShrink: 0,
+            width: 40, height: 40, flexShrink: 0,
             background: C.input,
             border: `1px solid ${C.borderGold}`,
             overflow: 'hidden',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {profileImage
-              ? <img src={profileImage} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => e.target.style.display = 'none'} />
+              ? <img
+                  src={profileImage}
+                  alt="preview"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => { e.target.style.display = 'none' }}
+                />
               : <span style={{ fontSize: '16px', color: C.textDim }}>ᚢ</span>
             }
           </div>
@@ -343,7 +364,9 @@ function RegisterForm({ onSwitch }) {
           fontSize: '12px', color: C.red, letterSpacing: '0.05em',
           padding: '10px 14px', background: C.redSoft,
           border: `1px solid ${C.red}33`,
-        }}>{error}</div>
+        }}>
+          {error}
+        </div>
       )}
 
       <button
@@ -358,13 +381,13 @@ function RegisterForm({ onSwitch }) {
           cursor: loading ? 'wait' : 'pointer',
           textTransform: 'uppercase',
           transition: 'all 0.25s',
-          boxShadow: loading ? 'none' : `0 0 20px rgba(56,189,248,0.10)`,
+          boxShadow: loading ? 'none' : '0 0 20px rgba(56,189,248,0.10)',
           marginTop: '4px',
         }}
         onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'rgba(56,189,248,0.18)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(56,189,248,0.18)' }}}
         onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = C.electricSoft; e.currentTarget.style.boxShadow = '0 0 20px rgba(56,189,248,0.10)' }}}
       >
-        {loading ? 'Creating your legend...' : 'ᚨ Begin the Journey'}
+        {loading ? 'Creating your legend…' : 'ᚨ Begin the Journey'}
       </button>
 
       <div style={{ textAlign: 'center', paddingTop: '4px' }}>
@@ -376,10 +399,12 @@ function RegisterForm({ onSwitch }) {
           style={{
             fontSize: '12px', color: C.gold, background: 'none', border: 'none',
             cursor: 'pointer', letterSpacing: '0.08em', padding: 0,
-            fontFamily: 'inherit', textDecoration: 'underline', textDecorationColor: C.gold + '55',
-            textUnderlineOffset: '3px',
+            fontFamily: 'inherit', textDecoration: 'underline',
+            textDecorationColor: C.gold + '55', textUnderlineOffset: '3px',
           }}
-        >Sign in</button>
+        >
+          Sign in
+        </button>
       </div>
     </div>
   )
@@ -389,6 +414,7 @@ function RegisterForm({ onSwitch }) {
 function ProfileView() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+
   const [hoverLogout, setHoverLogout] = useState(false)
   const [hoverHome,   setHoverHome]   = useState(false)
 
@@ -397,7 +423,13 @@ function ProfileView() {
     navigate('/')
   }
 
-  const initial = (user?.username?.[0] || 'ᚢ').toUpperCase()
+  const initial = (user?.username?.[0] ?? 'ᚢ').toUpperCase()
+
+  const realms = [
+    { name: 'Alfheim',  rune: 'ᚨ', color: '#7EB8F7', sub: 'Anime'  },
+    { name: 'Valhalla', rune: '⚔', color: '#C084FC', sub: 'Manga'  },
+    { name: 'Midgard',  rune: 'ᛗ', color: '#F4A261', sub: 'Drama'  },
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '36px' }}>
@@ -405,23 +437,26 @@ function ProfileView() {
       {/* Avatar */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
         <div style={{
-          width: '110px', height: '110px',
+          width: 110, height: 110,
           border: `1px solid ${C.gold}66`,
           overflow: 'hidden', position: 'relative',
           boxShadow: `0 0 40px rgba(201,168,76,0.18), 0 0 0 1px ${C.gold}22`,
         }}>
           <Corners color={C.gold} size={10} opacity={0.6} />
           {user?.profileImage
-            ? <img src={user.profileImage} alt={user.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img
+                src={user.profileImage}
+                alt={user.username}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             : (
               <div style={{
                 width: '100%', height: '100%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
                 fontFamily: '"Cinzel Decorative", "Cinzel", serif',
-                fontSize: '38px',
-                color: C.gold,
-                textShadow: `0 0 20px rgba(201,168,76,0.5)`,
+                fontSize: 38, color: C.gold,
+                textShadow: '0 0 20px rgba(201,168,76,0.5)',
               }}>
                 {initial}
               </div>
@@ -429,90 +464,90 @@ function ProfileView() {
           }
         </div>
 
-        {/* Username */}
         <div style={{ textAlign: 'center' }}>
           <div style={{
             fontFamily: '"Cinzel", serif',
-            fontSize: '22px', fontWeight: 700,
-            letterSpacing: '0.15em',
-            color: C.text,
-            textShadow: `0 0 30px rgba(201,168,76,0.2)`,
-          }}>{user?.username}</div>
+            fontSize: 22, fontWeight: 700,
+            letterSpacing: '0.15em', color: C.text,
+            textShadow: '0 0 30px rgba(201,168,76,0.2)',
+          }}>
+            {user?.username}
+          </div>
           <div style={{
-            fontSize: '12px', color: C.textDim,
-            letterSpacing: '0.1em', marginTop: '6px',
+            fontSize: 12, color: C.textDim,
+            letterSpacing: '0.1em', marginTop: 6,
             fontFamily: '"Cinzel", serif',
-          }}>{user?.email}</div>
+          }}>
+            {user?.email}
+          </div>
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '16px',
-        width: '100%',
-      }}>
-        <div style={{ flex: 1, height: '1px', background: `linear-gradient(to right, transparent, ${C.borderGold})` }} />
-        <div style={{ color: C.gold + '66', fontSize: '14px', fontFamily: '"Cinzel", serif' }}>ᛟ</div>
-        <div style={{ flex: 1, height: '1px', background: `linear-gradient(to left, transparent, ${C.borderGold})` }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, width: '100%' }}>
+        <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${C.borderGold})` }} />
+        <div style={{ color: C.gold + '66', fontSize: 14, fontFamily: '"Cinzel", serif' }}>ᛟ</div>
+        <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${C.borderGold})` }} />
       </div>
 
       {/* Realm badges */}
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-        {[
-          { name: 'Midgard', rune: 'ᛗ', color: '#F4A261', sub: 'Drama' },
-          { name: 'Alfheim', rune: 'ᚨ', color: '#7EB8F7', sub: 'Anime' },
-          { name: 'Valhalla', rune: '⚔', color: '#C084FC', sub: 'Manga' },
-        ].map(realm => (
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {realms.map(realm => (
           <div key={realm.name} style={{
             padding: '14px 20px',
             background: C.surface,
             border: `1px solid ${realm.color}33`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-            minWidth: '90px',
-            position: 'relative',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            minWidth: 90, position: 'relative',
           }}>
             <Corners color={realm.color} size={7} opacity={0.3} />
-            <div style={{ fontSize: '20px', color: realm.color, textShadow: `0 0 12px ${realm.color}55` }}>
+            <div style={{ fontSize: 20, color: realm.color, textShadow: `0 0 12px ${realm.color}55` }}>
               {realm.rune}
             </div>
-            <div style={{ fontFamily: '"Cinzel", serif', fontSize: '10px', letterSpacing: '0.2em', color: realm.color }}>{realm.name}</div>
-            <div style={{ fontSize: '9px', color: C.textDim, letterSpacing: '0.15em', fontFamily: '"Cinzel", serif' }}>{realm.sub}</div>
+            <div style={{ fontFamily: '"Cinzel", serif', fontSize: 10, letterSpacing: '0.2em', color: realm.color }}>
+              {realm.name}
+            </div>
+            <div style={{ fontSize: 9, color: C.textDim, letterSpacing: '0.15em', fontFamily: '"Cinzel", serif' }}>
+              {realm.sub}
+            </div>
           </div>
         ))}
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
         <button
           onClick={() => navigate('/')}
           onMouseEnter={() => setHoverHome(true)}
           onMouseLeave={() => setHoverHome(false)}
           style={{
-            fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.3em',
+            fontFamily: '"Cinzel", serif', fontSize: 11, letterSpacing: '0.3em',
             color: hoverHome ? C.goldBright : C.gold,
             background: hoverHome ? 'rgba(201,168,76,0.15)' : C.goldSoft,
             border: `1px solid ${hoverHome ? C.gold + 'aa' : C.gold + '55'}`,
-            padding: '13px',
-            cursor: 'pointer', textTransform: 'uppercase',
+            padding: 13, cursor: 'pointer', textTransform: 'uppercase',
             transition: 'all 0.25s',
-            boxShadow: hoverHome ? `0 0 24px rgba(201,168,76,0.18)` : 'none',
+            boxShadow: hoverHome ? '0 0 24px rgba(201,168,76,0.18)' : 'none',
           }}
-        >ᛟ Return to Yggdrasil</button>
+        >
+          ᛟ Return to Yggdrasil
+        </button>
 
         <button
           onClick={handleLogout}
           onMouseEnter={() => setHoverLogout(true)}
           onMouseLeave={() => setHoverLogout(false)}
           style={{
-            fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.3em',
+            fontFamily: '"Cinzel", serif', fontSize: 11, letterSpacing: '0.3em',
             color: hoverLogout ? C.red : C.textMuted,
             background: hoverLogout ? C.redSoft : 'transparent',
             border: `1px solid ${hoverLogout ? C.red + '66' : C.borderGold}`,
-            padding: '13px',
-            cursor: 'pointer', textTransform: 'uppercase',
+            padding: 13, cursor: 'pointer', textTransform: 'uppercase',
             transition: 'all 0.25s',
           }}
-        >✕ Leave the Realm</button>
+        >
+          ✕ Leave the Realm
+        </button>
       </div>
     </div>
   )
@@ -531,36 +566,54 @@ export default function ProfilePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <div style={{
-          fontFamily: '"Cinzel", serif', fontSize: '13px',
+          fontFamily: '"Cinzel", serif', fontSize: 13,
           letterSpacing: '0.3em', color: C.textDim,
-        }}>ᛟ Consulting the runes...</div>
+        }}>
+          ᛟ Consulting the runes…
+        </div>
       </div>
     )
   }
 
+  const headerRune     = user ? 'ᛟ' : mode === 'login' ? 'ᚢ' : 'ᚨ'
+  const headerTitle    = user ? 'YOUR LEGEND' : mode === 'login' ? 'ENTER THE REALM' : 'FORGE YOUR PATH'
+  const headerSubtitle = user
+    ? `Welcome back, ${user.username}`
+    : mode === 'login' ? 'Sign in to your account' : 'Create a new account'
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, position: 'relative' }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&display=swap" />
-
       <VegvisirWatermark />
 
-      {/* Edge glows */}
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '400px', height: '400px', background: 'radial-gradient(ellipse at top left, rgba(201,168,76,0.06), transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
-      <div style={{ position: 'fixed', bottom: 0, right: 0, width: '400px', height: '400px', background: 'radial-gradient(ellipse at bottom right, rgba(56,189,248,0.05), transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
+      {/* Ambient edge glows */}
+      <div style={{
+        position: 'fixed', top: 0, left: 0, width: 400, height: 400,
+        background: 'radial-gradient(ellipse at top left, rgba(201,168,76,0.06), transparent 70%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
+      <div style={{
+        position: 'fixed', bottom: 0, right: 0, width: 400, height: 400,
+        background: 'radial-gradient(ellipse at bottom right, rgba(56,189,248,0.05), transparent 70%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
 
       {/* Back button */}
       <div style={{ position: 'relative', zIndex: 1, padding: '28px 36px 0' }}>
         <button
           onClick={() => navigate('/')}
           style={{
-            fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.25em',
+            fontFamily: '"Cinzel", serif', fontSize: 11, letterSpacing: '0.25em',
             color: C.textDim, background: 'transparent', border: 'none',
-            cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '8px',
+            cursor: 'pointer', padding: 0,
+            display: 'flex', alignItems: 'center', gap: 8,
             transition: 'color 0.2s',
           }}
           onMouseEnter={e => e.currentTarget.style.color = C.gold}
           onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-        >← Yggdrasil</button>
+        >
+          ← Yggdrasil
+        </button>
       </div>
 
       {/* Main content */}
@@ -570,7 +623,7 @@ export default function ProfilePage() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '32px 24px 80px',
       }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
+        <div style={{ width: '100%', maxWidth: 460 }}>
 
           {/* Card */}
           <div style={{
@@ -583,7 +636,7 @@ export default function ProfilePage() {
 
             {/* Top accent line */}
             <div style={{
-              position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px',
+              position: 'absolute', top: 0, left: '10%', right: '10%', height: 1,
               background: `linear-gradient(to right, transparent, ${C.gold}88, transparent)`,
             }} />
 
@@ -593,40 +646,33 @@ export default function ProfilePage() {
               borderBottom: `1px solid ${C.borderGold}`,
               textAlign: 'center',
             }}>
-              {/* Rune ornament */}
               <div style={{
-                fontFamily: '"Cinzel", serif', fontSize: '24px',
-                color: C.gold + '66', marginBottom: '14px',
-                letterSpacing: '0.3em',
+                fontFamily: '"Cinzel", serif', fontSize: 24,
+                color: C.gold + '66', marginBottom: 14, letterSpacing: '0.3em',
               }}>
-                {user ? 'ᛟ' : mode === 'login' ? 'ᚢ' : 'ᚨ'}
+                {headerRune}
               </div>
 
               <div style={{
                 fontFamily: '"Cinzel Decorative", "Cinzel", serif',
-                fontSize: '18px', fontWeight: 700,
+                fontSize: 18, fontWeight: 700,
                 letterSpacing: '0.2em', color: C.text,
-                textShadow: `0 0 30px rgba(201,168,76,0.2)`,
-                marginBottom: '8px',
+                textShadow: '0 0 30px rgba(201,168,76,0.2)',
+                marginBottom: 8,
               }}>
-                {user ? 'YOUR LEGEND' : mode === 'login' ? 'ENTER THE REALM' : 'FORGE YOUR PATH'}
+                {headerTitle}
               </div>
 
               <div style={{
-                fontSize: '10px', letterSpacing: '0.35em', color: C.textDim,
+                fontSize: 10, letterSpacing: '0.35em', color: C.textDim,
                 fontFamily: '"Cinzel", serif', textTransform: 'uppercase',
               }}>
-                {user
-                  ? `Welcome back, ${user.username}`
-                  : mode === 'login'
-                    ? 'Sign in to your account'
-                    : 'Create a new account'
-                }
+                {headerSubtitle}
               </div>
 
-              {/* Tab switcher — only for guest */}
+              {/* Tab switcher — guests only */}
               {!user && (
-                <div style={{ display: 'flex', gap: '0', marginTop: '22px' }}>
+                <div style={{ display: 'flex', marginTop: 22 }}>
                   {[
                     { key: 'login',    label: 'Sign In',  rune: 'ᚢ' },
                     { key: 'register', label: 'Register', rune: 'ᚨ' },
@@ -636,15 +682,13 @@ export default function ProfilePage() {
                       onClick={() => setMode(tab.key)}
                       style={{
                         flex: 1,
-                        fontFamily: '"Cinzel", serif', fontSize: '10px',
+                        fontFamily: '"Cinzel", serif', fontSize: 10,
                         letterSpacing: '0.25em', textTransform: 'uppercase',
                         color: mode === tab.key ? C.gold : C.textDim,
                         background: mode === tab.key ? C.goldSoft : 'transparent',
                         border: 'none',
                         borderBottom: `2px solid ${mode === tab.key ? C.gold : C.borderGold}`,
-                        padding: '10px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
+                        padding: 10, cursor: 'pointer', transition: 'all 0.2s',
                       }}
                     >
                       {tab.rune} {tab.label}
@@ -667,12 +711,9 @@ export default function ProfilePage() {
             {/* Bottom rune row */}
             <div style={{
               borderTop: `1px solid ${C.borderGold}`,
-              padding: '14px',
-              textAlign: 'center',
-              fontFamily: '"Cinzel", serif',
-              fontSize: '11px',
-              letterSpacing: '0.4em',
-              color: C.textDim + '88',
+              padding: 14, textAlign: 'center',
+              fontFamily: '"Cinzel", serif', fontSize: 11,
+              letterSpacing: '0.4em', color: C.textDim + '88',
             }}>
               ᛟ ᚹ ᛁ ᚷ ᛞ ᚱ ᚨ ᛊ ᛁ ᛚ ᛟ
             </div>
@@ -680,8 +721,8 @@ export default function ProfilePage() {
 
           {/* Below-card note */}
           <div style={{
-            textAlign: 'center', marginTop: '20px',
-            fontSize: '11px', color: C.textDim, letterSpacing: '0.1em',
+            textAlign: 'center', marginTop: 20,
+            fontSize: 11, color: C.textDim, letterSpacing: '0.1em',
             fontFamily: '"Cinzel", serif',
           }}>
             Keeper of Worlds · Mimir's Well
