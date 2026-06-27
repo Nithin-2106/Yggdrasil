@@ -437,9 +437,8 @@ function TrendingSection({ onNavigate }) {
     const fetches   = countries.flatMap(country =>
       [1, 2, 3].map(page =>
         fetch(
-          `${TMDB_BASE}?path=discover/tv` +
-          `?with_origin_country=${country}&sort_by=popularity.desc&page=${page}`
-        )
+  `${TMDB_BASE}?path=discover/tv&with_origin_country=${country}&sort_by=popularity.desc&page=${page}`
+)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
@@ -1130,11 +1129,8 @@ function RecentlyReleasedSection({ onNavigate }) {
     const fetches = countries.flatMap(country =>
       [1, 2].map(page =>
         fetch(
-          `${TMDB_BASE}?path=discover/tv` +
-          `?with_origin_country=${country}` +
-          `&first_air_date.gte=${threeMonthsAgo}` +
-          `&sort_by=first_air_date.desc&page=${page}`
-        )
+  `${TMDB_BASE}?path=discover/tv&with_origin_country=${country}&first_air_date.gte=${threeMonthsAgo}&sort_by=first_air_date.desc&page=${page}`
+)
           .then(r => r.json())
           .then(d => d.results || [])
           .catch(() => [])
