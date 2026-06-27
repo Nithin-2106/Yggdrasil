@@ -1,26 +1,39 @@
-# Logs
-logs
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+dist-ssr/
+
+# ── Environment variables ─────────────────────────────────────────────────────
+# Never commit secrets
+.env
+.env.local
+.env.*.local
+.env.production
+
+# ── Vercel ────────────────────────────────────────────────────────────────────
+.vercel/
+
+# ── Vite ─────────────────────────────────────────────────────────────────────
+*.local
+vite.config.js.timestamp-*
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# ── Editor & OS ───────────────────────────────────────────────────────────────
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-node_modules/
-.env
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── TypeScript (if added later) ───────────────────────────────────────────────
+*.tsbuildinfo
