@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import {
   searchManga,
   detectMangaType,
-  detectMangaFormat,
   getTitle,
   getYear,
   getCover,
@@ -17,27 +16,27 @@ const C = {
   primary:      '#A78BFA',
   primarySoft:  'rgba(167,139,250,0.12)',
   crimson:      '#F43F5E',
-  crimsonSoft:  'rgba(244,63,94,0.15)',
   gold:         '#FCD34D',
-  goldSoft:     'rgba(252,211,77,0.15)',
-  green:        '#34D399',
-  red:          '#F87171',
   text:         '#EDE9FE',
   textMuted:    '#A89BC2',
   textDim:      '#4A3F6B',
   borderPrimary:'rgba(167,139,250,0.2)',
-  borderCrimson:'rgba(244,63,94,0.18)',
 }
 
 const TYPE_COLOR = {
-  'Manhwa': C.primary,
-  'Manga':  C.gold,
-  'Manhua': C.crimson,
+  Manhwa: '#A78BFA',
+  Manga:  '#FCD34D',
+  Manhua: '#F43F5E',
 }
 
-function typeColor(type) {
-  return TYPE_COLOR[type] || C.primary
-}
+const FILTERS = [
+  { label: 'All',    color: '#A78BFA' },
+  { label: 'Manhwa', color: '#A78BFA' },
+  { label: 'Manga',  color: '#FCD34D' },
+  { label: 'Manhua', color: '#F43F5E' },
+]
+
+function typeColor(type) { return TYPE_COLOR[type] || C.primary }
 
 function SkeletonCard() {
   return (
@@ -57,7 +56,6 @@ function SkeletonCard() {
 
 function FilterPill({ label, active, color, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const c = color || C.primary
   return (
     <button
       onClick={onClick}
@@ -65,11 +63,10 @@ function FilterPill({ label, active, color, onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? c : C.textMuted,
-        background: active ? c : hovered ? `${c}18` : 'transparent',
-        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
+        fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
+        color: active ? C.bg : hovered ? color : C.textMuted,
+        background: active ? color : hovered ? `${color}18` : 'transparent',
+        border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
         padding: '6px 16px', cursor: 'pointer',
         transition: 'all 0.2s ease', whiteSpace: 'nowrap',
       }}
@@ -81,10 +78,10 @@ function ResultCard({ item, onSelect }) {
   const [hovered, setHovered] = useState(false)
   const type   = detectMangaType(item)
   const tColor = typeColor(type)
-  const year   = getYear(item)
-  const score  = formatScore(item.averageScore)
   const cover  = getCover(item)
   const title  = getTitle(item)
+  const year   = getYear(item)
+  const score  = formatScore(item.averageScore)
 
   return (
     <div
@@ -108,45 +105,38 @@ function ResultCard({ item, onSelect }) {
           : '0 4px 16px rgba(0,0,0,0.4)',
         transition: 'all 0.25s ease',
       }}>
-        {cover ? (
-          <img src={cover} alt={title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            color: C.textDim, gap: '8px',
-            background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-          }}>
-            <div style={{ fontSize: '36px' }}>⚔</div>
-            <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>No Cover</div>
-          </div>
-        )}
+        {cover
+          ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{
+              width: '100%', height: '100%',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              color: C.textDim, gap: '8px',
+              background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
+            }}>
+              <div style={{ fontSize: '36px' }}>⚔</div>
+              <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>No Cover</div>
+            </div>
+        }
 
-        {/* Type badge */}
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
-          padding: '3px 8px',
-          background: 'rgba(10,8,16,0.92)',
+          padding: '3px 8px', background: 'rgba(10,8,16,0.92)',
           border: `1px solid ${tColor}66`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: tColor, fontFamily: '"Cinzel", serif',
         }}>{type}</div>
 
-        {/* Score badge */}
         {score && parseFloat(score) > 0 && (
           <div style={{
             position: 'absolute', top: '8px', right: '8px',
-            padding: '3px 8px',
-            background: 'rgba(10,8,16,0.92)',
+            padding: '3px 8px', background: 'rgba(10,8,16,0.92)',
             border: `1px solid ${C.gold}55`,
             fontSize: '10px', color: C.gold,
             fontFamily: '"Cinzel", serif', fontWeight: 700,
           }}>★ {score}</div>
         )}
 
-        {/* Corner ornaments on hover */}
         {hovered && (
           <>
             <div style={{ position: 'absolute', top: 6, left: 6, width: 10, height: 10, borderTop: `1px solid ${tColor}`, borderLeft: `1px solid ${tColor}` }} />
@@ -209,13 +199,6 @@ function EmptyResults({ query }) {
   )
 }
 
-const FILTERS = [
-  { label: 'All',    color: C.primary },
-  { label: 'Manhwa', color: C.primary },
-  { label: 'Manga',  color: C.gold    },
-  { label: 'Manhua', color: C.crimson },
-]
-
 export default function SearchPage({ query: initialQuery, onSelectManga }) {
   const [query, setQuery]       = useState(initialQuery || '')
   const [results, setResults]   = useState([])
@@ -231,6 +214,7 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
       setQuery(initialQuery)
       runSearch(initialQuery)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery])
 
   useEffect(() => {
@@ -256,10 +240,6 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
     }
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') runSearch(query)
-  }
-
   return (
     <>
       <style>{`
@@ -282,7 +262,7 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onKeyDown={e => e.key === 'Enter' && runSearch(query)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Search for a manga, manhwa or manhua title..."
@@ -290,10 +270,9 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
               width: '100%', padding: '13px 14px 13px 44px',
               background: C.input,
               border: `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
-              color: C.text, fontSize: '14px',
-              fontFamily: 'inherit', outline: 'none',
-              boxSizing: 'border-box',
-              boxShadow: focused ? `0 0 20px rgba(167,139,250,0.12)` : 'none',
+              color: C.text, fontSize: '14px', fontFamily: 'inherit',
+              outline: 'none', boxSizing: 'border-box',
+              boxShadow: focused ? '0 0 20px rgba(167,139,250,0.12)' : 'none',
               transition: 'all 0.25s ease',
             }}
           />
@@ -318,14 +297,10 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
 
       {/* Filter pills */}
       {searched && !loading && results.length > 0 && (
-        <div style={{
-          display: 'flex', gap: '8px', marginBottom: '28px',
-          alignItems: 'center', flexWrap: 'wrap',
-        }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{
-            fontSize: '10px', letterSpacing: '0.25em',
-            color: C.textDim, fontFamily: '"Cinzel", serif',
-            marginRight: '4px', textTransform: 'uppercase',
+            fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
+            fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
           }}>Filter</span>
           <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
           {FILTERS.map(f => (

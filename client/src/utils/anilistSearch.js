@@ -13,7 +13,12 @@ async function anilistFetch(query, variables = {}) {
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = await res.json()
-    if (json.errors) throw new Error(json.errors[0].message)
+    // AniList can return HTTP 200 with errors array — handle gracefully
+    if (json.errors?.length) {
+      console.warn('AniList error:', json.errors[0].message)
+      return null
+    }
+    if (!json.data) return null
     return json.data
   } catch (err) {
     console.error('AniList fetch error:', err)
@@ -21,7 +26,7 @@ async function anilistFetch(query, variables = {}) {
   }
 }
 
-// ── Field fragment reused across queries ──────────────────────────────────────
+// ── Shared field fragment ─────────────────────────────────────────────────────
 const MEDIA_FIELDS = `
   id
   title { english romaji native }
@@ -52,16 +57,14 @@ export function detectMangaType(item) {
 // Derive display format from AniList format field
 export function detectMangaFormat(item) {
   const f = (item.format || '').toUpperCase()
-  if (f === 'MANHWA')   return 'Series'
-  if (f === 'MANHUA')   return 'Series'
-  if (f === 'MANGA')    return 'Series'
   if (f === 'ONE_SHOT') return 'Special'
   return 'Series'
 }
 
 // AniList score is 0–100; convert to 1 decimal /10
+// FIX: use score == null instead of !score so a real 0 score isn't swallowed
 export function formatScore(score) {
-  if (!score) return null
+  if (score == null) return null
   return (score / 10).toFixed(1)
 }
 
@@ -80,7 +83,7 @@ export function getCover(item) {
   return item.coverImage?.extraLarge || item.coverImage?.large || ''
 }
 
-// Human-readable status
+// Human-readable publication status
 export function formatStatus(status) {
   if (!status) return ''
   const map = {
@@ -116,77 +119,69 @@ export async function searchManga(query) {
   return data?.Page?.media || []
 }
 
-// ── Trending (for Dashboard TrendingSection) ──────────────────────────────────
+// ── Trending ──────────────────────────────────────────────────────────────────
 export async function fetchTrending(limit = 25) {
   const q = `
-    query {
-      Page(page: 1, perPage: ${limit}) {
+    query ($limit: Int) {
+      Page(page: 1, perPage: $limit) {
         media(
           type: MANGA
           format_not_in: [NOVEL]
           sort: [TRENDING_DESC]
           status_not: NOT_YET_RELEASED
+          isAdult: false
         ) {
           ${MEDIA_FIELDS}
         }
       }
     }
   `
-  const data = await anilistFetch(q)
+  const data = await anilistFetch(q, { limit })
   return data?.Page?.media || []
 }
 
-// ── Popular (for Dashboard ExploreSection pool) ───────────────────────────────
+// ── Popular (used by ExploreSection) ─────────────────────────────────────────
+// Returns items that have a cover image — callers don't need to filter themselves
 export async function fetchPopular(limit = 50) {
   const q = `
-    query {
-      Page(page: 1, perPage: ${limit}) {
+    query ($limit: Int) {
+      Page(page: 1, perPage: $limit) {
         media(
           type: MANGA
           format_not_in: [NOVEL]
           sort: [POPULARITY_DESC]
+          isAdult: false
         ) {
           ${MEDIA_FIELDS}
         }
       }
     }
   `
-  const data = await anilistFetch(q)
-  return data?.Page?.media || []
+  const data = await anilistFetch(q, { limit })
+  const media = data?.Page?.media || []
+  // Filter here so callers receive clean data
+  return media.filter(item => getCover(item) !== '')
 }
 
-// ── Recently released (for Dashboard RecentlyReleasedSection) ─────────────────
+// ── Recently Released ─────────────────────────────────────────────────────────
 export async function fetchRecentlyReleased(limit = 25) {
   const q = `
-    query {
-      Page(page: 1, perPage: ${limit}) {
+    query ($limit: Int) {
+      Page(page: 1, perPage: $limit) {
         media(
           type: MANGA
           format_not_in: [NOVEL]
           sort: [START_DATE_DESC]
           status_not: NOT_YET_RELEASED
+          isAdult: false
         ) {
           ${MEDIA_FIELDS}
         }
       }
     }
   `
-  const data = await anilistFetch(q)
+  const data = await anilistFetch(q, { limit })
   return data?.Page?.media || []
-}
-
-// ── Hentai/adult content filter ───────────────────────────────────────────────
-const BLOCKED_TAGS = new Set([
-  'Hentai', 'Ecchi', 'Sexual Content', 'Explicit Sexual Content',
-  'Nudity', 'Pornography'
-])
-
-const BLOCKED_FORMATS = new Set(['HENTAI'])
-
-function isAdultContent(item) {
-  if (BLOCKED_FORMATS.has(item.format)) return true
-  const tags = item.tags || []
-  return tags.some(t => BLOCKED_TAGS.has(t.name))
 }
 
 // ── Single title detail (for InfoPage) ───────────────────────────────────────

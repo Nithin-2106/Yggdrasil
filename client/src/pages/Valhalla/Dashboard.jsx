@@ -14,11 +14,10 @@ import {
   getYear,
   getCover,
   formatScore,
-  formatStatus,
 } from '../../utils/anilistSearch'
 
-const API      = '/api/manga'
-const TOP10 = '/api/mangatop10'
+const API    = '/api/manga'
+const TOP10  = '/api/mangatop10'
 
 const C = {
   bg:           '#0A0810',
@@ -54,10 +53,10 @@ function Corners({ color = C.gold, size = 12, opacity = 0.4 }) {
   const b = `1px solid ${color}`
   return (
     <>
-      <div style={{ ...s, top: 8, left: 8,    borderTop: b, borderLeft: b }} />
-      <div style={{ ...s, top: 8, right: 8,   borderTop: b, borderRight: b }} />
-      <div style={{ ...s, bottom: 8, left: 8,  borderBottom: b, borderLeft: b }} />
-      <div style={{ ...s, bottom: 8, right: 8, borderBottom: b, borderRight: b }} />
+      <div style={{ ...s, top: 8,    left: 8,   borderTop: b, borderLeft: b }} />
+      <div style={{ ...s, top: 8,    right: 8,  borderTop: b, borderRight: b }} />
+      <div style={{ ...s, bottom: 8, left: 8,   borderBottom: b, borderLeft: b }} />
+      <div style={{ ...s, bottom: 8, right: 8,  borderBottom: b, borderRight: b }} />
     </>
   )
 }
@@ -93,56 +92,69 @@ function SectionHeader({ title, rune, count, right }) {
   )
 }
 
+// ── Horizontal scroll row ─────────────────────────────────────────────────────
 function HorizontalScroll({ children }) {
   const ref = useRef(null)
-  const [canLeft, setCanLeft]   = useState(false)
-  const [canRight, setCanRight] = useState(true)
+  const [canLeft,  setCanLeft]  = useState(false)
+  const [canRight, setCanRight] = useState(false)
 
-  const check = () => {
-    if (!ref.current) return
-    setCanLeft(ref.current.scrollLeft > 8)
-    setCanRight(ref.current.scrollLeft < ref.current.scrollWidth - ref.current.clientWidth - 8)
-  }
+  const check = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    setCanLeft(el.scrollLeft > 8)
+    setCanRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 8)
+  }, [])
+
+  // Check after children mount / resize
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [check])
 
   const scroll = (dir) => {
-    if (!ref.current) return
-    ref.current.scrollBy({ left: dir * 520, behavior: 'smooth' })
+    ref.current?.scrollBy({ left: dir * 520, behavior: 'smooth' })
+  }
+
+  const arrowStyle = {
+    position: 'absolute', top: '50%', transform: 'translateY(-60%)', zIndex: 10,
+    width: '36px', height: '36px',
+    background: 'rgba(10,8,16,0.92)',
+    border: `1px solid ${C.borderPrimary}`,
+    color: C.gold, fontSize: '16px', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'border-color 0.2s',
   }
 
   return (
     <div style={{ position: 'relative' }}>
       {canLeft && (
-        <button onClick={() => scroll(-1)} style={{
-          position: 'absolute', left: '-16px', top: '50%',
-          transform: 'translateY(-60%)', zIndex: 10,
-          width: '36px', height: '36px',
-          background: 'rgba(10,8,16,0.92)',
-          border: `1px solid ${C.borderPrimary}`,
-          color: C.gold, fontSize: '16px', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.2s',
-        }}
+        <button
+          onClick={() => scroll(-1)}
+          style={{ ...arrowStyle, left: '-16px' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = C.primary}
           onMouseLeave={e => e.currentTarget.style.borderColor = C.borderPrimary}
         >‹</button>
       )}
-      <div ref={ref} onScroll={check} style={{
-  display: 'flex', gap: '14px', overflowX: 'auto',
-  paddingBottom: '12px', paddingTop: '12px', scrollbarWidth: 'none', msOverflowStyle: 'none',
-}} className="hide-scroll">
+      <div
+        ref={ref}
+        onScroll={check}
+        className="hide-scroll"
+        style={{
+          display: 'flex', gap: '14px', overflowX: 'auto',
+          paddingBottom: '12px', paddingTop: '12px',
+          scrollbarWidth: 'none', msOverflowStyle: 'none',
+        }}
+      >
         {children}
       </div>
       {canRight && (
-        <button onClick={() => scroll(1)} style={{
-          position: 'absolute', right: '-16px', top: '50%',
-          transform: 'translateY(-60%)', zIndex: 10,
-          width: '36px', height: '36px',
-          background: 'rgba(10,8,16,0.92)',
-          border: `1px solid ${C.borderPrimary}`,
-          color: C.gold, fontSize: '16px', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.2s',
-        }}
+        <button
+          onClick={() => scroll(1)}
+          style={{ ...arrowStyle, right: '-16px' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = C.primary}
           onMouseLeave={e => e.currentTarget.style.borderColor = C.borderPrimary}
         >›</button>
@@ -169,7 +181,9 @@ function StatCard({ label, value, color, rune }) {
           : `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
         border: `1px solid ${hovered ? color + 'cc' : C.borderPrimary}`,
         transition: 'border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
-        boxShadow: hovered ? `0 0 40px ${color}55, 0 0 120px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)` : 'none',
+        boxShadow: hovered
+          ? `0 0 40px ${color}55, 0 0 120px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)`
+          : 'none',
         cursor: 'default', position: 'relative', overflow: 'hidden', textAlign: 'center',
       }}
     >
@@ -210,27 +224,26 @@ function StatCard({ label, value, color, rune }) {
 
 function StatsRow({ manga }) {
   const rated = manga.filter(m => m.rating)
-  const stats = {
-    total:       manga.length,
-    reading:     manga.filter(m => m.status === 'Reading').length,
-    completed:   manga.filter(m => m.status === 'Completed').length,
-    planToRead:  manga.filter(m => m.status === 'Plan to Read').length,
-    avgRating:   rated.length
-      ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
-      : '—',
-  }
+  const avgRating = rated.length
+    ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
+    : '—'
+
+  const stats = [
+    { label: 'Total',        value: manga.length,                                   color: C.primary, rune: '⚔' },
+    { label: 'Reading',      value: manga.filter(m => m.status === 'Reading').length, color: C.primary, rune: 'ᚹ' },
+    { label: 'Completed',    value: manga.filter(m => m.status === 'Completed').length, color: C.green,   rune: 'ᚲ' },
+    { label: 'Plan to Read', value: manga.filter(m => m.status === 'Plan to Read').length, color: C.crimson, rune: 'ᛈ' },
+    { label: 'Avg Rating',   value: avgRating,                                       color: C.gold,    rune: '★' },
+  ]
+
   return (
     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-      <StatCard label="Total"        value={stats.total}      color={C.primary} rune="⚔" />
-      <StatCard label="Reading"      value={stats.reading}    color={C.primary} rune="ᚹ" />
-      <StatCard label="Completed"    value={stats.completed}  color={C.green}   rune="ᚲ" />
-      <StatCard label="Plan to Read" value={stats.planToRead} color={C.crimson} rune="ᛈ" />
-      <StatCard label="Avg Rating"   value={stats.avgRating}  color={C.gold}    rune="★" />
+      {stats.map(s => <StatCard key={s.label} {...s} />)}
     </div>
   )
 }
 
-// ── 2. SHARED CARD ────────────────────────────────────────────────────────────
+// ── 2. SHARED MANGA CARD ──────────────────────────────────────────────────────
 function MangaCard({ item, onNavigate }) {
   const [hovered, setHovered] = useState(false)
   const type   = detectMangaType(item)
@@ -262,12 +275,14 @@ function MangaCard({ item, onNavigate }) {
       }}>
         {cover
           ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{
+          : (
+            <div style={{
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: C.textDim, fontSize: '32px',
               background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
             }}>⚔</div>
+          )
         }
         {/* Type badge */}
         <div style={{
@@ -301,9 +316,10 @@ function MangaCard({ item, onNavigate }) {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
           {item.chapters && (
-            <span style={{ fontSize: '9px', color: tColor + 'aa', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
-              {item.chapters} ch
-            </span>
+            <span style={{
+              fontSize: '9px', color: tColor + 'aa',
+              fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+            }}>{item.chapters} ch</span>
           )}
         </div>
       </div>
@@ -313,7 +329,7 @@ function MangaCard({ item, onNavigate }) {
 
 // ── 3. TRENDING ───────────────────────────────────────────────────────────────
 function TrendingSection({ onNavigate }) {
-  const [items, setItems]   = useState([])
+  const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -327,14 +343,7 @@ function TrendingSection({ onNavigate }) {
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Trending Now" rune="ᚦ" />
       <div style={{ display: 'flex', gap: '14px' }}>
-        {Array(6).fill(0).map((_, i) => (
-          <div key={i} style={{
-            flexShrink: 0, width: '160px', height: '220px',
-            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-            border: `1px solid ${C.borderPrimary}`,
-          }} />
-        ))}
+        {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)}
       </div>
     </div>
   )
@@ -354,8 +363,8 @@ function TrendingSection({ onNavigate }) {
 // ── 4. CURRENTLY READING ──────────────────────────────────────────────────────
 function ReadingCard({ manga, onNavigate }) {
   const [hovered, setHovered] = useState(false)
-  const type   = manga.type || 'Manga'
-  const tColor = TYPE_COLOR[type] || C.primary
+  const type    = manga.type || 'Manga'
+  const tColor  = TYPE_COLOR[type] || C.primary
   const progress = manga.chapters?.total
     ? (manga.chapters.current / manga.chapters.total) * 100
     : null
@@ -383,12 +392,14 @@ function ReadingCard({ manga, onNavigate }) {
       }}>
         {manga.coverImage
           ? <img src={manga.coverImage} alt={manga.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{
+          : (
+            <div style={{
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: C.textDim, fontSize: '32px',
               background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
             }}>⚔</div>
+          )
         }
         <div style={{
           position: 'absolute', top: '8px', left: '8px', padding: '3px 8px',
@@ -419,7 +430,7 @@ function ReadingCard({ manga, onNavigate }) {
         overflow: 'hidden', display: '-webkit-box',
         WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
       }}>{manga.title}</div>
-      {manga.chapters?.total && (
+      {manga.chapters?.total > 0 && (
         <div style={{ fontSize: '11px', color: C.textDim, marginTop: '3px' }}>
           Ch {manga.chapters.current} / {manga.chapters.total}
         </div>
@@ -443,7 +454,7 @@ function CurrentlyReadingSection({ manga, onNavigate }) {
 
 // ── 5. TOP 10 ─────────────────────────────────────────────────────────────────
 function Top10SearchModal({ position, onClose, onSaved }) {
-  const [query, setQuery]     = useState('')
+  const [query,   setQuery]   = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -454,8 +465,15 @@ function Top10SearchModal({ position, onClose, onSaved }) {
     try {
       const res = await searchManga(query)
       setResults(res.slice(0, 12))
-    } catch { setResults([]) }
-    finally { setLoading(false) }
+    } catch {
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') search()
   }
 
   const select = async (item) => {
@@ -469,7 +487,9 @@ function Top10SearchModal({ position, onClose, onSaved }) {
         format:     detectMangaFormat(item),
       })
       onSaved()
-    } catch (err) { console.error(err) }
+    } catch (err) {
+      console.error('Top10 select error:', err)
+    }
   }
 
   return (
@@ -487,27 +507,37 @@ function Top10SearchModal({ position, onClose, onSaved }) {
         position: 'relative', boxShadow: '0 0 80px rgba(0,0,0,0.8)',
       }}>
         <Corners color={C.primary} size={12} opacity={0.4} />
+
+        {/* Header */}
         <div style={{
           padding: '18px 24px 14px', borderBottom: `1px solid ${C.borderPrimary}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'sticky', top: 0, background: C.surface, zIndex: 10,
         }}>
-          <span style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.3em', color: C.primary }}>
-            SELECT FOR SLOT #{position}
-          </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer' }}>×</button>
+          <span style={{
+            fontFamily: '"Cinzel", serif', fontSize: '12px',
+            letterSpacing: '0.3em', color: C.primary,
+          }}>SELECT FOR SLOT #{position}</span>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.color = C.text}
+            onMouseLeave={e => e.currentTarget.style.color = C.textDim}
+          >×</button>
         </div>
+
+        {/* Search row */}
         <div style={{ padding: '20px 24px 16px', display: 'flex', gap: '10px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <span style={{
               position: 'absolute', left: '12px', top: '50%',
               transform: 'translateY(-50%)',
-              color: focused ? C.primary : C.textDim, fontSize: '14px',
+              color: focused ? C.primary : C.textDim, fontSize: '14px', pointerEvents: 'none',
             }}>⌕</span>
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && search()}
+              onKeyDown={handleKeyDown}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               placeholder="Search manga / manhwa / manhua..."
@@ -520,13 +550,20 @@ function Top10SearchModal({ position, onClose, onSaved }) {
               }}
             />
           </div>
-          <button onClick={search} disabled={loading} style={{
-            fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.15em',
-            color: C.primary, background: C.primarySoft,
-            border: `1px solid ${C.primary}55`, padding: '0 20px',
-            cursor: 'pointer', opacity: loading ? 0.6 : 1,
-          }}>{loading ? '...' : 'Search'}</button>
+          <button
+            onClick={search}
+            disabled={loading}
+            style={{
+              fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.15em',
+              color: C.primary, background: C.primarySoft,
+              border: `1px solid ${C.primary}55`, padding: '0 20px',
+              cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.6 : 1,
+              transition: 'opacity 0.2s',
+            }}
+          >{loading ? '...' : 'Search'}</button>
         </div>
+
+        {/* Results grid */}
         <div style={{
           padding: '0 24px 24px',
           display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '12px',
@@ -534,12 +571,17 @@ function Top10SearchModal({ position, onClose, onSaved }) {
           {results.map(item => {
             const tColor = TYPE_COLOR[detectMangaType(item)] || C.primary
             return (
-              <div key={item.id} onClick={() => select(item)} style={{ cursor: 'pointer' }}>
-                <div style={{
-                  height: '150px', background: C.bg,
-                  border: `1px solid ${C.borderPrimary}`, overflow: 'hidden',
-                  transition: 'border-color 0.2s',
-                }}
+              <div
+                key={item.id}
+                onClick={() => select(item)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div
+                  style={{
+                    height: '150px', background: C.bg,
+                    border: `1px solid ${C.borderPrimary}`, overflow: 'hidden',
+                    transition: 'border-color 0.2s',
+                  }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = tColor}
                   onMouseLeave={e => e.currentTarget.style.borderColor = C.borderPrimary}
                 >
@@ -548,9 +590,11 @@ function Top10SearchModal({ position, onClose, onSaved }) {
                     : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim }}>⚔</div>
                   }
                 </div>
-                <div style={{ marginTop: '6px', fontSize: '11px', color: C.textMuted, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                  {getTitle(item)}
-                </div>
+                <div style={{
+                  marginTop: '6px', fontSize: '11px', color: C.textMuted, lineHeight: 1.3,
+                  overflow: 'hidden', display: '-webkit-box',
+                  WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                }}>{getTitle(item)}</div>
               </div>
             )
           })}
@@ -561,10 +605,11 @@ function Top10SearchModal({ position, onClose, onSaved }) {
 }
 
 function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
-  const [hovered, setHovered]         = useState(false)
+  const [hovered,     setHovered]     = useState(false)
   const [showActions, setShowActions] = useState(false)
-  const isEmpty  = !entry.anilistId
-  const tColor   = entry.type ? (TYPE_COLOR[entry.type] || C.primary) : C.textDim
+
+  const isEmpty   = !entry.anilistId
+  const tColor    = entry.type ? (TYPE_COLOR[entry.type] || C.primary) : C.textDim
   const rankColor = index === 0 ? '#FFD700'
     : index === 1 ? '#E8C04A'
     : index === 2 ? '#C9963A'
@@ -577,6 +622,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
       onMouseEnter={() => { setHovered(true); setShowActions(true) }}
       onMouseLeave={() => { setHovered(false); setShowActions(false) }}
     >
+      {/* Big rank number */}
       <div style={{
         fontFamily: '"Cinzel Decorative", "Cinzel", serif',
         fontSize: 'clamp(100px, 12vw, 150px)', fontWeight: 900, lineHeight: 1,
@@ -587,6 +633,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
         transition: 'all 0.3s ease', letterSpacing: '-0.05em',
       }}>{String(index + 1)}</div>
 
+      {/* Card */}
       <div
         onClick={() => { if (isEmpty) onEdit(); else if (entry.anilistId) onNavigate('Info', entry.anilistId) }}
         style={{
@@ -611,7 +658,10 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
             gap: '10px', color: C.textDim,
           }}>
             <div style={{ fontSize: '28px', opacity: 0.4 }}>+</div>
-            <div style={{ fontSize: '9px', letterSpacing: '0.2em', fontFamily: '"Cinzel", serif', color: C.textDim + '88', textAlign: 'center', padding: '0 12px' }}>CLICK TO ADD</div>
+            <div style={{
+              fontSize: '9px', letterSpacing: '0.2em', fontFamily: '"Cinzel", serif',
+              color: C.textDim + '88', textAlign: 'center', padding: '0 12px',
+            }}>CLICK TO ADD</div>
           </div>
         ) : (
           <>
@@ -634,22 +684,29 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
         {hovered && <Corners color={isEmpty ? C.gold : tColor} size={9} opacity={0.6} />}
       </div>
 
+      {/* Edit / Clear actions */}
       {showActions && !isEmpty && (
         <div style={{
           position: 'absolute', bottom: '-34px', left: '50%',
           transform: 'translateX(-50%)',
           display: 'flex', gap: '6px', zIndex: 10, whiteSpace: 'nowrap',
         }}>
-          <button onClick={e => { e.stopPropagation(); onEdit() }} style={{
-            fontFamily: '"Cinzel", serif', fontSize: '9px', letterSpacing: '0.1em',
-            color: C.primary, background: 'rgba(10,8,16,0.95)',
-            border: `1px solid ${C.primary}44`, padding: '4px 10px', cursor: 'pointer',
-          }}>Edit</button>
-          <button onClick={e => { e.stopPropagation(); onClear() }} style={{
-            fontFamily: '"Cinzel", serif', fontSize: '9px', letterSpacing: '0.1em',
-            color: C.red, background: 'rgba(10,8,16,0.95)',
-            border: '1px solid rgba(248,113,113,0.3)', padding: '4px 10px', cursor: 'pointer',
-          }}>Clear</button>
+          <button
+            onClick={e => { e.stopPropagation(); onEdit() }}
+            style={{
+              fontFamily: '"Cinzel", serif', fontSize: '9px', letterSpacing: '0.1em',
+              color: C.primary, background: 'rgba(10,8,16,0.95)',
+              border: `1px solid ${C.primary}44`, padding: '4px 10px', cursor: 'pointer',
+            }}
+          >Edit</button>
+          <button
+            onClick={e => { e.stopPropagation(); onClear() }}
+            style={{
+              fontFamily: '"Cinzel", serif', fontSize: '9px', letterSpacing: '0.1em',
+              color: C.red, background: 'rgba(10,8,16,0.95)',
+              border: '1px solid rgba(248,113,113,0.3)', padding: '4px 10px', cursor: 'pointer',
+            }}
+          >Clear</button>
         </div>
       )}
     </div>
@@ -657,11 +714,15 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
 }
 
 function Top10Section({ onNavigate }) {
-  const [entries, setEntries]     = useState([])
-  const [loading, setLoading]     = useState(true)
+  const [entries,   setEntries]   = useState([])
+  const [loading,   setLoading]   = useState(true)
   const [modalSlot, setModalSlot] = useState(null)
   const { user } = useAuth()
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+
+  const EMPTY_SLOT = (i) => ({
+    position: i + 1, anilistId: null, title: '', coverImage: '', year: null, type: '', format: '',
+  })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -669,29 +730,33 @@ function Top10Section({ onNavigate }) {
       const res   = await axios.get(`${TOP10}/list`)
       const slots = Array.from({ length: 10 }, (_, i) => {
         const found = res.data.entries?.find(e => e.position === i + 1)
-        return found || { position: i + 1, anilistId: null, title: '', coverImage: '', year: null, type: '', format: '' }
+        return found || EMPTY_SLOT(i)
       })
       setEntries(slots)
     } catch {
-      setEntries(Array.from({ length: 10 }, (_, i) => ({ position: i + 1, anilistId: null, title: '', coverImage: '', year: null, type: '', format: '' })))
-    } finally { setLoading(false) }
+      setEntries(Array.from({ length: 10 }, (_, i) => EMPTY_SLOT(i)))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  const clearSlot = async (pos) => {
-  if (!user) {
-    navigate('/profile')
-    return
+  const guardAuth = (fn) => {
+    if (!user) { navigate('/profile'); return }
+    fn()
   }
 
-  try {
-    await axios.delete(`${TOP10}/${pos}`)
-    load()
-  } catch (err) {
-    console.error(err)
+  const clearSlot = async (pos) => {
+    guardAuth(async () => {
+      try {
+        await axios.delete(`${TOP10}/${pos}`)
+        load()
+      } catch (err) {
+        console.error('Clear slot error:', err)
+      }
+    })
   }
-}
 
   return (
     <div style={{ marginBottom: '72px' }}>
@@ -706,19 +771,17 @@ function Top10Section({ onNavigate }) {
           ))}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', paddingBottom: '44px', paddingTop: '16px' }} className="hide-scroll">
+        <div
+          className="hide-scroll"
+          style={{ overflowX: 'auto', paddingBottom: '44px', paddingTop: '16px' }}
+        >
           <div style={{ display: 'flex', gap: '4px', minWidth: 'max-content' }}>
             {entries.map((entry, i) => (
               <Top10Card
-                key={entry.position} entry={entry} index={i}
-                onEdit={() => {
-  if (!user) {
-    navigate('/profile')
-    return
-  }
-
-  setModalSlot(entry.position)
-}}
+                key={entry.position}
+                entry={entry}
+                index={i}
+                onEdit={() => guardAuth(() => setModalSlot(entry.position))}
                 onClear={() => clearSlot(entry.position)}
                 onNavigate={onNavigate}
               />
@@ -739,7 +802,7 @@ function Top10Section({ onNavigate }) {
 
 // ── 6. RECENTLY RELEASED ──────────────────────────────────────────────────────
 function RecentlyReleasedSection({ onNavigate }) {
-  const [items, setItems]     = useState([])
+  const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -756,14 +819,7 @@ function RecentlyReleasedSection({ onNavigate }) {
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Recently Released" rune="ᚾ" />
       <div style={{ display: 'flex', gap: '14px' }}>
-        {Array(5).fill(0).map((_, i) => (
-          <div key={i} style={{
-            flexShrink: 0, width: '160px', height: '220px',
-            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-            border: `1px solid ${C.borderPrimary}`,
-          }} />
-        ))}
+        {Array(5).fill(0).map((_, i) => <SkeletonCard key={i} />)}
       </div>
     </div>
   )
@@ -782,15 +838,15 @@ function RecentlyReleasedSection({ onNavigate }) {
 
 // ── 7. EXPLORE ────────────────────────────────────────────────────────────────
 function ExploreSection({ onNavigate }) {
-  const [pool, setPool]       = useState([])
-  const [shown, setShown]     = useState([])
-  const [loading, setLoading] = useState(true)
+  const [pool,     setPool]     = useState([])
+  const [shown,    setShown]    = useState([])
+  const [loading,  setLoading]  = useState(true)
   const [spinning, setSpinning] = useState(false)
   const shownIds = useRef(new Set())
 
   function pick6(arr, excludeIds) {
     const available = arr.filter(i => !excludeIds.has(i.id))
-    const source = available.length >= 6 ? available : arr
+    const source    = available.length >= 6 ? available : arr
     return [...source].sort(() => Math.random() - 0.5).slice(0, 6)
   }
 
@@ -798,13 +854,15 @@ function ExploreSection({ onNavigate }) {
     const timer = setTimeout(() => {
       fetchPopular(100)
         .then(data => {
+          // FIX: data is the raw array from fetchPopular — filter it here
+          const valid = (data || []).filter(item => getCover(item))
           setPool(valid)
           const initial = pick6(valid, new Set())
           shownIds.current = new Set(initial.map(i => i.id))
           setShown(initial)
-          setLoading(false)
         })
-        .catch(() => setLoading(false))
+        .catch(() => {})
+        .finally(() => setLoading(false))
     }, 1200)
     return () => clearTimeout(timer)
   }, [])
@@ -819,13 +877,15 @@ function ExploreSection({ onNavigate }) {
   }
 
   const RefreshButton = (
-    <button onClick={refresh} style={{
-      display: 'flex', alignItems: 'center', gap: '6px',
-      fontFamily: '"Cinzel", serif', fontSize: '10px', letterSpacing: '0.2em',
-      color: C.primary, background: 'transparent',
-      border: `1px solid ${C.primary}44`, padding: '6px 14px',
-      cursor: 'pointer', transition: 'all 0.2s',
-    }}
+    <button
+      onClick={refresh}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        fontFamily: '"Cinzel", serif', fontSize: '10px', letterSpacing: '0.2em',
+        color: C.primary, background: 'transparent',
+        border: `1px solid ${C.primary}44`, padding: '6px 14px',
+        cursor: 'pointer', transition: 'background 0.2s',
+      }}
       onMouseEnter={e => e.currentTarget.style.background = C.primarySoft}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
@@ -843,14 +903,7 @@ function ExploreSection({ onNavigate }) {
       <SectionHeader title="Explore" rune="ᚱ" right={RefreshButton} />
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px' }}>
-          {Array(6).fill(0).map((_, i) => (
-            <div key={i} style={{
-              height: '220px',
-              background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-              backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-              border: `1px solid ${C.borderPrimary}`,
-            }} />
-          ))}
+          {Array(6).fill(0).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : (
         <div style={{
@@ -942,40 +995,25 @@ function RecentlyAddedCard({ manga, onNavigate }) {
   )
 }
 
-function RecentlyAddedSection({ onNavigate }) {
-  const [manga, setManga]     = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    axios.get(API)
-      .then(r => setManga(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return null
-
-  const recent = [...manga]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 10)
-
-  if (!recent.length) return null
-
+// ── Skeleton card (shared) ────────────────────────────────────────────────────
+function SkeletonCard() {
   return (
-    <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="Recently Added to My List" rune="ᛊ" count={recent.length} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {recent.map(m => (
-          <RecentlyAddedCard key={m._id} manga={m} onNavigate={onNavigate} />
-        ))}
-      </div>
+    <div style={{ flexShrink: 0, width: '160px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{
+        width: '160px', height: '220px',
+        background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
+        backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+        border: `1px solid ${C.borderPrimary}`,
+      }} />
+      <div style={{ height: '12px', width: '80%', background: C.surface, borderRadius: '2px' }} />
+      <div style={{ height: '10px', width: '50%', background: C.surface, borderRadius: '2px' }} />
     </div>
   )
 }
 
 // ── MAIN DASHBOARD ────────────────────────────────────────────────────────────
 export default function Dashboard({ onNavigate }) {
-  const [manga, setManga]     = useState([])
+  const [manga,   setManga]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -984,6 +1022,11 @@ export default function Dashboard({ onNavigate }) {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  // Slice recent 10 from already-fetched manga — no second API call needed
+  const recentManga = [...manga]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 10)
 
   return (
     <div>
@@ -996,13 +1039,30 @@ export default function Dashboard({ onNavigate }) {
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
+      {/* Stats always render (shows zeros while loading) */}
       <StatsRow manga={manga} />
+
       <TrendingSection onNavigate={onNavigate} />
+
       {!loading && <CurrentlyReadingSection manga={manga} onNavigate={onNavigate} />}
+
       <Top10Section onNavigate={onNavigate} />
+
       <RecentlyReleasedSection onNavigate={onNavigate} />
+
       <ExploreSection onNavigate={onNavigate} />
-      <RecentlyAddedSection onNavigate={onNavigate} />
+
+      {/* Recently Added — uses manga already fetched above, no extra API call */}
+      {!loading && recentManga.length > 0 && (
+        <div style={{ marginBottom: '52px' }}>
+          <SectionHeader title="Recently Added to My List" rune="ᛊ" count={recentManga.length} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            {recentManga.map(m => (
+              <RecentlyAddedCard key={m._id} manga={m} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

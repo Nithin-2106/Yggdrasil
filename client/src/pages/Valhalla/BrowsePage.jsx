@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const ANILIST   = 'https://graphql.anilist.co'
-const PER_PAGE  = 25
-const PAGE_SIZE = 24  // cards revealed per scroll step
+const ANILIST  = 'https://graphql.anilist.co'
+const PER_PAGE = 25
+const PAGE_SIZE = 24
 
 const C = {
   bg:            '#0D0514',
@@ -12,38 +12,30 @@ const C = {
   primary:       '#A855F7',
   primarySoft:   'rgba(168,85,247,0.12)',
   crimson:       '#DC2626',
-  crimsonSoft:   'rgba(220,38,38,0.12)',
   gold:          '#D97706',
   goldBright:    '#F59E0B',
-  goldSoft:      'rgba(217,119,6,0.15)',
   rose:          '#FB7185',
-  roseSoft:      'rgba(251,113,133,0.12)',
   green:         '#34D399',
-  greenSoft:     'rgba(52,211,153,0.12)',
   text:          '#F3E8FF',
   textMuted:     '#B08EC2',
   textDim:       '#4A3560',
   borderPrimary: 'rgba(168,85,247,0.2)',
-  borderCrimson: 'rgba(220,38,38,0.18)',
 }
 
-// ── Sort modes ────────────────────────────────────────────────────────────────
 const SORT_MODES = [
-  { key: 'trending',  label: 'Trending',          rune: 'ᚦ', sort: 'TRENDING_DESC'    },
-  { key: 'toprated',  label: 'Top Rated',          rune: '★', sort: 'SCORE_DESC'       },
-  { key: 'popular',   label: 'Most Popular',       rune: 'ᚠ', sort: 'POPULARITY_DESC'  },
-  { key: 'recent',    label: 'Recently Released',  rune: 'ᚾ', sort: 'START_DATE_DESC'  },
+  { key: 'trending', label: 'Trending',         rune: 'ᚦ', sort: 'TRENDING_DESC'   },
+  { key: 'toprated', label: 'Top Rated',         rune: '★', sort: 'SCORE_DESC'      },
+  { key: 'popular',  label: 'Most Popular',      rune: 'ᚠ', sort: 'POPULARITY_DESC' },
+  { key: 'recent',   label: 'Recently Released', rune: 'ᚾ', sort: 'START_DATE_DESC' },
 ]
 
-// ── Type filters — server-side via countryOfOrigin ────────────────────────────
 const TYPE_FILTERS = [
-  { key: 'all',    label: 'All',     color: C.primary, country: null },
-  { key: 'manhwa', label: 'Manhwa',  color: C.rose,    country: 'KR' },
-  { key: 'manga',  label: 'Manga',   color: C.primary, country: 'JP' },
-  { key: 'manhua', label: 'Manhua',  color: C.gold,    country: 'CN' },
+  { key: 'all',    label: 'All',    color: C.primary, country: null },
+  { key: 'manhwa', label: 'Manhwa', color: C.rose,    country: 'KR' },
+  { key: 'manga',  label: 'Manga',  color: C.primary, country: 'JP' },
+  { key: 'manhua', label: 'Manhua', color: C.gold,    country: 'CN' },
 ]
 
-// ── AniList GraphQL helpers ───────────────────────────────────────────────────
 const MEDIA_FIELDS = `
   id
   title { english romaji native }
@@ -80,30 +72,28 @@ function buildQuery(sortKey, typeKey, page) {
   const filter  = TYPE_FILTERS.find(f => f.key === typeKey)
   const sort    = mode?.sort || 'TRENDING_DESC'
   const country = filter?.country || null
-
   const countryFilter = country ? `countryOfOrigin: "${country}"` : ''
 
-  const q = `
-    query ($page: Int) {
-      Page(page: $page, perPage: ${PER_PAGE}) {
-        pageInfo { hasNextPage }
-        media(
-          type: MANGA
-          format_not_in: [NOVEL, MUSIC]
-          sort: [${sort}]
-          status_not: NOT_YET_RELEASED
-          isAdult: false
-          ${countryFilter}
-        ) {
-          ${MEDIA_FIELDS}
+  return {
+    query: `
+      query ($page: Int) {
+        Page(page: $page, perPage: ${PER_PAGE}) {
+          pageInfo { hasNextPage }
+          media(
+            type: MANGA
+            format_not_in: [NOVEL, MUSIC]
+            sort: [${sort}]
+            status_not: NOT_YET_RELEASED
+            isAdult: false
+            ${countryFilter}
+          ) { ${MEDIA_FIELDS} }
         }
       }
-    }
-  `
-  return { query: q, variables: { page } }
+    `,
+    variables: { page },
+  }
 }
 
-// ── Display helpers ───────────────────────────────────────────────────────────
 function detectType(item) {
   const c = item.countryOfOrigin || ''
   if (c === 'KR') return 'Manhwa'
@@ -131,7 +121,8 @@ function formatScore(score) {
   return (score / 10).toFixed(1)
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
+// ── UI atoms ──────────────────────────────────────────────────────────────────
+
 function Corners({ color = C.primary, size = 10, opacity = 0.6 }) {
   const s = { position: 'absolute', width: size, height: size, opacity }
   const b = `1px solid ${color}`
@@ -163,12 +154,12 @@ function SkeletonCard() {
 
 function MangaCard({ item, onNavigate }) {
   const [hovered, setHovered] = useState(false)
-  const tColor  = typeColor(item)
-  const type    = detectType(item)
-  const title   = getTitle(item)
-  const cover   = getCover(item)
-  const score   = formatScore(item.averageScore)
-  const year    = item.startDate?.year || null
+  const tColor = typeColor(item)
+  const type   = detectType(item)
+  const title  = getTitle(item)
+  const cover  = getCover(item)
+  const score  = formatScore(item.averageScore)
+  const year   = item.startDate?.year || null
 
   return (
     <div
@@ -193,8 +184,7 @@ function MangaCard({ item, onNavigate }) {
         transition: 'all 0.25s ease',
       }}>
         {cover
-          ? <img src={cover} alt={title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -203,7 +193,6 @@ function MangaCard({ item, onNavigate }) {
             }}>᛭</div>
         }
 
-        {/* Type badge */}
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
           padding: '3px 8px', background: 'rgba(13,5,20,0.92)',
@@ -212,7 +201,6 @@ function MangaCard({ item, onNavigate }) {
           color: tColor, fontFamily: '"Cinzel", serif',
         }}>{type}</div>
 
-        {/* Score badge */}
         {score && parseFloat(score) > 0 && (
           <div style={{
             position: 'absolute', top: '8px', right: '8px',
@@ -223,7 +211,6 @@ function MangaCard({ item, onNavigate }) {
           }}>★ {score}</div>
         )}
 
-        {/* Hover glow */}
         <div style={{
           position: 'absolute', inset: 0,
           background: `linear-gradient(to top, ${tColor}33, transparent 60%)`,
@@ -297,9 +284,7 @@ function TypePill({ filter, active, onClick }) {
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
         padding: '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
       }}
-    >
-      {filter.label}
-    </button>
+    >{filter.label}</button>
   )
 }
 
@@ -318,17 +303,17 @@ function ScrollSentinel({ onVisible }) {
   return <div ref={ref} style={{ height: '1px' }} />
 }
 
-// ── Main BrowsePage ───────────────────────────────────────────────────────────
-export default function BrowsePage({ onNavigate }) {
-  const [sortMode,    setSortMode]    = useState('trending')
-  const [typeFilter,  setTypeFilter]  = useState('all')
+// ── Main ──────────────────────────────────────────────────────────────────────
 
-  // Pool — refs so scroll callbacks stay fresh
-  const pool         = useRef([])
-  const nextPage     = useRef(1)
-  const exhausted    = useRef(false)
-  const currentKey   = useRef('')
-  const fetching     = useRef(false)
+export default function BrowsePage({ onNavigate }) {
+  const [sortMode,   setSortMode]   = useState('trending')
+  const [typeFilter, setTypeFilter] = useState('all')
+
+  const pool        = useRef([])
+  const nextPage    = useRef(1)
+  const exhausted   = useRef(false)
+  const currentKey  = useRef('')
+  const fetching    = useRef(false)
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [loading,      setLoading]      = useState(true)
@@ -336,8 +321,6 @@ export default function BrowsePage({ onNavigate }) {
   const [expanding,    setExpanding]    = useState(false)
   const [poolSize,     setPoolSize]     = useState(0)
 
-  // ── Reset + initial load on sort or type change ───────────────────────────
-  // Unlike Alfheim, type change re-fetches from server (AniList supports it)
   useEffect(() => {
     const key = `${sortMode}__${typeFilter}`
     currentKey.current = key
@@ -353,26 +336,20 @@ export default function BrowsePage({ onNavigate }) {
 
     const run = async () => {
       const results = []
-
-      // Fetch 2 pages upfront for a full initial grid
       for (let p = 1; p <= 2; p++) {
         if (currentKey.current !== key) return
         const { query, variables } = buildQuery(sortMode, typeFilter, p)
         const data = await anilistFetch(query, variables)
         if (!data) break
-
-        const items = data.Page?.media || []
+        const items   = data.Page?.media || []
         const hasNext = data.Page?.pageInfo?.hasNextPage ?? false
-
         results.push(...items)
         nextPage.current = p + 1
-
         if (!hasNext) { exhausted.current = true; break }
       }
 
       if (currentKey.current !== key) return
 
-      // Dedupe by id
       const seen = new Set()
       pool.current = results.filter(i => {
         if (seen.has(i.id)) return false
@@ -388,7 +365,6 @@ export default function BrowsePage({ onNavigate }) {
     run()
   }, [sortMode, typeFilter])
 
-  // ── Expand pool: one more AniList page ───────────────────────────────────
   const expandPool = useCallback(async () => {
     if (fetching.current || exhausted.current) return
     const key = currentKey.current
@@ -405,16 +381,13 @@ export default function BrowsePage({ onNavigate }) {
     } else {
       const items   = data.Page?.media || []
       const hasNext = data.Page?.pageInfo?.hasNextPage ?? false
-
       const existingIds = new Set(pool.current.map(i => i.id))
       const fresh = items.filter(i => !existingIds.has(i.id) && getCover(i) !== '')
-
       if (fresh.length > 0) {
         pool.current = [...pool.current, ...fresh]
         nextPage.current += 1
         setPoolSize(pool.current.length)
       }
-
       if (!hasNext) exhausted.current = true
     }
 
@@ -422,24 +395,19 @@ export default function BrowsePage({ onNavigate }) {
     setExpanding(false)
   }, [sortMode, typeFilter])
 
-  // ── Infinite scroll ───────────────────────────────────────────────────────
   const onSentinelVisible = useCallback(() => {
     if (!poolReady || loading) return
-
     setVisibleCount(prev => {
       const next = Math.min(prev + PAGE_SIZE, pool.current.length)
-      // Expand when within 48 items of pool end
-      if (!exhausted.current && pool.current.length - prev < 48) {
-        expandPool()
-      }
+      if (!exhausted.current && pool.current.length - prev < 48) expandPool()
       return next
     })
   }, [poolReady, loading, expandPool])
 
-  const displayed  = pool.current.slice(0, visibleCount)
-  const activeType = TYPE_FILTERS.find(f => f.key === typeFilter)
+  const displayed   = pool.current.slice(0, visibleCount)
+  const activeType  = TYPE_FILTERS.find(f => f.key === typeFilter)
   const activeColor = activeType?.color || C.primary
-  const hasMore    = poolReady && (visibleCount < poolSize || !exhausted.current)
+  const hasMore     = poolReady && (visibleCount < poolSize || !exhausted.current)
 
   return (
     <>
@@ -450,122 +418,121 @@ export default function BrowsePage({ onNavigate }) {
         }
       `}</style>
 
-      {/* ── Sort tabs ── */}
+      {/* Sort tabs */}
       <div style={{
         display: 'flex', marginBottom: '24px',
         borderBottom: `1px solid ${C.borderPrimary}`,
         overflowX: 'auto',
       }}>
         {SORT_MODES.map(mode => (
-          <SortTab
-            key={mode.key} mode={mode}
-            active={sortMode === mode.key}
-            onClick={() => setSortMode(mode.key)}
-          />
+          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} />
         ))}
       </div>
 
-      {/* ── Type filter row ── */}
-      <div style={{
-        display: 'flex', gap: '8px', marginBottom: '28px',
-        alignItems: 'center', flexWrap: 'wrap',
-      }}>
+      {/* Type filter row */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{
           fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
           fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
         }}>Realm</span>
         <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
         {TYPE_FILTERS.map(f => (
-          <TypePill
-            key={f.key} filter={f}
-            active={typeFilter === f.key}
-            onClick={() => setTypeFilter(f.key)}
-          />
+          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} />
         ))}
 
-        {/* Stats */}
         <div style={{
           marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px',
-          fontSize: '11px', color: C.textDim,
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+          fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
         }}>
           {loading ? (
-            <span style={{ color: C.textDim }}>Consulting the runes…</span>
+            <span>Consulting the runes…</span>
           ) : (
             <>
-              <span>
-                <span style={{ color: activeColor }}>{displayed.length}</span>
-                <span style={{ color: C.textDim }}> shown</span>
-              </span>
+              <span><span style={{ color: activeColor }}>{displayed.length}</span> shown</span>
               <span style={{ color: C.borderPrimary }}>·</span>
-              <span>
-                <span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span>
-                <span style={{ color: C.textDim }}> loaded</span>
-              </span>
+              <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span> loaded</span>
               {expanding && (
-                <>
-                  <span style={{ color: C.borderPrimary }}>·</span>
-                  <span style={{ color: C.goldBright + '88' }}>expanding…</span>
-                </>
+                <><span style={{ color: C.borderPrimary }}>·</span><span style={{ color: C.goldBright + '88' }}>expanding…</span></>
               )}
             </>
           )}
         </div>
       </div>
 
-      {/* ── Divider ── */}
+      {/* Divider */}
       <div style={{
         height: '1px', marginBottom: '32px',
         background: `linear-gradient(to right, ${C.crimson}66, ${C.primary}44, transparent)`,
       }} />
 
-      {/* ── Grid ── */}
+      {/* Grid */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
-        gap: '20px 16px',
-        marginBottom: '32px',
+        gap: '20px 16px', marginBottom: '32px',
       }}>
         {loading
           ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
-          : displayed.map(item => (
-              <MangaCard key={item.id} item={item} onNavigate={onNavigate} />
-            ))
+          : displayed.map(item => <MangaCard key={item.id} item={item} onNavigate={onNavigate} />)
         }
       </div>
 
-      {/* ── Empty state ── */}
-      {!loading && poolReady && displayed.length === 0 && (
-        <div style={{
-          padding: '64px 24px', textAlign: 'center',
-          border: `1px dashed ${C.borderPrimary}`,
-          position: 'relative',
-        }}>
-          {[
-            { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-            { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-            { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-            { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-          ].map((s, i) => (
-            <div key={i} style={{ position: 'absolute', width: 12, height: 12, ...s }} />
-          ))}
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '24px',
-            color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px',
-          }}>᛭</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '13px',
-            letterSpacing: '0.25em', color: C.textMuted,
-          }}>No titles found for this combination</div>
-        </div>
-      )}
+      {/* Empty state */}
+{!loading && poolReady && displayed.length === 0 && (
+  <div
+    style={{
+      padding: '64px 24px',
+      textAlign: 'center',
+      border: `1px dashed ${C.borderPrimary}`,
+      position: 'relative',
+    }}
+  >
+    {[
+      { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+      { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+      { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+      { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+    ].map((s, i) => (
+      <div
+        key={i}
+        style={{
+          position: 'absolute',
+          width: 12,
+          height: 12,
+          ...s,
+        }}
+      />
+    ))}
 
-      {/* ── Infinite scroll sentinel ── */}
-      {!loading && hasMore && (
-        <ScrollSentinel onVisible={onSentinelVisible} />
-      )}
+    <div
+      style={{
+        fontFamily: '"Cinzel", serif',
+        fontSize: '24px',
+        color: C.primary + '33',
+        letterSpacing: '0.4em',
+        marginBottom: '16px',
+      }}
+    >
+      ᛭
+    </div>
 
-      {/* ── End of results ── */}
+    <div
+      style={{
+        fontFamily: '"Cinzel", serif',
+        fontSize: '13px',
+        letterSpacing: '0.25em',
+        color: C.textMuted,
+      }}
+    >
+      No titles found for this combination
+    </div>
+  </div>
+)}
+
+      {/* Infinite scroll sentinel */}
+      {!loading && hasMore && <ScrollSentinel onVisible={onSentinelVisible} />}
+
+      {/* End of results */}
       {!loading && poolReady && !hasMore && displayed.length > 0 && (
         <div style={{
           textAlign: 'center', padding: '32px 0 64px',

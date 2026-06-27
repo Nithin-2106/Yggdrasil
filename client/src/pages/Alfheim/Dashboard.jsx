@@ -736,11 +736,11 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
             style={{
               fontFamily: '"Cinzel", serif', fontSize: '9px', letterSpacing: '0.1em',
               color: C.red, background: 'rgba(6,11,20,0.95)',
-              border: 'rgba(248,113,113,0.3)', padding: '4px 10px', cursor: 'pointer',
+              border: `1px solid ${C.red}44`, padding: '4px 10px', cursor: 'pointer',
               transition: 'border-color 0.2s',
             }}
             onMouseEnter={e => e.currentTarget.style.borderColor = C.red + '88'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(248,113,113,0.3)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = C.red + '44'}
           >Clear</button>
         </div>
       )}
