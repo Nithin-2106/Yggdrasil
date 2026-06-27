@@ -39,22 +39,53 @@ export default async function handler(req, res) {
     });
 
   if (req.method === "PUT") {
-    doc.entries[idx] = {
-      position: pos,
-      ...req.body,
-    };
+    const field = `entries.${idx}`;
 
-    doc.markModified("entries");
-    await doc.save();
+await Top10.updateOne(
+  {
+    _id: doc._id,
+    userId: auth.user._id,
+  },
+  {
+    $set: {
+      [field]: {
+        position: pos,
+        ...req.body,
+      },
+    },
+  }
+);
+
+const updated = await Top10.findById(doc._id);
+
+return res.json(updated);
 
     return res.json(doc);
   }
 
   if (req.method === "DELETE") {
-    doc.entries[idx] = emptyEntry(pos);
+    await Top10.updateOne(
+  {
+    _id: doc._id,
+    userId: auth.user._id,
+  },
+  {
+    $set: {
+      [field]: {
+        position: pos,
+        tmdbId: null,
+        title: "",
+        coverImage: "",
+        year: null,
+        type: "",
+      },
+    },
+  }
+);
 
-    doc.markModified("entries");
-    await doc.save();
+const updated = await Top10.findById(doc._id);
+
+return res.json(updated);
 
     return res.json(doc);
   }
