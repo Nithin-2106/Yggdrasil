@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 
-
 const C = {
   bg:           '#080D1A',
   surface:      '#0F1829',
@@ -12,14 +11,11 @@ const C = {
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.12)',
   violet:       '#7C3AED',
-  violetSoft:   'rgba(124,58,237,0.15)',
   ember:        '#C2410C',
   text:         '#E8EDF5',
   textMuted:    '#8899B4',
   textDim:      '#3D4F6B',
   borderGold:   'rgba(202,138,4,0.2)',
-  borderElec:   'rgba(56,189,248,0.15)',
-  green:        '#22C55E',
 }
 
 function detectType(item) {
@@ -55,7 +51,6 @@ function SkeletonCard() {
 // ── Filter pill ───────────────────────────────────────────────────────────────
 function FilterPill({ label, active, color, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const isActive = active
   const c = color || C.electric
   return (
     <button
@@ -67,9 +62,9 @@ function FilterPill({ label, active, color, onClick }) {
         fontSize: '10px',
         letterSpacing: '0.2em',
         textTransform: 'uppercase',
-        color: isActive ? C.bg : hovered ? c : C.textMuted,
-        background: isActive ? c : hovered ? `${c}18` : 'transparent',
-        border: `1px solid ${isActive ? c : hovered ? `${c}66` : C.borderGold}`,
+        color: active ? C.bg : hovered ? c : C.textMuted,
+        background: active ? c : hovered ? `${c}18` : 'transparent',
+        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
         padding: '6px 16px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
@@ -117,7 +112,7 @@ function ResultCard({ item, onSelect }) {
           <img
             src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
             alt={item.name}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
           <div style={{
@@ -141,7 +136,6 @@ function ResultCard({ item, onSelect }) {
           fontSize: '9px', letterSpacing: '0.15em',
           color: type.color,
           fontFamily: '"Cinzel", serif',
-          transition: 'border-color 0.25s',
         }}>
           {typeLabel(type.label)}
         </div>
@@ -171,9 +165,18 @@ function ResultCard({ item, onSelect }) {
             <div style={{ position: 'absolute', bottom: 6, right: 6, width: 10, height: 10, borderBottom: `1px solid ${type.color}`, borderRight: `1px solid ${type.color}` }} />
           </>
         )}
+
+        {/* Hover gradient overlay */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `linear-gradient(to top, ${type.color}22, transparent 60%)`,
+          opacity: hovered ? 1 : 0,
+          transition: 'opacity 0.25s',
+          pointerEvents: 'none',
+        }} />
       </div>
 
-      {/* Title + year below poster */}
+      {/* Title + year */}
       <div style={{ marginTop: '10px', padding: '0 2px' }}>
         <div style={{
           fontSize: '13px',
@@ -188,13 +191,8 @@ function ResultCard({ item, onSelect }) {
         }}>
           {item.name || item.original_name}
         </div>
-        <div style={{
-          display: 'flex', gap: '8px', alignItems: 'center',
-          marginTop: '5px',
-        }}>
-          {year && (
-            <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>
-          )}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
+          {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
           {item.origin_country?.length > 0 && (
             <span style={{
               fontSize: '9px',
@@ -213,6 +211,12 @@ function ResultCard({ item, onSelect }) {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyResults({ query }) {
+  const corners = [
+    { top: 10, left: 10, borderTop: `1px solid ${C.gold}44`, borderLeft: `1px solid ${C.gold}44` },
+    { top: 10, right: 10, borderTop: `1px solid ${C.gold}44`, borderRight: `1px solid ${C.gold}44` },
+    { bottom: 10, left: 10, borderBottom: `1px solid ${C.gold}44`, borderLeft: `1px solid ${C.gold}44` },
+    { bottom: 10, right: 10, borderBottom: `1px solid ${C.gold}44`, borderRight: `1px solid ${C.gold}44` },
+  ]
   return (
     <div style={{
       gridColumn: '1 / -1',
@@ -221,31 +225,13 @@ function EmptyResults({ query }) {
       border: `1px dashed ${C.borderGold}`,
       position: 'relative',
     }}>
-      {/* corner ornaments */}
-      {[
-        { top: 10, left: 10, borderTop: `1px solid ${C.gold}44`, borderLeft: `1px solid ${C.gold}44` },
-        { top: 10, right: 10, borderTop: `1px solid ${C.gold}44`, borderRight: `1px solid ${C.gold}44` },
-        { bottom: 10, left: 10, borderBottom: `1px solid ${C.gold}44`, borderLeft: `1px solid ${C.gold}44` },
-        { bottom: 10, right: 10, borderBottom: `1px solid ${C.gold}44`, borderRight: `1px solid ${C.gold}44` },
-      ].map((s, i) => (
+      {corners.map((s, i) => (
         <div key={i} style={{ position: 'absolute', width: 12, height: 12, ...s }} />
       ))}
-      <div style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '24px',
-        color: C.gold + '33',
-        letterSpacing: '0.4em',
-        marginBottom: '16px',
-      }}>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '24px', color: C.gold + '33', letterSpacing: '0.4em', marginBottom: '16px' }}>
         ᛟ
       </div>
-      <div style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '13px',
-        letterSpacing: '0.25em',
-        color: C.textMuted,
-        marginBottom: '8px',
-      }}>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px' }}>
         No results found
       </div>
       <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.05em' }}>
@@ -257,13 +243,13 @@ function EmptyResults({ query }) {
 
 // ── Main SearchPage ───────────────────────────────────────────────────────────
 export default function SearchPage({ query: initialQuery, onSelectDrama }) {
-  const [query, setQuery]       = useState(initialQuery || '')
-  const [results, setResults]   = useState([])
-  const [filtered, setFiltered] = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [query, setQuery]             = useState(initialQuery || '')
+  const [results, setResults]         = useState([])
+  const [filtered, setFiltered]       = useState([])
+  const [loading, setLoading]         = useState(false)
+  const [searched, setSearched]       = useState(false)
   const [activeFilter, setActiveFilter] = useState('All')
-  const [focused, setFocused]   = useState(false)
+  const [focused, setFocused]         = useState(false)
   const inputRef = useRef(null)
 
   const filters = [
@@ -273,12 +259,13 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
     { label: 'Jdrama', color: C.goldBright },
   ]
 
-  // Auto-search when query comes in from navbar
+  // Auto-search when query arrives from navbar
   useEffect(() => {
     if (initialQuery) {
       setQuery(initialQuery)
       runSearch(initialQuery)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery])
 
   // Apply filter whenever results or activeFilter change
@@ -291,19 +278,19 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
   }, [results, activeFilter])
 
   const runSearch = async (q) => {
-  if (!q.trim()) return
-  setLoading(true)
-  setSearched(true)
-  setActiveFilter('All')
-  try {
-    const res = await searchDramas(q)
-    setResults(res)
-  } catch {
-    setResults([])
-  } finally {
-    setLoading(false)
+    if (!q.trim()) return
+    setLoading(true)
+    setSearched(true)
+    setActiveFilter('All')
+    try {
+      const res = await searchDramas(q)
+      setResults(res)
+    } catch {
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') runSearch(query)
@@ -311,7 +298,6 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
 
   return (
     <>
-      {/* Shimmer keyframe */}
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
@@ -320,9 +306,7 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
       `}</style>
 
       {/* Search bar row */}
-      <div style={{
-        display: 'flex', gap: '12px', marginBottom: '28px', alignItems: 'center',
-      }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', alignItems: 'center' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <span style={{
             position: 'absolute', left: '14px', top: '50%',
@@ -377,17 +361,10 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
         </button>
       </div>
 
-      {/* Filter pills — only show after first search */}
+      {/* Filter pills — only after first search with results */}
       {searched && !loading && results.length > 0 && (
-        <div style={{
-          display: 'flex', gap: '8px', marginBottom: '28px',
-          alignItems: 'center', flexWrap: 'wrap',
-        }}>
-          <span style={{
-            fontSize: '10px', letterSpacing: '0.25em',
-            color: C.textDim, fontFamily: '"Cinzel", serif',
-            marginRight: '4px', textTransform: 'uppercase',
-          }}>Filter</span>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Filter</span>
           <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
           {filters.map(f => (
             <FilterPill
@@ -398,14 +375,7 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
               onClick={() => setActiveFilter(f.label)}
             />
           ))}
-          {/* Result count */}
-          <span style={{
-            marginLeft: 'auto',
-            fontSize: '11px',
-            color: C.textDim,
-            fontFamily: '"Cinzel", serif',
-            letterSpacing: '0.1em',
-          }}>
+          <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
             <span style={{ color: C.electric }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -425,24 +395,12 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
         gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
         gap: '20px 16px',
       }}>
+        {loading && Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
 
-        {/* Loading skeletons */}
-        {loading && Array.from({ length: 12 }).map((_, i) => (
-          <SkeletonCard key={i} />
-        ))}
+        {!loading && searched && filtered.length === 0 && <EmptyResults query={query} />}
 
-        {/* Empty state */}
-        {!loading && searched && filtered.length === 0 && (
-          <EmptyResults query={query} />
-        )}
-
-        {/* Result cards */}
         {!loading && filtered.map(item => (
-          <ResultCard
-            key={item.id}
-            item={item}
-            onSelect={onSelectDrama}
-          />
+          <ResultCard key={item.id} item={item} onSelect={onSelectDrama} />
         ))}
       </div>
 
@@ -453,19 +411,10 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
           alignItems: 'center', justifyContent: 'center',
           minHeight: '35vh', gap: '16px',
         }}>
-          <div style={{
-            fontFamily: '"Cinzel", serif',
-            fontSize: '40px',
-            color: C.gold + '22',
-            letterSpacing: '0.3em',
-          }}>ᛟ</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif',
-            fontSize: '12px',
-            letterSpacing: '0.3em',
-            color: C.textDim,
-            textTransform: 'uppercase',
-          }}>Search the realms</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '40px', color: C.gold + '22', letterSpacing: '0.3em' }}>ᛟ</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
+            Search the realms
+          </div>
         </div>
       )}
     </>

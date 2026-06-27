@@ -19,15 +19,11 @@ const C = {
   borderGold:   'rgba(202,138,4,0.2)',
 }
 
-const BLOCKED_GENRES = new Set([16, 10764, 10767, 10763, 10766])
-
-// How many TMDB pages to fetch on initial load per country query
-// TMDB max is 500 pages × 20 items = 10,000 items per query
-// We fetch 25 pages upfront (500 items) and expand in background
+const BLOCKED_GENRES  = new Set([16, 10764, 10767, 10763, 10766])
 const INITIAL_PAGES   = 25
-const EXPAND_PAGES    = 15   // pages fetched per background expansion
-const PAGE_SIZE       = 24   // cards revealed per infinite scroll step
-const MAX_TMDB_PAGES  = 500  // hard TMDB limit
+const EXPAND_PAGES    = 15
+const PAGE_SIZE       = 24
+const MAX_TMDB_PAGES  = 500
 
 const SORT_MODES = [
   { key: 'mostwatched', label: 'Most Watched',      rune: 'ᚦ' },
@@ -36,8 +32,6 @@ const SORT_MODES = [
   { key: 'recent',      label: 'Recently Released', rune: 'ᚾ' },
 ]
 
-// Each type maps to one or more TMDB origin_country values
-// We run a SEPARATE query per country code and merge results
 const TYPE_FILTERS = [
   { key: 'Kdrama', label: 'Korean',   color: C.electric,   countries: ['KR'] },
   { key: 'Cdrama', label: 'Chinese',  color: C.violet,     countries: ['CN', 'TW', 'HK'] },
@@ -53,29 +47,31 @@ function getDramaType(item) {
   if (countries.includes('JP') || lang === 'ja') return 'Jdrama'
   return null
 }
+
 function typeColor(type) {
   if (type === 'Kdrama') return C.electric
   if (type === 'Cdrama') return C.violet
   if (type === 'Jdrama') return C.goldBright
   return C.electric
 }
+
 function typeLabel(type) {
   if (type === 'Kdrama') return 'Korean'
   if (type === 'Cdrama') return 'Chinese'
   if (type === 'Jdrama') return 'Japanese'
   return type
 }
-function isValidItem(item, typeKey, sortMode) {
+
+function isValidItem(item, typeKey) {
   if (!item.poster_path) return false
   const type = getDramaType(item)
   if (!type) return false
   if (typeKey && type !== typeKey) return false
-  const genres = item.genre_ids || []
-  if (genres.some(g => BLOCKED_GENRES.has(g))) return false
-  // Drop entries with fewer than 10 votes to avoid noise in both popularity and top rated
+  if ((item.genre_ids || []).some(g => BLOCKED_GENRES.has(g))) return false
   if ((item.vote_count || 0) < 10) return false
   return true
 }
+
 function dedupeById(items) {
   const seen = new Set()
   return items.filter(item => {
@@ -89,13 +85,10 @@ function getSortParam(sortMode) {
   if (sortMode === 'toprated')    return 'vote_average.desc'
   if (sortMode === 'recent')      return 'first_air_date.desc'
   if (sortMode === 'mostwatched') return 'vote_count.desc'
-  // popularity: TMDB's own algorithmic score (recency + trending weighted)
   return 'popularity.desc'
 }
+
 function getExtraParams(sortMode) {
-  // No server-side vote_count filter for toprated — it artificially caps results
-  // because many legitimate dramas have < 50 votes on TMDB.
-  // We apply a minimal client-side guard (vote_count >= 3) in isValidItem instead.
   if (sortMode === 'recent') {
     const cutoff = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000)
       .toISOString().split('T')[0]
@@ -104,7 +97,7 @@ function getExtraParams(sortMode) {
   return ''
 }
 
-// Fetch a range of pages for a SINGLE country code
+// ── FIXED: removed the double-? bug. URL is now properly constructed ──────────
 async function fetchPagesForCountry(country, sortMode, startPage, count) {
   const sortParam  = getSortParam(sortMode)
   const extraParam = getExtraParams(sortMode)
@@ -114,7 +107,6 @@ async function fetchPagesForCountry(country, sortMode, startPage, count) {
   const fetches = Array.from({ length: end - startPage + 1 }, (_, i) =>
     fetch(
       `${TMDB_BASE}?path=discover/tv` +
-      `?` +
       `&with_origin_country=${country}` +
       `&sort_by=${sortParam}` +
       `${extraParam}` +
@@ -128,55 +120,40 @@ async function fetchPagesForCountry(country, sortMode, startPage, count) {
   return pages.flat()
 }
 
-// Build initial pool: fetch INITIAL_PAGES for each country in the type filter,
-// then merge + dedupe + sort by the primary metric so the combined list is
-// in a sensible order (not just KR first, then CN, then HK…)
-async function buildPool(typeKey, sortMode) {
-  const filterDef = TYPE_FILTERS.find(f => f.key === typeKey)
-  if (!filterDef) return []
-
-  // Fetch pages for all country codes in parallel
-  const perCountryFetches = filterDef.countries.map(country =>
-    fetchPagesForCountry(country, sortMode, 1, INITIAL_PAGES)
-  )
-  const perCountryResults = await Promise.all(perCountryFetches)
-  const allRaw = perCountryResults.flat()
-
-  // Filter
-  const filtered = allRaw.filter(item => isValidItem(item, typeKey, sortMode))
-  const deduped  = dedupeById(filtered)
-
-  // Re-sort the merged set so the combined list is globally ranked
-  // (since we interleaved pages from multiple country queries)
-  return sortPool(deduped, sortMode)
-}
-
 function sortPool(items, sortMode) {
   if (sortMode === 'toprated') {
     return [...items].sort((a, b) => {
-      // Primary: vote_average desc
-      const ratingDiff = (b.vote_average || 0) - (a.vote_average || 0)
-      if (ratingDiff !== 0) return ratingDiff
-      // Tiebreak: vote_count desc (more votes = more trustworthy rating)
-      return (b.vote_count || 0) - (a.vote_count || 0)
+      const diff = (b.vote_average || 0) - (a.vote_average || 0)
+      return diff !== 0 ? diff : (b.vote_count || 0) - (a.vote_count || 0)
     })
   }
   if (sortMode === 'recent') {
     return [...items].sort((a, b) => {
-      // Primary: first_air_date desc
-      const dateDiff = (b.first_air_date || '').localeCompare(a.first_air_date || '')
-      if (dateDiff !== 0) return dateDiff
-      // Tiebreak: popularity desc
-      return (b.popularity || 0) - (a.popularity || 0)
+      const diff = (b.first_air_date || '').localeCompare(a.first_air_date || '')
+      return diff !== 0 ? diff : (b.popularity || 0) - (a.popularity || 0)
     })
   }
-  // popularity: sort by vote_count desc — "most voted = most watched"
-  // Tiebreak: vote_average desc so equally-voted shows surface the better-rated one
+  // mostwatched / popularity — sort by vote_count desc, tiebreak by vote_average
   return [...items].sort((a, b) => {
-    const countDiff = (b.vote_count || 0) - (a.vote_count || 0)
-    if (countDiff !== 0) return countDiff
-    return (b.vote_average || 0) - (a.vote_average || 0)
+    const diff = (b.vote_count || 0) - (a.vote_count || 0)
+    return diff !== 0 ? diff : (b.vote_average || 0) - (a.vote_average || 0)
   })
+}
+
+async function buildPool(typeKey, sortMode) {
+  const filterDef = TYPE_FILTERS.find(f => f.key === typeKey)
+  if (!filterDef) return []
+
+  const perCountryResults = await Promise.all(
+    filterDef.countries.map(country =>
+      fetchPagesForCountry(country, sortMode, 1, INITIAL_PAGES)
+    )
+  )
+
+  const deduped = dedupeById(
+    perCountryResults.flat().filter(item => isValidItem(item, typeKey))
+  )
+  return sortPool(deduped, sortMode)
 }
 
 // ── UI Components ─────────────────────────────────────────────────────────────
@@ -241,7 +218,7 @@ function DramaCard({ item, onNavigate }) {
         <img
           src={`${IMG_BASE}/w300${item.poster_path}`}
           alt={item.name}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
 
         <div style={{
@@ -266,6 +243,7 @@ function DramaCard({ item, onNavigate }) {
           position: 'absolute', inset: 0,
           background: `linear-gradient(to top, ${tColor}33, transparent 60%)`,
           opacity: hovered ? 1 : 0, transition: 'opacity 0.25s',
+          pointerEvents: 'none',
         }} />
 
         {hovered && <Corners color={tColor} />}
@@ -341,9 +319,10 @@ function TypePill({ filter, active, onClick }) {
   )
 }
 
-// Infinite scroll sentinel
+// ── Infinite scroll sentinel ──────────────────────────────────────────────────
 function ScrollSentinel({ onVisible }) {
   const ref = useRef(null)
+
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -354,6 +333,7 @@ function ScrollSentinel({ onVisible }) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [onVisible])
+
   return <div ref={ref} style={{ height: '1px' }} />
 }
 
@@ -362,25 +342,24 @@ export default function BrowsePage({ onNavigate }) {
   const [sortMode,   setSortMode]   = useState('popularity')
   const [typeFilter, setTypeFilter] = useState('Kdrama')
 
-  // Pool state — stored in refs so scroll callbacks don't go stale
-  const pool            = useRef([])           // all fetched + filtered items
-  const nextPageMap     = useRef({})           // { countryCode: nextPageToFetch }
-  const exhaustedMap    = useRef({})           // { countryCode: true } when no more pages
-  const currentKey      = useRef('')           // tracks active sort+type combo to cancel stale updates
+  const pool            = useRef([])
+  const nextPageMap     = useRef({})
+  const exhaustedMap    = useRef({})
+  const currentKey      = useRef('')
 
   const [visibleCount,  setVisibleCount]  = useState(PAGE_SIZE)
   const [loading,       setLoading]       = useState(true)
   const [poolReady,     setPoolReady]     = useState(false)
   const [expanding,     setExpanding]     = useState(false)
-  const [poolSize,      setPoolSize]      = useState(0)  // reactive pool size for display
+  const [poolSize,      setPoolSize]      = useState(0)
 
-  // ── Build initial pool on sort/filter change ──────────────────────────────
+  // ── Build initial pool ────────────────────────────────────────────────────
   useEffect(() => {
     const key = `${typeFilter}__${sortMode}`
     currentKey.current = key
 
-    pool.current        = []
-    nextPageMap.current = {}
+    pool.current         = []
+    nextPageMap.current  = {}
     exhaustedMap.current = {}
     setVisibleCount(PAGE_SIZE)
     setPoolReady(false)
@@ -390,23 +369,25 @@ export default function BrowsePage({ onNavigate }) {
     const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter)
     if (!filterDef) { setLoading(false); return }
 
-    // Initialise next-page pointer for each country
     filterDef.countries.forEach(c => {
       nextPageMap.current[c] = INITIAL_PAGES + 1
     })
 
-    buildPool(typeFilter, sortMode).then(sorted => {
-      if (currentKey.current !== key) return // stale, discard
-      pool.current = sorted
-      setPoolSize(sorted.length)
-      setPoolReady(true)
-    }).catch(() => {
-      if (currentKey.current !== key) return
-      pool.current = []
-      setPoolReady(true)
-    }).finally(() => {
-      if (currentKey.current === key) setLoading(false)
-    })
+    buildPool(typeFilter, sortMode)
+      .then(sorted => {
+        if (currentKey.current !== key) return
+        pool.current = sorted
+        setPoolSize(sorted.length)
+        setPoolReady(true)
+      })
+      .catch(() => {
+        if (currentKey.current !== key) return
+        pool.current = []
+        setPoolReady(true)
+      })
+      .finally(() => {
+        if (currentKey.current === key) setLoading(false)
+      })
   }, [sortMode, typeFilter])
 
   // ── Expand pool in background ─────────────────────────────────────────────
@@ -417,13 +398,11 @@ export default function BrowsePage({ onNavigate }) {
     const filterDef = TYPE_FILTERS.find(f => f.key === typeFilter)
     if (!filterDef) return
 
-    // Check if all countries are exhausted
     const allExhausted = filterDef.countries.every(c => exhaustedMap.current[c])
     if (allExhausted) return
 
     setExpanding(true)
     try {
-      // Fetch next batch for each non-exhausted country in parallel
       const fetches = filterDef.countries
         .filter(c => !exhaustedMap.current[c])
         .map(async country => {
@@ -442,15 +421,14 @@ export default function BrowsePage({ onNavigate }) {
         })
 
       const batches = await Promise.all(fetches)
-      if (currentKey.current !== key) return // stale
+      if (currentKey.current !== key) return
 
-      const newRaw     = batches.flat()
-      const filtered   = newRaw.filter(item => isValidItem(item, typeFilter, sortMode))
+      const newRaw      = batches.flat()
+      const filtered    = newRaw.filter(item => isValidItem(item, typeFilter))
       const existingIds = new Set(pool.current.map(i => i.id))
       const fresh       = filtered.filter(item => !existingIds.has(item.id))
 
       if (fresh.length > 0) {
-        // Merge and re-sort so new items slot into the correct position
         const merged = sortPool([...pool.current, ...fresh], sortMode)
         pool.current = merged
         setPoolSize(merged.length)
@@ -465,10 +443,8 @@ export default function BrowsePage({ onNavigate }) {
   // ── Infinite scroll ───────────────────────────────────────────────────────
   const onSentinelVisible = useCallback(() => {
     if (!poolReady || loading) return
-
     setVisibleCount(prev => {
       const next = Math.min(prev + PAGE_SIZE, pool.current.length)
-      // Expand pool if within 72 cards of the end
       if (next >= pool.current.length - 72) {
         expandPool()
       }
@@ -482,7 +458,7 @@ export default function BrowsePage({ onNavigate }) {
   const allExhausted = filterDef
     ? filterDef.countries.every(c => exhaustedMap.current[c])
     : true
-  const hasMore    = poolReady && (visibleCount < poolSize || !allExhausted)
+  const hasMore = poolReady && (visibleCount < poolSize || !allExhausted)
 
   return (
     <>
@@ -509,21 +485,11 @@ export default function BrowsePage({ onNavigate }) {
       </div>
 
       {/* ── Type filter row ── */}
-      <div style={{
-        display: 'flex', gap: '8px', marginBottom: '28px',
-        alignItems: 'center', flexWrap: 'wrap',
-      }}>
-        <span style={{
-          fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
-          fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
-        }}>Realm</span>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Realm</span>
         <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
         {TYPE_FILTERS.map(f => (
-          <TypePill
-            key={f.key} filter={f}
-            active={typeFilter === f.key}
-            onClick={() => setTypeFilter(f.key)}
-          />
+          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} />
         ))}
 
         {/* Stats */}
@@ -536,20 +502,11 @@ export default function BrowsePage({ onNavigate }) {
             <span style={{ color: C.textDim }}>Fetching realm…</span>
           ) : (
             <>
-              <span>
-                <span style={{ color: tColor }}>{displayed.length}</span>
-                <span style={{ color: C.textDim }}> shown</span>
-              </span>
+              <span><span style={{ color: tColor }}>{displayed.length}</span><span style={{ color: C.textDim }}> shown</span></span>
               <span style={{ color: C.borderGold }}>·</span>
-              <span>
-                <span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span>
-                <span style={{ color: C.textDim }}> loaded</span>
-              </span>
+              <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span><span style={{ color: C.textDim }}> loaded</span></span>
               {expanding && (
-                <>
-                  <span style={{ color: C.borderGold }}>·</span>
-                  <span style={{ color: C.gold + '88' }}>expanding…</span>
-                </>
+                <><span style={{ color: C.borderGold }}>·</span><span style={{ color: C.gold + '88' }}>expanding…</span></>
               )}
             </>
           )}
@@ -583,21 +540,15 @@ export default function BrowsePage({ onNavigate }) {
           padding: '64px 24px', textAlign: 'center',
           border: `1px dashed ${C.borderGold}`,
         }}>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '24px',
-            color: C.gold + '33', letterSpacing: '0.4em', marginBottom: '16px',
-          }}>ᛟ</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '13px',
-            letterSpacing: '0.25em', color: C.textMuted,
-          }}>No results found for this combination</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '24px', color: C.gold + '33', letterSpacing: '0.4em', marginBottom: '16px' }}>ᛟ</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted }}>
+            No results found for this combination
+          </div>
         </div>
       )}
 
       {/* ── Infinite scroll sentinel ── */}
-      {!loading && hasMore && (
-        <ScrollSentinel onVisible={onSentinelVisible} />
-      )}
+      {!loading && hasMore && <ScrollSentinel onVisible={onSentinelVisible} />}
 
       {/* ── End of results ── */}
       {!loading && poolReady && !hasMore && poolSize > 0 && (

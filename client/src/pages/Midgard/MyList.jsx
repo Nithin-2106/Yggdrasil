@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
 const API = '/api/drama'
@@ -9,14 +9,11 @@ const C = {
   surfaceHover: '#141F33',
   input:        '#0A1220',
   ember:        '#C2410C',
-  emberSoft:    'rgba(194,65,12,0.15)',
   gold:         '#CA8A04',
   goldBright:   '#F59E0B',
-  goldSoft:     'rgba(202,138,4,0.15)',
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.1)',
   violet:       '#7C3AED',
-  violetSoft:   'rgba(124,58,237,0.15)',
   green:        '#22C55E',
   red:          '#EF4444',
   text:         '#E8EDF5',
@@ -36,27 +33,18 @@ const STATUS_COLOR = {
   'On Hold':       C.goldBright,
 }
 
-const TYPE_COUNTRY = {
-  'Kdrama': 'Korea',
-  'Cdrama': 'China',
-  'Jdrama': 'Japan',
-}
-
-const TYPE_COLOR = {
-  'Kdrama': C.electric,
-  'Cdrama': C.violet,
-  'Jdrama': C.goldBright,
-}
+const TYPE_COUNTRY = { Kdrama: 'Korea', Cdrama: 'China', Jdrama: 'Japan' }
+const TYPE_COLOR   = { Kdrama: C.electric, Cdrama: C.violet, Jdrama: C.goldBright }
 
 const COLUMNS = [
-  { key: 'index',         label: '#',               sortable: false, width: '52px' },
-  { key: 'cover',         label: 'Poster',          sortable: false, width: '100px', rune: 'ᛈ' },
-  { key: 'title',         label: 'Title',           sortable: true,  width: 'auto',  rune: 'ᛏ' },
-  { key: 'country',       label: 'Country',         sortable: true,  width: '150px', rune: 'ᚱ' },
-  { key: 'year',          label: 'Year',            sortable: true,  width: '90px',  rune: 'ᚢ' },
-  { key: 'dateCompleted', label: 'Completed',       sortable: true,  width: '150px', rune: 'ᛞ' },
-  { key: 'format',        label: 'Format',          sortable: true,  width: '100px', rune: 'ᚠ' },
-  { key: 'rating',        label: 'My Score',        sortable: true,  width: '140px', rune: '★' },
+  { key: 'index',         label: '#',         sortable: false, width: '52px' },
+  { key: 'cover',         label: 'Poster',    sortable: false, width: '100px', rune: 'ᛈ' },
+  { key: 'title',         label: 'Title',     sortable: true,  width: 'auto',  rune: 'ᛏ' },
+  { key: 'country',       label: 'Country',   sortable: true,  width: '150px', rune: 'ᚱ' },
+  { key: 'year',          label: 'Year',      sortable: true,  width: '90px',  rune: 'ᚢ' },
+  { key: 'dateCompleted', label: 'Completed', sortable: true,  width: '150px', rune: 'ᛞ' },
+  { key: 'format',        label: 'Format',    sortable: true,  width: '100px', rune: 'ᚠ' },
+  { key: 'rating',        label: 'My Score',  sortable: true,  width: '140px', rune: '★' },
 ]
 
 function getCountry(drama) {
@@ -65,15 +53,15 @@ function getCountry(drama) {
 
 function formatDate(iso) {
   if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function ScoreDisplay({ rating }) { 
+// ── Sub-components ────────────────────────────────────────────────────────────
+function ScoreDisplay({ rating }) {
   if (!rating) return (
     <span style={{ color: C.textDim, fontSize: '14px', fontFamily: '"Cinzel", serif' }}>—</span>
   )
-  const color = rating >= 8 ? C.green : rating >= 6 ? C.goldBright : rating >= 4 ? C.ember : C.red
+  const color  = rating >= 8 ? C.green : rating >= 6 ? C.goldBright : rating >= 4 ? C.ember : C.red
   const filled = Math.round(rating / 2)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', justifyContent: 'center' }}>
@@ -87,11 +75,8 @@ function ScoreDisplay({ rating }) {
         ))}
       </div>
       <span style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '15px',
-        fontWeight: 700,
-        color,
-        textShadow: `0 0 10px ${color}66`,
+        fontFamily: '"Cinzel", serif', fontSize: '15px', fontWeight: 700,
+        color, textShadow: `0 0 10px ${color}66`,
       }}>{rating}</span>
     </div>
   )
@@ -99,10 +84,7 @@ function ScoreDisplay({ rating }) {
 
 function SortIndicator({ direction }) {
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center',
-      marginLeft: '6px', fontSize: '13px', color: C.electric,
-    }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.electric }}>
       {direction === 'asc' ? '↑' : '↓'}
     </span>
   )
@@ -122,23 +104,19 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
         padding: '16px 18px',
         textAlign: col.key === 'rating' ? 'center' : 'left',
         fontFamily: '"Cinzel", serif',
-        fontSize: '11px',
-        letterSpacing: '0.25em',
-        fontWeight: 700,
+        fontSize: '11px', letterSpacing: '0.25em', fontWeight: 700,
         textTransform: 'uppercase',
         color: isActive ? C.electric : hovered && col.sortable ? C.text : C.textMuted,
         background: isActive
           ? `linear-gradient(180deg, ${C.electricSoft}, transparent)`
           : hovered && col.sortable ? C.surfaceHover : 'transparent',
-        borderTop: 'none',
-        borderLeft: 'none',
+        borderTop: 'none', borderLeft: 'none',
         borderRight: col.key !== 'rating' ? `1px solid ${C.borderGold}` : 'none',
         borderBottom: `2px solid ${isActive ? C.electric : C.borderGold}`,
         cursor: col.sortable ? 'pointer' : 'default',
         userSelect: 'none',
         transition: 'all 0.2s ease',
         whiteSpace: 'nowrap',
-        position: 'relative',
       }}
     >
       <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '13px' }}>{col.rune}</span>
@@ -155,13 +133,9 @@ function DramaRow({ drama, index, onNavigate }) {
   const [hovered, setHovered] = useState(false)
   const sc = STATUS_COLOR[drama.status] || C.textMuted
   const tc = TYPE_COLOR[drama.type]    || C.textMuted
-
-  const goToInfo = () => {
-    if (drama.tmdbId) {
-      onNavigate('Info', drama.tmdbId)
-    }
-  }
   const canNavigate = !!drama.tmdbId
+
+  const goToInfo = () => { if (canNavigate) onNavigate('Info', drama.tmdbId) }
 
   const tdBase = {
     borderBottom: `1px solid ${C.borderGold}33`,
@@ -183,11 +157,7 @@ function DramaRow({ drama, index, onNavigate }) {
     >
       {/* # */}
       <td style={{ ...tdBase, padding: '0 18px', textAlign: 'center', width: '52px' }}>
-        <span style={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: '13px',
-          color: C.textDim,
-        }}>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', color: C.textDim }}>
           {index + 1}
         </span>
       </td>
@@ -197,23 +167,17 @@ function DramaRow({ drama, index, onNavigate }) {
         <div
           onClick={goToInfo}
           style={{
-            width: '95px',
-            height: '140px',
+            width: '95px', height: '140px',
             background: C.input,
             border: `1px solid ${hovered && canNavigate ? sc + '99' : C.borderGold}`,
             overflow: 'hidden',
             cursor: canNavigate ? 'pointer' : 'default',
             transition: 'border-color 0.2s, box-shadow 0.2s',
             boxShadow: hovered && canNavigate ? `0 4px 16px ${sc}33` : 'none',
-            flexShrink: 0,
           }}
         >
           {drama.coverImage
-            ? <img
-                src={drama.coverImage}
-                alt={drama.title}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
+            ? <img src={drama.coverImage} alt={drama.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             : <div style={{
                 width: '100%', height: '100%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -230,8 +194,7 @@ function DramaRow({ drama, index, onNavigate }) {
           <span
             onClick={goToInfo}
             style={{
-              fontSize: '16px',
-              fontWeight: 600,
+              fontSize: '16px', fontWeight: 600,
               color: hovered ? C.electric : C.text,
               cursor: canNavigate ? 'pointer' : 'default',
               transition: 'color 0.2s',
@@ -243,27 +206,17 @@ function DramaRow({ drama, index, onNavigate }) {
           >
             {drama.title}
           </span>
-
           {!canNavigate && (
-            <span style={{
-              fontSize: '10px', color: C.textDim + '88',
-              fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-            }}>
+            <span style={{ fontSize: '10px', color: C.textDim + '88', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
               (no TMDB link — re-add to enable)
             </span>
           )}
-
-          {/* Status badge replacing genre tags */}
           <span style={{
-            fontSize: '11px',
-            letterSpacing: '0.12em',
-            color: sc,
-            padding: '4px 10px',
+            fontSize: '11px', letterSpacing: '0.12em',
+            color: sc, padding: '4px 10px',
             border: `1px solid ${sc}55`,
             background: `${sc}10`,
-            fontFamily: '"Cinzel", serif',
-            whiteSpace: 'nowrap',
-            alignSelf: 'flex-start',
+            fontFamily: '"Cinzel", serif', whiteSpace: 'nowrap', alignSelf: 'flex-start',
           }}>
             {drama.status}
           </span>
@@ -272,51 +225,28 @@ function DramaRow({ drama, index, onNavigate }) {
 
       {/* Country */}
       <td style={{ ...tdBase, padding: '14px 18px', width: '150px' }}>
-        <span style={{
-          fontSize: '14px',
-          color: tc,
-          fontFamily: '"Cinzel", serif',
-          letterSpacing: '0.05em',
-        }}>
+        <span style={{ fontSize: '14px', color: tc, fontFamily: '"Cinzel", serif', letterSpacing: '0.05em' }}>
           {getCountry(drama)}
         </span>
       </td>
 
       {/* Year */}
       <td style={{ ...tdBase, padding: '14px 18px', width: '90px', textAlign: 'center' }}>
-        <span style={{
-          fontFamily: '"Cinzel", serif',
-          fontSize: '15px',
-          color: C.textMuted,
-        }}>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '15px', color: C.textMuted }}>
           {drama.year || '—'}
         </span>
       </td>
 
       {/* Date Completed */}
       <td style={{ ...tdBase, padding: '14px 18px', width: '150px' }}>
-        <span style={{
-          fontSize: '13px',
-          color: drama.dateCompleted ? C.textMuted : C.textDim,
-          fontFamily: '"Cinzel", serif',
-          letterSpacing: '0.03em',
-        }}>
+        <span style={{ fontSize: '13px', color: drama.dateCompleted ? C.textMuted : C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.03em' }}>
           {formatDate(drama.dateCompleted)}
         </span>
       </td>
 
       {/* Format */}
       <td style={{ ...tdBase, padding: '14px 18px', width: '100px', textAlign: 'center' }}>
-        <span style={{
-          fontSize: '11px',
-          letterSpacing: '0.12em',
-          color: C.textMuted,
-          padding: '4px 10px',
-          border: `1px solid ${C.borderGold}`,
-          background: C.bg,
-          fontFamily: '"Cinzel", serif',
-          whiteSpace: 'nowrap',
-        }}>
+        <span style={{ fontSize: '11px', letterSpacing: '0.12em', color: C.textMuted, padding: '4px 10px', border: `1px solid ${C.borderGold}`, background: C.bg, fontFamily: '"Cinzel", serif', whiteSpace: 'nowrap' }}>
           {drama.format || '—'}
         </span>
       </td>
@@ -334,14 +264,8 @@ function EmptyState({ status, searchQuery }) {
     <tr>
       <td colSpan={8}>
         <div style={{ padding: '64px 24px', textAlign: 'center' }}>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '32px',
-            color: C.gold + '22', letterSpacing: '0.4em', marginBottom: '16px',
-          }}>ᛗ</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '13px',
-            letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase',
-          }}>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '32px', color: C.gold + '22', letterSpacing: '0.4em', marginBottom: '16px' }}>ᛗ</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
             {searchQuery
               ? `No results for "${searchQuery}"`
               : status === 'All'
@@ -357,9 +281,8 @@ function EmptyState({ status, searchQuery }) {
 
 function StatusTab({ label, count, active, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const color = STATUS_COLOR[label] || C.electric
-  const isAll = label === 'All'
-  const activeColor = isAll ? C.electric : color
+  const color       = STATUS_COLOR[label] || C.electric
+  const activeColor = label === 'All' ? C.electric : color
 
   return (
     <button
@@ -367,25 +290,17 @@ function StatusTab({ label, count, active, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '11px',
-        letterSpacing: '0.2em',
-        textTransform: 'uppercase',
+        fontFamily: '"Cinzel", serif', fontSize: '11px',
+        letterSpacing: '0.2em', textTransform: 'uppercase',
         color: active ? activeColor : hovered ? C.text : C.textMuted,
-        background: active
-          ? `${activeColor}15`
-          : hovered ? C.surfaceHover : 'transparent',
+        background: active ? `${activeColor}15` : hovered ? C.surfaceHover : 'transparent',
         borderTop:    `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderLeft:   `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderRight:  `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
-        padding: '10px 20px',
-        cursor: 'pointer',
+        padding: '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        whiteSpace: 'nowrap',
+        display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
     >
       {label}
@@ -395,10 +310,7 @@ function StatusTab({ label, count, active, onClick }) {
           color: active ? activeColor : C.textDim,
           background: active ? `${activeColor}20` : C.surface,
           border: `1px solid ${active ? activeColor + '44' : C.borderGold}`,
-          padding: '1px 6px',
-          borderRadius: '2px',
-          fontWeight: 700,
-          transition: 'all 0.2s',
+          padding: '1px 6px', borderRadius: '2px', fontWeight: 700, transition: 'all 0.2s',
         }}>
           {count}
         </span>
@@ -407,14 +319,15 @@ function StatusTab({ label, count, active, onClick }) {
   )
 }
 
+// ── Main MyList ───────────────────────────────────────────────────────────────
 export default function MyList({ onNavigate }) {
   const [dramas, setDramas]       = useState([])
   const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('All')
   const [searchQuery, setSearch]  = useState('')
   const [focused, setFocused]     = useState(false)
-  const [sortKey, setSortKey]   = useState('createdAt')
-  const [sortDir, setSortDir]   = useState('desc')
+  const [sortKey, setSortKey]     = useState('createdAt')
+  const [sortDir, setSortDir]     = useState('desc')
 
   useEffect(() => {
     axios.get(API)
@@ -425,9 +338,7 @@ export default function MyList({ onNavigate }) {
 
   const counts = useMemo(() => {
     const map = { All: dramas.length }
-    STATUS_TABS.slice(1).forEach(s => {
-      map[s] = dramas.filter(d => d.status === s).length
-    })
+    STATUS_TABS.slice(1).forEach(s => { map[s] = dramas.filter(d => d.status === s).length })
     return map
   }, [dramas])
 
@@ -452,7 +363,7 @@ export default function MyList({ onNavigate }) {
       list = list.filter(d => d.title?.toLowerCase().includes(q))
     }
 
-    list = [...list].sort((a, b) => {
+    return [...list].sort((a, b) => {
       let aVal, bVal
       if (sortKey === 'country') {
         aVal = getCountry(a); bVal = getCountry(b)
@@ -474,22 +385,16 @@ export default function MyList({ onNavigate }) {
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-
-    return list
   }, [dramas, activeTab, searchQuery, sortKey, sortDir])
 
   return (
     <div>
       {/* ── Tabs + search row ── */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-end',
-        justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           {STATUS_TABS.map(tab => (
             <StatusTab
-              key={tab}
-              label={tab}
+              key={tab} label={tab}
               count={counts[tab] || 0}
               active={activeTab === tab}
               onClick={() => setActiveTab(tab)}
@@ -518,7 +423,7 @@ export default function MyList({ onNavigate }) {
               color: C.text, fontSize: '13px',
               fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
               outline: 'none', transition: 'all 0.3s ease',
-              boxShadow: focused ? `0 0 16px ${C.electricSoft}` : 'none',
+              boxShadow: focused ? `0 0 16px rgba(56,189,248,0.1)` : 'none',
             }}
           />
           {searchQuery && (
@@ -537,14 +442,8 @@ export default function MyList({ onNavigate }) {
       </div>
 
       {/* ── Count row ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'flex-end', padding: '10px 0 0',
-      }}>
-        <span style={{
-          fontSize: '13px', color: C.textDim,
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-        }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '10px 0 0' }}>
+        <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
           <span style={{ color: C.electric }}>{filtered.length}</span> entr{filtered.length !== 1 ? 'ies' : 'y'}
         </span>
       </div>
@@ -557,11 +456,7 @@ export default function MyList({ onNavigate }) {
 
       {/* ── Table ── */}
       {loading ? (
-        <div style={{
-          padding: '64px', textAlign: 'center',
-          fontFamily: '"Cinzel", serif', fontSize: '13px',
-          letterSpacing: '0.3em', color: C.textDim,
-        }}>
+        <div style={{ padding: '64px', textAlign: 'center', fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim }}>
           Loading the realm...
         </div>
       ) : (
@@ -578,12 +473,7 @@ export default function MyList({ onNavigate }) {
               {filtered.length === 0
                 ? <EmptyState status={activeTab} searchQuery={searchQuery} />
                 : filtered.map((drama, i) => (
-                    <DramaRow
-                      key={drama._id}
-                      drama={drama}
-                      index={i}
-                      onNavigate={onNavigate}
-                    />
+                    <DramaRow key={drama._id} drama={drama} index={i} onNavigate={onNavigate} />
                   ))
               }
             </tbody>
