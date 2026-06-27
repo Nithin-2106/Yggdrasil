@@ -260,10 +260,13 @@ export default function Valhalla() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMangaId, setSelectedMangaId] = useState(null)
 
+  // Replace with:
+  const navigate = useNavigate()
+
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)
-    if (page === 'Info')   setSelectedMangaId(payload)
+    if (page === 'Info')   setSelectedDramaId(payload)
     setActivePage(page)
   }
 

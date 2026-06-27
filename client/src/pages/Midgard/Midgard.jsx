@@ -311,6 +311,9 @@ function Midgard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDramaId, setSelectedDramaId] = useState(null)
 
+  // Replace with:
+  const navigate = useNavigate()
+
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)

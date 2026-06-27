@@ -254,10 +254,13 @@ export default function Alfheim() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAnimeId, setSelectedAnimeId] = useState(null)
 
+  // Replace with:
+const navigate = useNavigate()
+
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
     if (page === 'Search') setSearchQuery(payload)
-    if (page === 'Info')   setSelectedAnimeId(payload)
+    if (page === 'Info')   setSelectedDramaId(payload)
     setActivePage(page)
   }
 
