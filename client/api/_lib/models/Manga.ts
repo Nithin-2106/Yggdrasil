@@ -1,11 +1,36 @@
-import mongoose from 'mongoose'
+import mongoose, { Document, Model, Types } from 'mongoose'
+import type { IPlatform } from './Anime.js'
 
-const platformSchema = new mongoose.Schema({
+export type MangaStatus = 'Reading' | 'Completed' | 'Dropped' | 'Plan to Read' | 'On Hold'
+export type MangaType = 'Manhwa' | 'Manga' | 'Manhua'
+export type MangaFormat = 'Series' | 'Special'
+
+export interface IManga extends Document {
+  title: string
+  anilistId: number | null
+  coverImage: string
+  status: MangaStatus
+  type: MangaType
+  format: MangaFormat
+  rating: number | null
+  chapters: { current: number; total: number | null }
+  year: number | null
+  genres: string[]
+  review: string
+  rereadCount: number
+  dateStarted: Date | null
+  dateCompleted: Date | null
+  platforms: IPlatform[]
+  customTags: string[]
+  userId: Types.ObjectId
+}
+
+const platformSchema = new mongoose.Schema<IPlatform>({
   name: { type: String, required: true },
   url:  { type: String, default: '' }
 }, { _id: false })
 
-const mangaSchema = new mongoose.Schema({
+const mangaSchema = new mongoose.Schema<IManga>({
   title:        { type: String, required: true },
   anilistId:    { type: Number, default: null },
   coverImage:   { type: String, default: '' },
@@ -28,4 +53,4 @@ const mangaSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
-export default mongoose.models.Manga || mongoose.model('Manga', mangaSchema)
+export default (mongoose.models.Manga as Model<IManga>) || mongoose.model<IManga>('Manga', mangaSchema)

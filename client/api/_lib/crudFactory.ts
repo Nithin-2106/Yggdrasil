@@ -1,17 +1,17 @@
 import { connectDB } from './mongodb.js'
 import { requireAuth } from './auth.js'
-import { MEDIA_MODELS } from './models/mediaModels.js'
+import { MEDIA_MODELS, isMediaType } from './models/mediaModels.js'
+import type { ApiRequest, ApiResponse } from './httpTypes.js'
 
 // Resolves the Mongoose model for the current request's `type` param.
 // Writes a 404 and returns null if the type isn't recognized.
-function resolveModel(req, res) {
+function resolveModel(req: ApiRequest, res: ApiResponse) {
   const { type } = req.query
-  const Model = MEDIA_MODELS[type]
-  if (!Model) {
+  if (!isMediaType(type)) {
     res.status(404).json({ message: `Unknown media type: ${type}` })
     return null
   }
-  return Model
+  return MEDIA_MODELS[type]
 }
 
 // Shared handler for GET (list) / POST (create) on /api/media/[type]
@@ -19,7 +19,7 @@ function resolveModel(req, res) {
 // - list sorted by title ascending
 // - create scoped to the authenticated user
 export function createListHandler() {
-  return async function handler(req, res) {
+  return async function handler(req: ApiRequest, res: ApiResponse) {
     await connectDB()
     const { user, error, status } = await requireAuth(req)
     if (error) return res.status(status).json({ message: error })
@@ -44,7 +44,7 @@ export function createListHandler() {
 // Shared handler for GET (single) / PUT (update) / DELETE on /api/media/[type]/[id]
 // Matches the exact behavior of the former anime/manga/drama [id].js files.
 export function createItemHandler() {
-  return async function handler(req, res) {
+  return async function handler(req: ApiRequest, res: ApiResponse) {
     await connectDB()
     const { user, error, status } = await requireAuth(req)
     if (error) return res.status(status).json({ message: error })

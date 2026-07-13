@@ -1,11 +1,38 @@
-import mongoose from 'mongoose'
+import mongoose, { Document, Model, Types } from 'mongoose'
 
-const platformSchema = new mongoose.Schema({
+export interface IPlatform {
+  name: string
+  url: string
+}
+
+export type AnimeStatus = 'Watching' | 'Completed' | 'Dropped' | 'Plan to Watch' | 'On Hold'
+export type AnimeFormat = 'Series' | 'Movie' | 'Special' | 'OVA'
+
+export interface IAnime extends Document {
+  title: string
+  malId: number | null
+  coverImage: string
+  status: AnimeStatus
+  format: AnimeFormat
+  rating: number | null
+  episodes: { current: number; total: number | null }
+  year: number | null
+  genres: string[]
+  review: string
+  rewatchCount: number
+  dateStarted: Date | null
+  dateCompleted: Date | null
+  platforms: IPlatform[]
+  customTags: string[]
+  userId: Types.ObjectId
+}
+
+const platformSchema = new mongoose.Schema<IPlatform>({
   name: { type: String, required: true },
   url:  { type: String, default: '' }
 }, { _id: false })
 
-const animeSchema = new mongoose.Schema({
+const animeSchema = new mongoose.Schema<IAnime>({
   title:        { type: String, required: true },
   malId:        { type: Number, default: null },
   coverImage:   { type: String, default: '' },
@@ -27,4 +54,4 @@ const animeSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true })
 
-export default mongoose.models.Anime || mongoose.model('Anime', animeSchema)
+export default (mongoose.models.Anime as Model<IAnime>) || mongoose.model<IAnime>('Anime', animeSchema)
