@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 
 const TMDB_BASE = '/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
-const API       = '/api/drama'
+const API       = '/api/media/drama'
 
 const C = {
   bg:           '#080D1A',

@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 const JIKAN = 'https://api.jikan.moe/v4'
-const API   = '/api/anime'
+const API   = '/api/media/anime'
 
 const C = {
   bg:           '#050C10',

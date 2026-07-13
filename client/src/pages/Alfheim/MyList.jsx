@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
-const API = '/api/anime'
+const API = '/api/media/anime'
 
 const C = {
   bg:           '#050C10',

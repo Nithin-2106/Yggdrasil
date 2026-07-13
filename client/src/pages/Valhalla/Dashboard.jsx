@@ -17,7 +17,7 @@ import {
   formatScore,
 } from '../../utils/anilistSearch'
 
-const API    = '/api/manga'
+const API    = '/api/media/manga'
 const TOP10  = '/api/mangatop10'
 
 const C = {

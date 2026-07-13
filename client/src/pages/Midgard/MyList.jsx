@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
-const API = '/api/drama'
+const API = '/api/media/drama'
 
 const C = {
   bg:           '#080D1A',

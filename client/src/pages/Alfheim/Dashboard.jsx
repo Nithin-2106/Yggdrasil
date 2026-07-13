@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import Counter from '../../components/Counter'
 
 const JIKAN     = 'https://api.jikan.moe/v4'
-const API       = '/api/anime'
+const API       = '/api/media/anime'
 const TOP10_LIST = '/api/animetop10/list'
 const TOP10_SLOT = '/api/animetop10'
 

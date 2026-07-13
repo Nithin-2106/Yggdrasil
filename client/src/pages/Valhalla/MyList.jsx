@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 
-const API = '/api/manga'
+const API = '/api/media/manga'
 
 const C = {
   bg:           '#0A0810',

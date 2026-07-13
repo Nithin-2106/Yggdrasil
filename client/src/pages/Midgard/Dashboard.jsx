@@ -7,7 +7,7 @@ import Counter          from '../../components/Counter'
 
 const TMDB_BASE  = '/api/tmdb'
 const IMG_BASE   = 'https://image.tmdb.org/t/p'
-const API        = '/api/drama'
+const API        = '/api/media/drama'
 const TOP10_API  = '/api/top10'
 
 const C = {

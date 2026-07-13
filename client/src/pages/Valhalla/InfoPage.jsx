@@ -13,7 +13,7 @@ import {
   formatStatus,
 } from '../../utils/anilistSearch'
 
-const API = '/api/manga'
+const API = '/api/media/manga'
 
 const C = {
   bg:           '#0A0810',
