@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import SearchPage  from './SearchPage'
 import InfoPage    from './InfoPage'
 import MyList      from './MyList'
@@ -252,17 +252,21 @@ function PageTitle({ activePage, searchQuery }) {
 export default function Alfheim() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [activePage,      setActivePage]      = useState('Dashboard')
-  const [searchQuery,     setSearchQuery]     = useState('')
-  const [selectedAnimeId, setSelectedAnimeId] = useState(null)
+
+  const activePage      = searchParams.get('page') || 'Dashboard'
+  const searchQuery     = searchParams.get('q') || ''
+  const selectedAnimeId = searchParams.get('id') || null
 
   // Central navigation handler — navigate is stable here at the top level
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
-    if (page === 'Search') setSearchQuery(payload)
-    if (page === 'Info')   setSelectedAnimeId(payload)
-    setActivePage(page)
+    const next = new URLSearchParams(searchParams)
+    next.set('page', page)
+    if (page === 'Search') next.set('q', payload)
+    if (page === 'Info')   next.set('id', payload)
+    setSearchParams(next)
   }
 
   return (
