@@ -1199,25 +1199,31 @@ function ExploreSection({ onNavigate }) {
   }
 
   useEffect(() => {
-    const queries = [
-      'with_origin_country=KR&sort_by=popularity.desc',
-      'with_origin_country=KR&sort_by=vote_average.desc&vote_count.gte=100',
-      'with_origin_country=CN&sort_by=popularity.desc',
-      'with_origin_country=TW&sort_by=popularity.desc',
-      'with_origin_country=JP&sort_by=popularity.desc',
-      'with_origin_country=KR&sort_by=first_air_date.desc',
+    let cancelled = false
+
+    const countries = ['KR', 'CN', 'TW', 'JP']
+    const sorts = [
+      'popularity.desc',
+      'vote_average.desc&vote_count.gte=100',
+      'first_air_date.desc',
     ]
 
-    Promise.all(
-      queries.flatMap(q =>
-        [1, 2].map(p =>
-          fetch(`${TMDB_BASE}?path=discover/tv?${q}&page=${p}`)
-            .then(r => r.json())
-            .then(d => d.results || [])
-            .catch(() => [])
+    // Cross product of country × sort — each combo hits a random page (1–8)
+    // instead of always the same top-of-catalog pages, so the pool actually varies.
+    const fetches = countries.flatMap(country =>
+      sorts.map(sort => {
+        const randomPage = Math.floor(Math.random() * 8) + 1
+        return fetch(
+          `${TMDB_BASE}?path=discover/tv&with_origin_country=${country}&sort_by=${sort}&page=${randomPage}`
         )
-      )
-    ).then(pages => {
+          .then(r => r.json())
+          .then(d => d.results || [])
+          .catch(() => [])
+      })
+    )
+
+    Promise.all(fetches).then(pages => {
+      if (cancelled) return
       const seen = new Set()
       const all  = pages.flat().filter(item => {
         if (seen.has(item.id)) return false
@@ -1229,7 +1235,9 @@ function ExploreSection({ onNavigate }) {
       shownIds.current = new Set(initial.map(i => i.id))
       setShown(initial)
     }).catch(console.error)
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
   }, [])
 
   const refresh = () => {

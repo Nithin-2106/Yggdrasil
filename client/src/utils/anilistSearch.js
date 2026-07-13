@@ -162,6 +162,25 @@ export async function fetchPopular(limit = 50) {
   // Filter here so callers receive clean data
   return media.filter(item => getCover(item) !== '')
 }
+// ── Generic sort-based fetch (used by Explore for wider variety) ────────────
+export async function fetchBySort(sort, page = 1, perPage = 40) {
+  const q = `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(
+          type: MANGA
+          format_not_in: [NOVEL]
+          sort: [${sort}]
+          isAdult: false
+        ) {
+          ${MEDIA_FIELDS}
+        }
+      }
+    }
+  `
+  const data = await anilistFetch(q, { page, perPage })
+  return data?.Page?.media || []
+}
 
 // ── Recently Released ─────────────────────────────────────────────────────────
 export async function fetchRecentlyReleased(limit = 25) {

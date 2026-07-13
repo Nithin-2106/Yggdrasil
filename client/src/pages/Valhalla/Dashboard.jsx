@@ -7,6 +7,7 @@ import {
   fetchTrending,
   fetchPopular,
   fetchRecentlyReleased,
+  fetchBySort,
   searchManga,
   detectMangaType,
   detectMangaFormat,
@@ -851,20 +852,31 @@ function ExploreSection({ onNavigate }) {
   }
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchPopular(100)
-        .then(data => {
-          // FIX: data is the raw array from fetchPopular — filter it here
-          const valid = (data || []).filter(item => getCover(item))
-          setPool(valid)
-          const initial = pick6(valid, new Set())
-          shownIds.current = new Set(initial.map(i => i.id))
-          setShown(initial)
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false))
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      // Rotate through several sort modes at random pages instead of always
+      // POPULARITY_DESC page 1, so the pool actually varies between loads.
+      const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'FAVOURITES_DESC']
+      const fetches = sorts.map(sort => {
+        const randomPage = Math.floor(Math.random() * 5) + 1
+        return fetchBySort(sort, randomPage, 40).catch(() => [])
+      })
+      const results = await Promise.all(fetches)
+      if (cancelled) return
+      const seen = new Set()
+      const valid = results.flat().filter(item => {
+        if (!getCover(item)) return false
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
+      setPool(valid)
+      const initial = pick6(valid, new Set())
+      shownIds.current = new Set(initial.map(i => i.id))
+      setShown(initial)
+      setLoading(false)
     }, 1200)
-    return () => clearTimeout(timer)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [])
 
   const refresh = () => {
