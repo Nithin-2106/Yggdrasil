@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import SearchPage  from './SearchPage'
 import InfoPage    from './InfoPage'
 import MyList      from './MyList'
@@ -250,15 +250,19 @@ function PageTitle({ activePage, searchQuery }) {
 export default function Valhalla() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
-  const [activePage,      setActivePage]      = useState('Dashboard')
-  const [searchQuery,     setSearchQuery]     = useState('')
-  const [selectedMangaId, setSelectedMangaId] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const activePage      = searchParams.get('page') || 'Dashboard'
+  const searchQuery     = searchParams.get('q') || ''
+  const selectedMangaId = searchParams.get('id') || null
 
   const handleNavigate = (page, payload = '') => {
     if (page === 'My List' && !user) { navigate('/profile'); return }
-    if (page === 'Search') setSearchQuery(payload)
-    if (page === 'Info')   setSelectedMangaId(payload)
-    setActivePage(page)
+    const next = new URLSearchParams(searchParams)
+    next.set('page', page)
+    if (page === 'Search') next.set('q', payload)
+    if (page === 'Info')   next.set('id', payload)
+    setSearchParams(next)
   }
 
   return (
