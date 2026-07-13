@@ -22,7 +22,7 @@ async function safeFetch(url, timeoutMs = 6000) {
     return await res.json()
   } catch (err) {
     clearTimeout(timer)
-    if (err.name === 'AbortError') throw new Error('Request timed out')
+    if (err.name === 'AbortError') throw new Error('Request timed out', { cause: err })
     throw err
   }
 }

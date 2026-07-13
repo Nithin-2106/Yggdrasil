@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import SearchPage  from './SearchPage'
 import InfoPage    from './InfoPage'
-import Counter     from '../../components/Counter'
 import MyList      from './MyList'
 import Dashboard   from './Dashboard'
 import BrowsePage  from './BrowsePage'
@@ -77,20 +76,6 @@ function VegvisirWatermark() {
       <circle cx="100" cy="100" r="20" fill="none" stroke="#CA8A04" strokeWidth="1" />
       <circle cx="100" cy="100" r="6"  fill="#CA8A04" opacity="0.5" />
     </svg>
-  )
-}
-
-// ── Corner ornament ───────────────────────────────────────────────────────────
-function Corners({ color = C.goldBright, size = 14, opacity = 1 }) {
-  const s = { position: 'absolute', width: size, height: size, opacity }
-  const b = `1px solid ${color}`
-  return (
-    <>
-      <div style={{ ...s, top: 10, left:  10, borderTop:    b, borderLeft:  b }} />
-      <div style={{ ...s, top: 10, right: 10, borderTop:    b, borderRight: b }} />
-      <div style={{ ...s, bottom: 10, left:  10, borderBottom: b, borderLeft:  b }} />
-      <div style={{ ...s, bottom: 10, right: 10, borderBottom: b, borderRight: b }} />
-    </>
   )
 }
 

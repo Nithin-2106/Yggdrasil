@@ -20,7 +20,7 @@ async function safeFetch(url, timeoutMs = 10000) {
     } catch (err) {
       clearTimeout(timer)
       if (err.name === 'AbortError') {
-        if (attempt === 3) throw new Error('Request timed out')
+        if (attempt === 3) throw new Error('Request timed out', { cause: err })
         continue
       }
       if (attempt === 3) throw err

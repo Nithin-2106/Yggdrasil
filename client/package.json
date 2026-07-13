@@ -5,13 +5,15 @@
   "description": "Personal Asian media tracker — dramas, anime, and manga across three Norse realms.",
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "axios": "^1.18.0",
@@ -36,8 +38,10 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "mongodb-memory-server": "^11.2.0",
     "tailwindcss": "^4.3.1",
     "typescript": "5.7.3",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.10"
   }
 }
