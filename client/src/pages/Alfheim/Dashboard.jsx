@@ -887,29 +887,9 @@ function ExploreSection({ onNavigate }) {
   useEffect(() => {
     let cancelled = false
     const timer = setTimeout(async () => {
-      // Rotate through several Jikan sort filters at random pages instead of
-      // always bypopularity/page=2 — sequential + staggered to respect the
-      // 3 req/sec Jikan limit (jikanFetch already retries on 429).
-      const filters = ['bypopularity', 'favorite', null] // null = plain top/anime (rank-sorted)
-      const results = []
-      for (const filter of filters) {
-        if (cancelled) return
-        const randomPage = Math.floor(Math.random() * 5) + 1
-        const url = filter
-          ? `${JIKAN}/top/anime?filter=${filter}&page=${randomPage}`
-          : `${JIKAN}/top/anime?page=${randomPage}`
-        const data = await jikanFetch(url)
-        results.push(...data)
-        await sleep(500)
-      }
+      const data = await jikanFetch(`${JIKAN}/top/anime?filter=bypopularity&page=2`)
       if (cancelled) return
-      const seen = new Set()
-      const valid = results.filter(i => {
-        if (!i.images?.jpg?.image_url) return false
-        if (seen.has(i.mal_id)) return false
-        seen.add(i.mal_id)
-        return true
-      })
+      const valid = data.filter(i => i.images?.jpg?.image_url)
       setPool(valid)
       const initial = pick6(valid, new Set())
       shownIds.current = new Set(initial.map(i => i.mal_id))
