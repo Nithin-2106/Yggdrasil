@@ -9,6 +9,7 @@ let authHandler
 let User
 let AnimeTop10
 let tokenA, tokenB
+let RateLimitAttempt
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
@@ -20,6 +21,7 @@ beforeAll(async () => {
   ;({ default: handler } = await import('../[...params].js'))
   ;({ default: User } = await import('../../_lib/models/User.js'))
   ;({ default: AnimeTop10 } = await import('../../_lib/models/AnimeTop10.js'))
+  ;({ default: RateLimitAttempt } = await import('../../_lib/models/RateLimitAttempt.js'))
 
   await connectDB()
 }, 30000)
@@ -49,12 +51,10 @@ async function ensureListExists(token) {
 beforeEach(async () => {
   await User.deleteMany({})
   await AnimeTop10.deleteMany({})
+  await RateLimitAttempt.deleteMany({})
   tokenA = await registerAndLogin('userA', 'a@example.com')
   tokenB = await registerAndLogin('userB', 'b@example.com')
 
-  // PUT/DELETE require the AnimeTop10 doc to already exist (only GET /list
-  // creates it) — mirrors real usage, since the frontend always loads the
-  // list on mount before showing edit controls.
   await ensureListExists(tokenA)
   await ensureListExists(tokenB)
 })
@@ -114,12 +114,12 @@ describe('GET /api/animetop10/list', () => {
 
 describe('PUT /api/animetop10/:position', () => {
 
-  it('returns 404 for an out-of-range position (no explicit bounds check exists)', async () => {
+  it('rejects an out-of-range position with 400 (explicit bounds check now exists)', async () => {
     const { req, res } = mockReqRes({
       method: 'PUT', query: { params: ['99'] }, headers: authHeader(tokenA), body: sampleSlotBody,
     })
     await handler(req, res)
-    expect(res.statusCode).toBe(404)
+    expect(res.statusCode).toBe(400)
   })
 
   it('fills the given slot', async () => {

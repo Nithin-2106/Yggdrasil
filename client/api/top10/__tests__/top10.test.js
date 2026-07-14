@@ -10,6 +10,8 @@ let authHandler
 let User
 let Top10
 let tokenA, tokenB
+let RateLimitAttempt
+
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
@@ -22,6 +24,7 @@ beforeAll(async () => {
   ;({ default: itemHandler } = await import('../[region]/[position].js'))
   ;({ default: User } = await import('../../_lib/models/User.js'))
   ;({ default: Top10 } = await import('../../_lib/models/Top10.js'))
+  ;({ default: RateLimitAttempt } = await import('../../_lib/models/RateLimitAttempt.js'))
 
   await connectDB()
 }, 30000)
@@ -53,12 +56,10 @@ async function ensureRegionExists(region, token) {
 beforeEach(async () => {
   await User.deleteMany({})
   await Top10.deleteMany({})
+  await RateLimitAttempt.deleteMany({})
   tokenA = await registerAndLogin('userA', 'a@example.com')
   tokenB = await registerAndLogin('userB', 'b@example.com')
 
-  // PUT/DELETE require the region doc to already exist — mirrors real
-  // usage, since Dashboard's Top10Section always loads(region) on mount
-  // and on every tab switch before showing edit controls.
   await ensureRegionExists('Korean', tokenA)
   await ensureRegionExists('Chinese', tokenA)
   await ensureRegionExists('Korean', tokenB)

@@ -1,6 +1,8 @@
 import { connectDB } from "../../_lib/mongodb.js";
 import Top10 from "../../_lib/models/Top10.js";
 import { requireAuth } from "../../_lib/auth.js";
+import { validateBody, ValidationError } from "../../_lib/validate.js";
+import { dramaSlotSchema, positionSchema } from "../../_lib/schemas/top10.js";
 
 export default async function handler(req, res) {
   await connectDB();
@@ -10,10 +12,17 @@ export default async function handler(req, res) {
     return res.status(auth.status).json({ message: auth.error });
 
   const { region, position } = req.query;
-  const pos = Number(position);
 
-  if (!region || isNaN(pos) || pos < 1 || pos > 10)
-    return res.status(400).json({ message: "Invalid region or position" });
+  if (!region)
+    return res.status(400).json({ message: "Invalid region" });
+
+  let pos;
+  try {
+    pos = validateBody(positionSchema, Number(position));
+  } catch (err) {
+    if (err instanceof ValidationError) return res.status(400).json({ message: err.message });
+    throw err;
+  }
 
   if (req.method !== "PUT" && req.method !== "DELETE")
     return res.status(405).json({ message: "Method not allowed" });
@@ -29,17 +38,25 @@ export default async function handler(req, res) {
   const field = `entries.${idx}`;
 
   if (req.method === "PUT") {
+    let data;
+    try {
+      data = validateBody(dramaSlotSchema, req.body);
+    } catch (err) {
+      if (err instanceof ValidationError) return res.status(400).json({ message: err.message });
+      throw err;
+    }
+
     await Top10.updateOne(
       { _id: doc._id, userId: auth.user._id },
       {
         $set: {
           [field]: {
             position: pos,
-            tmdbId:     req.body.tmdbId     ?? null,
-            title:      req.body.title      ?? "",
-            coverImage: req.body.coverImage ?? "",
-            year:       req.body.year       ?? null,
-            type:       req.body.type       ?? "",
+            tmdbId:     data.tmdbId     ?? null,
+            title:      data.title      ?? "",
+            coverImage: data.coverImage ?? "",
+            year:       data.year       ?? null,
+            type:       data.type       ?? "",
           },
         },
       }

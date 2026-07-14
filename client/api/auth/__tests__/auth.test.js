@@ -7,6 +7,7 @@ import { mockReqRes } from '../../_lib/__tests__/testHelpers.js'
 let mongod
 let handler
 let User
+let RateLimitAttempt
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
@@ -18,6 +19,7 @@ beforeAll(async () => {
   const { connectDB } = await import('../../_lib/mongodb.js')
   ;({ default: handler } = await import('../[action].js'))
   ;({ default: User } = await import('../../_lib/models/User.js'))
+  ;({ default: RateLimitAttempt } = await import('../../_lib/models/RateLimitAttempt.js'))
 
   // Actually establish the connection — the handler calls connectDB()
   // per-request, but beforeEach's deleteMany() runs before any request
@@ -33,6 +35,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await User.deleteMany({})
+  await RateLimitAttempt.deleteMany({})
 })
 
 describe('POST /api/auth/register', () => {
@@ -222,7 +225,7 @@ describe('GET /api/auth/me', () => {
     expect(res.statusCode).toBe(401)
   })
 
-  it('rejects a malformed token', async () => {
+  it('rejects a malformed token with 401 (not 500)', async () => {
     const { req, res } = mockReqRes({
       method: 'GET',
       query: { action: 'me' },
@@ -231,12 +234,7 @@ describe('GET /api/auth/me', () => {
 
     await handler(req, res)
 
-    // NOTE: this currently returns 500, not 401 — jwt.verify() throws inside
-    // the /me branch but there's no dedicated try/catch around it, so it
-    // falls through to the handler's outer catch. Flagging for item 6
-    // (security hardening) rather than fixing now, since that's a scope
-    // change to auth.js you haven't approved yet.
-    expect(res.statusCode).toBe(500)
+    expect(res.statusCode).toBe(401)
   })
 
   it('rejects a token for a deleted user', async () => {
@@ -252,5 +250,88 @@ describe('GET /api/auth/me', () => {
     await handler(req, res)
 
     expect(res.statusCode).toBe(404)
+  })
+})
+
+describe('Rate limiting', () => {
+  it('blocks login after 5 failed attempts, even with the correct password on the 6th try', async () => {
+    await User.create({ username: 'limited', email: 'limited@example.com', password: 'hunter22' })
+
+    for (let i = 0; i < 5; i++) {
+      const { req, res } = mockReqRes({
+        method: 'POST',
+        query: { action: 'login' },
+        body: { email: 'limited@example.com', password: 'wrongpass' },
+      })
+      await handler(req, res)
+      expect(res.statusCode).toBe(401)
+    }
+
+    const { req, res } = mockReqRes({
+      method: 'POST',
+      query: { action: 'login' },
+      body: { email: 'limited@example.com', password: 'hunter22' }, // correct this time
+    })
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(429)
+  })
+
+  it('does not count successful logins toward the failed-attempt limit', async () => {
+    await User.create({ username: 'ok', email: 'ok@example.com', password: 'hunter22' })
+
+    for (let i = 0; i < 10; i++) {
+      const { req, res } = mockReqRes({
+        method: 'POST',
+        query: { action: 'login' },
+        body: { email: 'ok@example.com', password: 'hunter22' },
+      })
+      await handler(req, res)
+      expect(res.statusCode).toBe(200)
+    }
+  })
+
+  it('blocks registration after 5 attempts from the same source within the window', async () => {
+    for (let i = 0; i < 5; i++) {
+      const { req, res } = mockReqRes({
+        method: 'POST',
+        query: { action: 'register' },
+        body: { username: `spam${i}`, email: `spam${i}@example.com`, password: 'hunter22' },
+      })
+      await handler(req, res)
+      expect(res.statusCode).toBe(201)
+    }
+
+    const { req, res } = mockReqRes({
+      method: 'POST',
+      query: { action: 'register' },
+      body: { username: 'spam6', email: 'spam6@example.com', password: 'hunter22' },
+    })
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(429)
+  })
+
+  it('does not count requests that fail body validation toward the register limit', async () => {
+    for (let i = 0; i < 10; i++) {
+      const { req, res } = mockReqRes({
+        method: 'POST',
+        query: { action: 'register' },
+        body: { email: 'bad@example.com', password: '123' }, // missing username, weak password
+      })
+      await handler(req, res)
+      expect(res.statusCode).toBe(400)
+    }
+
+    // None of the malformed attempts above should have counted — this
+    // should still succeed.
+    const { req, res } = mockReqRes({
+      method: 'POST',
+      query: { action: 'register' },
+      body: { username: 'finally', email: 'finally@example.com', password: 'hunter22' },
+    })
+    await handler(req, res)
+
+    expect(res.statusCode).toBe(201)
   })
 })

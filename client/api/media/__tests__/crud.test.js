@@ -16,6 +16,7 @@ let Anime
 let authHandler
 let userA, userB
 let tokenA, tokenB
+let RateLimitAttempt
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create()
@@ -29,6 +30,7 @@ beforeAll(async () => {
   itemHandler = factory.createItemHandler()
   ;({ default: User } = await import('../../_lib/models/User.js'))
   ;({ default: Anime } = await import('../../_lib/models/Anime.js'))
+  ;({ default: RateLimitAttempt } = await import('../../_lib/models/RateLimitAttempt.js'))
 
   await connectDB()
 }, 30000)
@@ -51,6 +53,7 @@ async function registerAndLogin(username, email) {
 beforeEach(async () => {
   await User.deleteMany({})
   await Anime.deleteMany({})
+  await RateLimitAttempt.deleteMany({})
 
   const a = await registerAndLogin('userA', 'a@example.com')
   const b = await registerAndLogin('userB', 'b@example.com')

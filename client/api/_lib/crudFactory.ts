@@ -1,6 +1,8 @@
 import { connectDB } from './mongodb.js'
 import { requireAuth } from './auth.js'
 import { MEDIA_MODELS, isMediaType } from './models/mediaModels.js'
+import { validateBody, ValidationError } from './validate.js'
+import { MEDIA_SCHEMAS, MEDIA_UPDATE_SCHEMAS } from './schemas/media.js'
 import type { ApiRequest, ApiResponse } from './httpTypes.js'
 
 // Resolves the Mongoose model for the current request's `type` param.
@@ -24,6 +26,7 @@ export function createListHandler() {
     const { user, error, status } = await requireAuth(req)
     if (error) return res.status(status).json({ message: error })
 
+    const { type } = req.query
     const Model = resolveModel(req, res)
     if (!Model) return
 
@@ -33,8 +36,14 @@ export function createListHandler() {
     }
 
     if (req.method === 'POST') {
-      const item = await Model.create({ ...req.body, userId: user._id })
-      return res.status(201).json(item)
+      try {
+        const data = validateBody(MEDIA_SCHEMAS[type as keyof typeof MEDIA_SCHEMAS], req.body)
+        const item = await Model.create({ ...data, userId: user._id })
+        return res.status(201).json(item)
+      } catch (err) {
+        if (err instanceof ValidationError) return res.status(400).json({ message: err.message })
+        throw err
+      }
     }
 
     res.status(405).json({ message: 'Method not allowed' })
@@ -49,6 +58,7 @@ export function createItemHandler() {
     const { user, error, status } = await requireAuth(req)
     if (error) return res.status(status).json({ message: error })
 
+    const { type } = req.query
     const Model = resolveModel(req, res)
     if (!Model) return
 
@@ -61,13 +71,19 @@ export function createItemHandler() {
     }
 
     if (req.method === 'PUT') {
-      const item = await Model.findOneAndUpdate(
-        { _id: id, userId: user._id },
-        req.body,
-        { new: true, runValidators: true }
-      )
-      if (!item) return res.status(404).json({ message: 'Not found' })
-      return res.json(item)
+      try {
+        const data = validateBody(MEDIA_UPDATE_SCHEMAS[type as keyof typeof MEDIA_UPDATE_SCHEMAS], req.body)
+        const item = await Model.findOneAndUpdate(
+          { _id: id, userId: user._id },
+          data,
+          { new: true, runValidators: true }
+        )
+        if (!item) return res.status(404).json({ message: 'Not found' })
+        return res.json(item)
+      } catch (err) {
+        if (err instanceof ValidationError) return res.status(400).json({ message: err.message })
+        throw err
+      }
     }
 
     if (req.method === 'DELETE') {
