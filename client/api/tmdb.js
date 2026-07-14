@@ -1,8 +1,22 @@
 import axios from "axios";
 
+// Comma-separated list of allowed origins, e.g.:
+// "https://yggdrasil-realms.vercel.app,http://localhost:5173"
+// Falls back to allowing nothing (same-origin only, since this proxy
+// is normally called from the same Vercel deployment it lives on) if
+// the env var isn't set — fails closed rather than open.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map(o => o.trim())
+  .filter(Boolean);
+
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Vary", "Origin");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
