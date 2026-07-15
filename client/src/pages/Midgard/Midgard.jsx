@@ -7,6 +7,7 @@ import Dashboard   from './Dashboard'
 import BrowsePage  from './BrowsePage'
 import ProfileIcon from '../../components/ProfileIcon'
 import { useAuth } from '../../context/AuthContext'
+import ErrorBoundary from '../../components/ErrorBoundary'
 
 const C = {
   bg:           '#080D1A',
@@ -427,27 +428,33 @@ export default function Midgard() {
       }}>
         <PageHeader activePage={activePage} searchQuery={searchQuery} />
 
-        {activePage === 'Dashboard' && (
-          <Dashboard onNavigate={handleNavigate} />
-        )}
-        {activePage === 'Browse' && (
-          <BrowsePage onNavigate={handleNavigate} />
-        )}
-        {activePage === 'My List' && (
-          <MyList onNavigate={handleNavigate} />
-        )}
-        {activePage === 'Search' && (
-          <SearchPage
-            query={searchQuery}
-            onSelectDrama={item => handleNavigate('Info', item.id)}
-          />
-        )}
-        {activePage === 'Info' && (
-          <InfoPage
-            tmdbId={selectedDramaId}
-            onBack={() => handleNavigate('Search', searchQuery)}
-          />
-        )}
+        <ErrorBoundary
+          colors={C}
+          realmName="Midgard"
+          onReturnHome={() => handleNavigate('Dashboard')}
+        >
+          {activePage === 'Dashboard' && (
+            <Dashboard onNavigate={handleNavigate} />
+          )}
+          {activePage === 'Browse' && (
+            <BrowsePage onNavigate={handleNavigate} />
+          )}
+          {activePage === 'My List' && (
+            <MyList onNavigate={handleNavigate} />
+          )}
+          {activePage === 'Search' && (
+            <SearchPage
+              query={searchQuery}
+              onSelectDrama={item => handleNavigate('Info', item.id)}
+            />
+          )}
+          {activePage === 'Info' && (
+            <InfoPage
+              tmdbId={selectedDramaId}
+              onBack={() => handleNavigate('Search', searchQuery)}
+            />
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   )
