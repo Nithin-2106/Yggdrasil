@@ -57,14 +57,20 @@ export default async function handler(req, res) {
       try {
         result = await callGemini(windowed, TOOL_SCHEMAS, SYSTEM_INSTRUCTION)
       } catch (err) {
-        console.error('Gemini call failed:', err?.response?.data || err.message)
-        convo.messages.push({
-          role: 'assistant',
-          content: { type: 'text', text: "Sorry, I couldn't reach the model just now — try again in a moment." },
-        })
-        await convo.save()
-        return res.json({ messages: convo.messages, activity })
-      }
+  console.error('Gemini call failed:', err?.response?.data || err.message)
+  const isRateLimit = err?.response?.status === 429
+  convo.messages.push({
+    role: 'assistant',
+    content: {
+      type: 'text',
+      text: isRateLimit
+        ? "I'm getting rate-limited by Gemini's free tier right now — give it about a minute and try again."
+        : "Sorry, I couldn't reach the model just now — try again in a moment.",
+    },
+  })
+  await convo.save()
+  return res.json({ messages: convo.messages, activity })
+}
 
       if (result.type === 'text') {
         convo.messages.push({ role: 'assistant', content: { type: 'text', text: result.text } })

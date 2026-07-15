@@ -162,19 +162,28 @@ export const TOOL_SCHEMAS = [
 // External search helpers (server-side — no proxy needed except TMDB's key)
 // ─────────────────────────────────────────────────────────────────────────
 async function searchJikan(query: string) {
-  const res = await axios.get('https://api.jikan.moe/v4/anime', {
-    params: { q: query, limit: 10, sfw: false },
-    timeout: 10000,
-  })
-  return (res.data?.data || []).map((item: any) => ({
-    malId:      item.mal_id,
-    title:      item.title_english || item.title,
-    coverImage: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
-    year:       item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : null),
-    format:     item.type === 'Movie' ? 'Movie' : item.type === 'OVA' ? 'OVA'
-                : (item.type === 'Special' || item.type === 'ONA') ? 'Special' : 'Series',
-    episodes:   item.episodes ?? null,
-  }))
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1500 * attempt))
+    try {
+      const res = await axios.get('https://api.jikan.moe/v4/anime', {
+        params: { q: query, limit: 10, sfw: false },
+        timeout: 10000,
+      })
+      return (res.data?.data || []).map((item: any) => ({
+        malId:      item.mal_id,
+        title:      item.title_english || item.title,
+        coverImage: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
+        year:       item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : null),
+        format:     item.type === 'Movie' ? 'Movie' : item.type === 'OVA' ? 'OVA'
+                    : (item.type === 'Special' || item.type === 'ONA') ? 'Special' : 'Series',
+        episodes:   item.episodes ?? null,
+      }))
+    } catch (err: any) {
+      const status = err?.response?.status
+      if (attempt === 2 || (status && status !== 429 && status !== 504)) throw err
+    }
+  }
+  return []
 }
 
 async function searchAniList(query: string) {
