@@ -14,7 +14,7 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 // ─────────────────────────────────────────────────────────────────────────
 export type AgnosticContent =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; calls: { name: string; args: any }[] }
+  | { type: 'tool_use'; calls: { name: string; args: any; thoughtSignature?: string }[] }
   | { type: 'tool_result'; results: { name: string; result: any }[] }
 
 export interface AgnosticMessage {
@@ -67,7 +67,7 @@ function apiKey() {
 
 export type GeminiResult =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; calls: { name: string; args: any }[] }
+  | { type: 'tool_use'; calls: { name: string; args: any; thoughtSignature?: string }[] }
 
 // Single generateContent round-trip. Never throws for model-level issues —
 // only for transport/auth failures, which the caller should catch.
@@ -90,14 +90,18 @@ export async function callGemini(
   )
 
   const parts = data?.candidates?.[0]?.content?.parts || []
-  const functionCalls = parts.filter((p: any) => p.functionCall).map((p: any) => p.functionCall)
+const functionCallParts = parts.filter((p: any) => p.functionCall)
 
-  if (functionCalls.length > 0) {
-    return {
-      type: 'tool_use',
-      calls: functionCalls.map((fc: any) => ({ name: fc.name, args: fc.args || {} })),
-    }
+if (functionCallParts.length > 0) {
+  return {
+    type: 'tool_use',
+    calls: functionCallParts.map((p: any) => ({
+      name: p.functionCall.name,
+      args: p.functionCall.args || {},
+      thoughtSignature: p.thoughtSignature, // undefined on parallel calls after the first — that's expected
+    })),
   }
+}
 
   const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('')
   return { type: 'text', text }
