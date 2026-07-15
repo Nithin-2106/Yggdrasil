@@ -14,8 +14,8 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 // ─────────────────────────────────────────────────────────────────────────
 export type AgnosticContent =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; calls: { name: string; args: any; thoughtSignature?: string }[] }
-  | { type: 'tool_result'; results: { name: string; result: any }[] }
+  | { type: 'tool_use'; calls: { name: string; args: any; id?: string; thoughtSignature?: string }[] }
+  | { type: 'tool_result'; results: { name: string; result: any; id?: string }[] }
 
 export interface AgnosticMessage {
   role: 'user' | 'assistant'
@@ -36,25 +36,41 @@ function toGeminiTools(toolSchemas: any[]) {
   }]
 }
 
-// Our history -> Gemini `contents`. Tool results MUST use role "function"
-// (not "user") — this is the part that's easy to get wrong and silently
-// produces a model that "forgets" tool results.
+// Our history -> Gemini `contents`. Tool-result turns use role "user" (the
+// v1beta REST API rejects role "function"); tool_use turns from the model
+// must echo back the exact functionCall id + thoughtSignature Gemini gave us.
 function toGeminiContents(messages: AgnosticMessage[]) {
   return messages.map((msg) => {
     const c = msg.content
+
     if (c.type === 'text') {
       return { role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: c.text }] }
     }
+
     if (c.type === 'tool_use') {
       return {
         role: 'model',
-        parts: c.calls.map(call => ({ functionCall: { name: call.name, args: call.args } })),
+        parts: c.calls.map(call => ({
+          functionCall: {
+            name: call.name,
+            args: call.args,
+            ...(call.id ? { id: call.id } : {}),
+          },
+          ...(call.thoughtSignature ? { thoughtSignature: call.thoughtSignature } : {}),
+        })),
       }
     }
+
     // tool_result
     return {
-      role: 'user',   // was 'function' — v1beta REST rejects that role now
-      parts: c.results.map(r => ({ functionResponse: { name: r.name, response: { result: r.result } } })),
+      role: 'user',
+      parts: c.results.map(r => ({
+        functionResponse: {
+          name: r.name,
+          response: { result: r.result },
+          ...(r.id ? { id: r.id } : {}),
+        },
+      })),
     }
   })
 }
@@ -67,7 +83,7 @@ function apiKey() {
 
 export type GeminiResult =
   | { type: 'text'; text: string }
-  | { type: 'tool_use'; calls: { name: string; args: any; thoughtSignature?: string }[] }
+  | { type: 'tool_use'; calls: { name: string; args: any; id?: string; thoughtSignature?: string }[] }
 
 // Single generateContent round-trip. Never throws for model-level issues —
 // only for transport/auth failures, which the caller should catch.
@@ -90,18 +106,19 @@ export async function callGemini(
   )
 
   const parts = data?.candidates?.[0]?.content?.parts || []
-const functionCallParts = parts.filter((p: any) => p.functionCall)
+  const functionCallParts = parts.filter((p: any) => p.functionCall)
 
-if (functionCallParts.length > 0) {
-  return {
-    type: 'tool_use',
-    calls: functionCallParts.map((p: any) => ({
-      name: p.functionCall.name,
-      args: p.functionCall.args || {},
-      thoughtSignature: p.thoughtSignature, // undefined on parallel calls after the first — that's expected
-    })),
+  if (functionCallParts.length > 0) {
+    return {
+      type: 'tool_use',
+      calls: functionCallParts.map((p: any) => ({
+        name: p.functionCall.name,
+        args: p.functionCall.args || {},
+        id: p.functionCall.id,               // nested inside functionCall
+        thoughtSignature: p.thoughtSignature, // sibling of functionCall on the Part
+      })),
+    }
   }
-}
 
   const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('')
   return { type: 'text', text }

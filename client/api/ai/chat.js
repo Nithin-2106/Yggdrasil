@@ -75,11 +75,11 @@ export default async function handler(req, res) {
       convo.messages.push({ role: 'assistant', content: { type: 'tool_use', calls: result.calls } })
 
       const results = []
-      for (const call of result.calls) {
-        const toolResult = await executeTool(call.name, call.args, user)
-        results.push({ name: call.name, result: toolResult })
-        activity.push({ name: call.name, args: call.args, ok: !toolResult?.error })
-      }
+for (const call of result.calls) {
+  const toolResult = await executeTool(call.name, call.args, user)
+  results.push({ name: call.name, id: call.id, result: toolResult })  // added id
+  activity.push({ name: call.name, args: call.args, ok: !toolResult?.error })
+}
       convo.messages.push({ role: 'assistant', content: { type: 'tool_result', results } })
 
       if (round === MAX_TOOL_ROUNDS - 1) {
