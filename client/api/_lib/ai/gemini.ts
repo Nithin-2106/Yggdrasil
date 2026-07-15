@@ -53,7 +53,7 @@ function toGeminiContents(messages: AgnosticMessage[]) {
     }
     // tool_result
     return {
-      role: 'function',
+      role: 'user',   // was 'function' — v1beta REST rejects that role now
       parts: c.results.map(r => ({ functionResponse: { name: r.name, response: { result: r.result } } })),
     }
   })
