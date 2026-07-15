@@ -5,6 +5,7 @@ import Alfheim     from './pages/Alfheim/Alfheim'
 import Valhalla    from './pages/Valhalla/Valhalla'
 import Midgard     from './pages/Midgard/Midgard'
 import ProfilePage from './pages/Profile/ProfilePage'
+import AiAssistant  from './components/AiAssistant/AiAssistant'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/profile"   element={<ProfilePage />} />
         </Routes>
       </BrowserRouter>
+      <AiAssistant />
     </AuthProvider>
   )
 }
