@@ -299,7 +299,6 @@ export default function MyList({ onNavigate }) {
       .finally(() => setLoading(false))
   }, [])
 
-  throw new Error("Testing ErrorBoundary");
 
   const counts = useMemo(() => {
     const map = { All: anime.length }
