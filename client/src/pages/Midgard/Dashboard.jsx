@@ -1481,8 +1481,6 @@ export default function Dashboard({ onNavigate }) {
       .finally(() => setLoading(false))
   }, [])
 
-  throw new Error("Testing ErrorBoundary");
-
   return (
     <div>
       <style>{`

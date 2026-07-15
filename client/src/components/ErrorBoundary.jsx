@@ -25,6 +25,13 @@ function Corners({ color, size = 14, opacity = 0.5 }) {
 }
 
 function ErrorFallback({ colors: C, realmName, error, onRetry, onReturnHome }) {
+  // Palette-agnostic lookups — each realm names its accent/border keys
+  // differently (Midgard: electric/borderGold, Alfheim: primary/borderPrimary,
+  // Valhalla: primary/borderPrimary), so resolve whichever exists.
+  const accent   = C.electric   || C.primary   || C.goldBright || C.gold
+  const border   = C.borderGold || C.borderPrimary || C.borderElec || 'rgba(255,255,255,0.2)'
+  const accentSoft = C.electricSoft || C.primarySoft || 'transparent'
+
   return (
     <div style={{
       minHeight: '50vh',
@@ -39,15 +46,15 @@ function ErrorFallback({ colors: C, realmName, error, onRetry, onReturnHome }) {
         width: '100%',
         padding: '56px 40px',
         textAlign: 'center',
-        border: `1px dashed ${C.borderGold}`,
+        border: `1px dashed ${border}`,
         background: C.surface || 'transparent',
       }}>
-        <Corners color={C.gold} size={14} opacity={0.5} />
+        <Corners color={accent} size={14} opacity={0.5} />
 
         <div style={{
           fontFamily: '"Cinzel", serif',
           fontSize: '32px',
-          color: (C.gold || C.goldBright) + '55',
+          color: accent + '55',
           letterSpacing: '0.4em',
           marginBottom: '20px',
         }}>ᛟ</div>
@@ -82,9 +89,9 @@ function ErrorFallback({ colors: C, realmName, error, onRetry, onReturnHome }) {
               fontFamily: '"Cinzel", serif',
               fontSize: '11px',
               letterSpacing: '0.2em',
-              color: C.electric || C.goldBright,
-              background: C.electricSoft || 'transparent',
-              border: `1px solid ${(C.electric || C.goldBright)}55`,
+              color: accent,
+              background: accentSoft,
+              border: `1px solid ${accent}55`,
               padding: '10px 24px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
@@ -102,7 +109,7 @@ function ErrorFallback({ colors: C, realmName, error, onRetry, onReturnHome }) {
                 letterSpacing: '0.2em',
                 color: C.textMuted,
                 background: 'transparent',
-                border: `1px solid ${C.borderGold}`,
+                border: `1px solid ${border}`,
                 padding: '10px 24px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -123,7 +130,7 @@ function ErrorFallback({ colors: C, realmName, error, onRetry, onReturnHome }) {
             fontFamily: 'monospace',
             color: C.textDim,
             background: 'rgba(0,0,0,0.25)',
-            border: `1px solid ${C.borderGold}`,
+            border: `1px solid ${border}`,
             maxHeight: '160px',
             overflow: 'auto',
             whiteSpace: 'pre-wrap',

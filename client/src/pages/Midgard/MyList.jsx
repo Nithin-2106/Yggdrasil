@@ -336,6 +336,8 @@ export default function MyList({ onNavigate }) {
       .finally(() => setLoading(false))
   }, [])
 
+  throw new Error("Testing ErrorBoundary");
+
   const counts = useMemo(() => {
     const map = { All: dramas.length }
     STATUS_TABS.slice(1).forEach(s => { map[s] = dramas.filter(d => d.status === s).length })

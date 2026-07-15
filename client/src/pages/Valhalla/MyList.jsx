@@ -319,6 +319,8 @@ export default function MyList({ onNavigate }) {
       .finally(() => setLoading(false))
   }, [])
 
+  throw new Error("Testing ErrorBoundary");
+
   const counts = useMemo(() => {
     const map = { All: manga.length }
     STATUS_TABS.slice(1).forEach(s => { map[s] = manga.filter(m => m.status === s).length })

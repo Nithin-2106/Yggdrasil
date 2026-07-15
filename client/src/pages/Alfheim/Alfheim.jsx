@@ -6,6 +6,7 @@ import MyList      from './MyList'
 import Dashboard   from './Dashboard'
 import BrowsePage  from './BrowsePage'
 import ProfileIcon from '../../components/ProfileIcon'
+import ErrorBoundary from '../../components/ErrorBoundary'
 import { useAuth } from '../../context/AuthContext'
 
 const C = {
@@ -307,21 +308,27 @@ export default function Alfheim() {
       }}>
         <PageTitle activePage={activePage} searchQuery={searchQuery} />
 
-        {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
-        {activePage === 'Browse'    && <BrowsePage onNavigate={handleNavigate} />}
-        {activePage === 'My List'   && <MyList onNavigate={handleNavigate} />}
-        {activePage === 'Search'    && (
-          <SearchPage
-            query={searchQuery}
-            onSelectAnime={item => handleNavigate('Info', item.mal_id)}
-          />
-        )}
-        {activePage === 'Info' && (
-          <InfoPage
-            malId={selectedAnimeId}
-            onBack={() => handleNavigate('Search', searchQuery)}
-          />
-        )}
+        <ErrorBoundary
+          colors={C}
+          realmName="Alfheim"
+          onReturnHome={() => handleNavigate('Dashboard')}
+        >
+          {activePage === 'Dashboard' && <Dashboard onNavigate={handleNavigate} />}
+          {activePage === 'Browse'    && <BrowsePage onNavigate={handleNavigate} />}
+          {activePage === 'My List'   && <MyList onNavigate={handleNavigate} />}
+          {activePage === 'Search'    && (
+            <SearchPage
+              query={searchQuery}
+              onSelectAnime={item => handleNavigate('Info', item.mal_id)}
+            />
+          )}
+          {activePage === 'Info' && (
+            <InfoPage
+              malId={selectedAnimeId}
+              onBack={() => handleNavigate('Search', searchQuery)}
+            />
+          )}
+        </ErrorBoundary>
       </main>
     </div>
   )
