@@ -1,6 +1,12 @@
 import axios from 'axios'
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+// gemini-2.5-flash was retired for new API keys (404 "no longer available
+// to new users") shortly after this was first wired up. Using the
+// `-latest` alias instead of a pinned version avoids repeating that —
+// Google keeps it pointed at whatever their current recommended Flash
+// model is, rather than a fixed version that can be deprecated later.
+// Override via GEMINI_MODEL if you want a pinned, predictable version instead.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
 // ─────────────────────────────────────────────────────────────────────────
