@@ -4,6 +4,8 @@ import AiConversation from '../_lib/models/AiConversation.js'
 import { TOOL_SCHEMAS, executeTool } from '../_lib/ai/tools.js'
 import { callGemini } from '../_lib/ai/gemini.js'
 import { countRecentAttempts, recordAttempt } from '../_lib/rateLimit.js'
+import { withSentry } from '../_lib/sentry.js'
+import * as Sentry from '@sentry/node'
 
 const MAX_TOOL_ROUNDS = 6      // bounds runaway tool loops
 const HISTORY_WINDOW = 20      // messages sent to the model per call (not stored history)
@@ -17,7 +19,7 @@ the user's lists and Top 10s. Always confirm destructive actions (delete) succee
 reply. Keep responses conversational and concise — the user sees your text plus small chips \
 showing which tools ran, so don't narrate tool calls in prose.`
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await connectDB()
   const { user, error, status } = await requireAuth(req)
   if (error) return res.status(status).json({ message: error })
@@ -57,20 +59,23 @@ export default async function handler(req, res) {
       try {
         result = await callGemini(windowed, TOOL_SCHEMAS, SYSTEM_INSTRUCTION)
       } catch (err) {
-  console.error('Gemini call failed:', err?.response?.data || err.message)
-  const isRateLimit = err?.response?.status === 429
-  convo.messages.push({
-    role: 'assistant',
-    content: {
-      type: 'text',
-      text: isRateLimit
-        ? "I'm getting rate-limited by Gemini's free tier right now — give it about a minute and try again."
-        : "Sorry, I couldn't reach the model just now — try again in a moment.",
-    },
-  })
-  await convo.save()
-  return res.json({ messages: convo.messages, activity })
-}
+        console.error('Gemini call failed:', err?.response?.data || err.message)
+        Sentry.captureException(err, {
+          contexts: { gemini: { status: err?.response?.status, data: err?.response?.data } },
+        })
+        const isRateLimit = err?.response?.status === 429
+        convo.messages.push({
+          role: 'assistant',
+          content: {
+            type: 'text',
+            text: isRateLimit
+              ? "I'm getting rate-limited by Gemini's free tier right now — give it about a minute and try again."
+              : "Sorry, I couldn't reach the model just now — try again in a moment.",
+          },
+        })
+        await convo.save()
+        return res.json({ messages: convo.messages, activity })
+      }
 
       if (result.type === 'text') {
         convo.messages.push({ role: 'assistant', content: { type: 'text', text: result.text } })
@@ -102,3 +107,4 @@ for (const call of result.calls) {
 
   res.status(405).json({ message: 'Method not allowed' })
 }
+export default withSentry(handler)

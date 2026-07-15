@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken'
 import { validateBody, ValidationError } from '../_lib/validate.js'
 import { registerSchema, loginSchema } from '../_lib/schemas/auth.js'
 import { rateLimitKey, countRecentAttempts, recordAttempt } from '../_lib/rateLimit.js'
+import { withSentry, initSentry } from '../_lib/sentry.js'
+import * as Sentry from '@sentry/node'
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
@@ -19,7 +21,7 @@ const LOGIN_MAX_ATTEMPTS = 5
 const REGISTER_WINDOW_MS = 60 * 60 * 1000 // 1 hour
 const REGISTER_MAX_ATTEMPTS = 5
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     await connectDB()
     const { action } = req.query
@@ -107,6 +109,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: err.message })
     }
     console.error('Auth handler error:', err)
+    Sentry.captureException(err)
     return res.status(500).json({ message: err.message || 'Internal server error' })
   }
 }
+
+export default withSentry(handler)

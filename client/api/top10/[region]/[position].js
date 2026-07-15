@@ -3,8 +3,9 @@ import Top10 from "../../_lib/models/Top10.js";
 import { requireAuth } from "../../_lib/auth.js";
 import { validateBody, ValidationError } from "../../_lib/validate.js";
 import { dramaSlotSchema, positionSchema } from "../../_lib/schemas/top10.js";
+import { withSentry } from "../../_lib/sentry.js";
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await connectDB();
 
   const auth = await requireAuth(req);
@@ -87,3 +88,4 @@ export default async function handler(req, res) {
     return res.json(updated);
   }
 }
+export default withSentry(handler);

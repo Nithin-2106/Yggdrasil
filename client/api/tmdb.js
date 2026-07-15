@@ -1,4 +1,5 @@
 import axios from "axios";
+import { withSentry } from "./_lib/sentry.js";
 
 // Comma-separated list of allowed origins, e.g.:
 // "https://yggdrasil-realms.vercel.app,http://localhost:5173"
@@ -10,7 +11,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .map(o => o.trim())
   .filter(Boolean);
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
@@ -53,3 +54,4 @@ export default async function handler(req, res) {
     });
   }
 }
+export default withSentry(handler);

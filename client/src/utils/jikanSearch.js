@@ -1,3 +1,6 @@
+import { withCache } from './apiCache'
+
+const TTL_SEARCH = 5 * 60 * 1000 // 5 min — search results don't need to be fresher than that
 // client/src/utils/jikanSearch.js
 const BASE = 'https://api.jikan.moe/v4'
 
@@ -30,15 +33,19 @@ async function safeFetch(url, timeoutMs = 10000) {
 
 export async function searchAnime(query) {
   if (!query?.trim()) return []
-  try {
-    await sleep(400)
-    const data = await safeFetch(
-      `${BASE}/anime?q=${encodeURIComponent(query.trim())}&limit=20&sfw=false`
-    )
-    return data?.data || []
-  } catch {
-    return []
-  }
+  const q = query.trim()
+
+  return withCache(`jikan:search:${q}`, TTL_SEARCH, async () => {
+    try {
+      await sleep(400)
+      const data = await safeFetch(
+        `${BASE}/anime?q=${encodeURIComponent(q)}&limit=20&sfw=false`
+      )
+      return data?.data || []
+    } catch {
+      return []
+    }
+  })
 }
 
 export function detectAnimeFormat(item) {

@@ -1,3 +1,6 @@
+import { withCache } from './apiCache'
+
+const TTL_SEARCH = 5 * 60 * 1000
 // client/src/utils/tmdbSearch.js
 // Robust TMDB drama search with fallback, scoring, and typo tolerance
 
@@ -131,25 +134,27 @@ function buildQueryVariants(query) {
 // ── Main exported search function ─────────────────────────────────────────────
 export async function searchDramas(query) {
   if (!query?.trim()) return []
+  const q = query.trim()
 
-  const variants = buildQueryVariants(query)
+  return withCache(`tmdb:search:${q}`, TTL_SEARCH, async () => {
+    const variants = buildQueryVariants(q)
 
-  // Pages 1 & 2 for primary variant; page 1 only for fallback variants
-  const fetches = [
-    fetchPage(variants[0], 1),
-    fetchPage(variants[0], 2),
-    ...variants.slice(1).map(v => fetchPage(v, 1)),
-  ]
+    const fetches = [
+      fetchPage(variants[0], 1),
+      fetchPage(variants[0], 2),
+      ...variants.slice(1).map(v => fetchPage(v, 1)),
+    ]
 
-  const pages      = await Promise.allSettled(fetches)
-  const allResults = pages.flatMap(p => p.status === 'fulfilled' ? p.value : [])
+    const pages      = await Promise.allSettled(fetches)
+    const allResults = pages.flatMap(p => p.status === 'fulfilled' ? p.value : [])
 
-  const unique = dedupe(allResults)
-  const valid  = unique.filter(isValidDrama)
-  const scored = valid.map(item => ({ item, score: scoreItem(item, query) }))
-  scored.sort((a, b) => b.score - a.score)
+    const unique = dedupe(allResults)
+    const valid  = unique.filter(isValidDrama)
+    const scored = valid.map(item => ({ item, score: scoreItem(item, q) }))
+    scored.sort((a, b) => b.score - a.score)
 
-  return scored.map(s => s.item)
+    return scored.map(s => s.item)
+  })
 }
 
 // ── Helper to detect drama type from a result item ────────────────────────────

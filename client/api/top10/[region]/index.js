@@ -1,6 +1,7 @@
 import { connectDB } from "../../_lib/mongodb.js";
 import Top10 from "../../_lib/models/Top10.js";
 import { requireAuth } from "../../_lib/auth.js";
+import { withSentry } from "../../_lib/sentry.js";
 
 const emptySlots = () =>
   Array.from({ length: 10 }, (_, i) => ({
@@ -12,7 +13,7 @@ const emptySlots = () =>
     type: "",
   }));
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== "GET")
     return res.status(405).json({ message: "Method not allowed" });
 
@@ -39,3 +40,4 @@ export default async function handler(req, res) {
 
   res.json(doc);
 }
+export default withSentry(handler);

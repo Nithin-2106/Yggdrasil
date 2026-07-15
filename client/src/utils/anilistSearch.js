@@ -1,3 +1,8 @@
+import { withCache } from './apiCache'
+
+const TTL_LIST   = 10 * 60 * 1000 // trending/popular/recent/sort pages
+const TTL_SEARCH = 5 * 60 * 1000
+const TTL_DETAIL = 10 * 60 * 1000
 // client/src/utils/anilistSearch.js
 // AniList GraphQL API utility for Valhalla (Manga / Manhwa / Manhua)
 
@@ -99,178 +104,185 @@ export function formatStatus(status) {
 // ── Search ────────────────────────────────────────────────────────────────────
 export async function searchManga(query) {
   if (!query?.trim()) return []
+  const q = query.trim()
 
-  const q = `
-    query ($search: String) {
-      Page(page: 1, perPage: 24) {
-        media(
-          search: $search
-          type: MANGA
-          format_not_in: [NOVEL, MUSIC]
-          sort: [SEARCH_MATCH, POPULARITY_DESC]
-          isAdult: false
-        ) {
-          ${MEDIA_FIELDS}
+  return withCache(`anilist:search:${q}`, TTL_SEARCH, async () => {
+    const qGql = `
+      query ($search: String) {
+        Page(page: 1, perPage: 24) {
+          media(
+            search: $search
+            type: MANGA
+            format_not_in: [NOVEL, MUSIC]
+            sort: [SEARCH_MATCH, POPULARITY_DESC]
+            isAdult: false
+          ) {
+            ${MEDIA_FIELDS}
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { search: query.trim() })
-  return data?.Page?.media || []
+    `
+    const data = await anilistFetch(qGql, { search: q })
+    return data?.Page?.media || []
+  })
 }
 
-// ── Trending ──────────────────────────────────────────────────────────────────
 export async function fetchTrending(limit = 25) {
-  const q = `
-    query ($limit: Int) {
-      Page(page: 1, perPage: $limit) {
-        media(
-          type: MANGA
-          format_not_in: [NOVEL]
-          sort: [TRENDING_DESC]
-          status_not: NOT_YET_RELEASED
-          isAdult: false
-        ) {
-          ${MEDIA_FIELDS}
+  return withCache(`anilist:trending:${limit}`, TTL_LIST, async () => {
+    const q = `
+      query ($limit: Int) {
+        Page(page: 1, perPage: $limit) {
+          media(
+            type: MANGA
+            format_not_in: [NOVEL]
+            sort: [TRENDING_DESC]
+            status_not: NOT_YET_RELEASED
+            isAdult: false
+          ) {
+            ${MEDIA_FIELDS}
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { limit })
-  return data?.Page?.media || []
+    `
+    const data = await anilistFetch(q, { limit })
+    return data?.Page?.media || []
+  })
 }
 
-// ── Popular (used by ExploreSection) ─────────────────────────────────────────
-// Returns items that have a cover image — callers don't need to filter themselves
 export async function fetchPopular(limit = 50) {
-  const q = `
-    query ($limit: Int) {
-      Page(page: 1, perPage: $limit) {
-        media(
-          type: MANGA
-          format_not_in: [NOVEL]
-          sort: [POPULARITY_DESC]
-          isAdult: false
-        ) {
-          ${MEDIA_FIELDS}
+  return withCache(`anilist:popular:${limit}`, TTL_LIST, async () => {
+    const q = `
+      query ($limit: Int) {
+        Page(page: 1, perPage: $limit) {
+          media(
+            type: MANGA
+            format_not_in: [NOVEL]
+            sort: [POPULARITY_DESC]
+            isAdult: false
+          ) {
+            ${MEDIA_FIELDS}
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { limit })
-  const media = data?.Page?.media || []
-  // Filter here so callers receive clean data
-  return media.filter(item => getCover(item) !== '')
+    `
+    const data = await anilistFetch(q, { limit })
+    const media = data?.Page?.media || []
+    return media.filter(item => getCover(item) !== '')
+  })
 }
-// ── Generic sort-based fetch (used by Explore for wider variety) ────────────
+
 export async function fetchBySort(sort, page = 1, perPage = 40) {
-  const q = `
-    query ($page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        media(
-          type: MANGA
-          format_not_in: [NOVEL]
-          sort: [${sort}]
-          isAdult: false
-        ) {
-          ${MEDIA_FIELDS}
+  return withCache(`anilist:sort:${sort}:${page}:${perPage}`, TTL_LIST, async () => {
+    const q = `
+      query ($page: Int, $perPage: Int) {
+        Page(page: $page, perPage: $perPage) {
+          media(
+            type: MANGA
+            format_not_in: [NOVEL]
+            sort: [${sort}]
+            isAdult: false
+          ) {
+            ${MEDIA_FIELDS}
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { page, perPage })
-  return data?.Page?.media || []
+    `
+    const data = await anilistFetch(q, { page, perPage })
+    return data?.Page?.media || []
+  })
 }
 
-// ── Recently Released ─────────────────────────────────────────────────────────
 export async function fetchRecentlyReleased(limit = 25) {
-  const q = `
-    query ($limit: Int) {
-      Page(page: 1, perPage: $limit) {
-        media(
-          type: MANGA
-          format_not_in: [NOVEL]
-          sort: [START_DATE_DESC]
-          status_not: NOT_YET_RELEASED
-          isAdult: false
-        ) {
-          ${MEDIA_FIELDS}
+  return withCache(`anilist:recent:${limit}`, TTL_LIST, async () => {
+    const q = `
+      query ($limit: Int) {
+        Page(page: 1, perPage: $limit) {
+          media(
+            type: MANGA
+            format_not_in: [NOVEL]
+            sort: [START_DATE_DESC]
+            status_not: NOT_YET_RELEASED
+            isAdult: false
+          ) {
+            ${MEDIA_FIELDS}
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { limit })
-  return data?.Page?.media || []
+    `
+    const data = await anilistFetch(q, { limit })
+    return data?.Page?.media || []
+  })
 }
 
-// ── Single title detail (for InfoPage) ───────────────────────────────────────
 export async function fetchMangaDetail(id) {
-  const q = `
-    query ($id: Int) {
-      Media(id: $id, type: MANGA) {
-        id
-        title { english romaji native }
-        coverImage { large extraLarge }
-        bannerImage
-        format
-        status
-        countryOfOrigin
-        averageScore
-        meanScore
-        popularity
-        favourites
-        trending
-        chapters
-        volumes
-        genres
-        tags { name rank isMediaSpoiler }
-        startDate { year month day }
-        endDate { year month day }
-        description(asHtml: false)
-        siteUrl
-        staff(sort: [RELEVANCE]) {
-          edges {
-            role
-            node {
-              id
-              name { full native }
-              image { medium large }
-              siteUrl
+  return withCache(`anilist:detail:${id}`, TTL_DETAIL, async () => {
+    const q = `
+      query ($id: Int) {
+        Media(id: $id, type: MANGA) {
+          id
+          title { english romaji native }
+          coverImage { large extraLarge }
+          bannerImage
+          format
+          status
+          countryOfOrigin
+          averageScore
+          meanScore
+          popularity
+          favourites
+          trending
+          chapters
+          volumes
+          genres
+          tags { name rank isMediaSpoiler }
+          startDate { year month day }
+          endDate { year month day }
+          description(asHtml: false)
+          siteUrl
+          staff(sort: [RELEVANCE]) {
+            edges {
+              role
+              node {
+                id
+                name { full native }
+                image { medium large }
+                siteUrl
+              }
             }
           }
-        }
-        characters(sort: [ROLE, RELEVANCE], perPage: 24) {
-          edges {
-            role
-            node {
-              id
-              name { full native }
-              image { medium large }
-              description
+          characters(sort: [ROLE, RELEVANCE], perPage: 24) {
+            edges {
+              role
+              node {
+                id
+                name { full native }
+                image { medium large }
+                description
+              }
             }
           }
-        }
-        relations {
-          edges {
-            relationType
-            node {
-              id
-              title { english romaji }
-              coverImage { large }
-              type
-              format
-              status
+          relations {
+            edges {
+              relationType
+              node {
+                id
+                title { english romaji }
+                coverImage { large }
+                type
+                format
+                status
+              }
             }
           }
-        }
-        externalLinks {
-          url
-          site
-          type
+          externalLinks {
+            url
+            site
+            type
+          }
         }
       }
-    }
-  `
-  const data = await anilistFetch(q, { id })
-  return data?.Media || null
+    `
+    const data = await anilistFetch(q, { id })
+    return data?.Media || null
+  })
 }

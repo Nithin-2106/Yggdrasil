@@ -1033,6 +1033,7 @@ export default function Dashboard({ onNavigate }) {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+  throw new Error("Testing Sentry");
 
   // Slice recent 10 from already-fetched manga — no second API call needed
   const recentManga = [...manga]

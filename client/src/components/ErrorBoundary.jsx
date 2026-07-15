@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import * as Sentry from '@sentry/react'
 
 // ─────────────────────────────────────────────────────────────────────────
 // Shared error boundary — themed via `colors` prop so each realm can pass
@@ -155,10 +156,13 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // TODO: POST to /api/log-error (or wire Sentry) once monitoring lands —
-    // item 8.4 in the roadmap. For now, surface it in the console so it's
-    // at least visible during dev/manual QA.
     console.error(`[ErrorBoundary${this.props.realmName ? ` — ${this.props.realmName}` : ''}]`, error, info)
+    Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack: info.componentStack },
+        boundary: { realm: this.props.realmName || 'unknown' },
+      },
+    })
   }
 
   handleRetry() {

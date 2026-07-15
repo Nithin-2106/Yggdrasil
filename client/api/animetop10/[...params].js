@@ -3,13 +3,14 @@ import AnimeTop10 from '../_lib/models/AnimeTop10.js'
 import { requireAuth } from '../_lib/auth.js'
 import { validateBody, ValidationError } from '../_lib/validate.js'
 import { animeSlotSchema, positionSchema } from '../_lib/schemas/top10.js'
+import { withSentry } from '../_lib/sentry.js'
 
 const emptySlots = () =>
   Array.from({ length: 10 }, (_, i) => ({
     position: i + 1, malId: null, title: '', coverImage: '', year: null, format: ''
   }))
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   await connectDB()
   const { user, error, status } = await requireAuth(req)
   if (error) return res.status(status).json({ message: error })
@@ -76,3 +77,4 @@ const position = isList ? null : (first ? parseInt(first) : null);
 
   res.status(405).json({ message: 'Method not allowed' })
 }
+export default withSentry(handler)
