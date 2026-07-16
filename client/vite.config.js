@@ -21,9 +21,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         icons: [
-          { src: '/logo3.png', sizes: '192x192', type: 'image/png' },
-          { src: '/logo3.png', sizes: '512x512', type: 'image/png' },
-          { src: '/logo3.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/logo.png', sizes: '192x192', type: 'image/png' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png' },
+          { src: '/logo.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
