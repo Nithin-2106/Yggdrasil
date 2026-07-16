@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import { validateBody, ValidationError } from '../_lib/validate.js'
 import { registerSchema, loginSchema } from '../_lib/schemas/auth.js'
 import { rateLimitKey, countRecentAttempts, recordAttempt } from '../_lib/rateLimit.js'
-import { withSentry, initSentry } from '../_lib/sentry.js'
+import { withSentry } from '../_lib/sentry.js'
 import * as Sentry from '@sentry/node'
 
 const signToken = (id) =>
