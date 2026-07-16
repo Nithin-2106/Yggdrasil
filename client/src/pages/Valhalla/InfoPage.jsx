@@ -526,7 +526,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
           {/* Footer */}
           <div style={{
             padding: isCompact ? '14px 18px 18px' : '16px 28px 24px',
-            borderTop: `1px solid ${C.borderGold}`,
+            borderTop: `1px solid ${C.borderPrimary}`,
             display: 'flex',
             flexDirection: isCompact ? 'column-reverse' : 'row',
             justifyContent: 'space-between', alignItems: isCompact ? 'stretch' : 'center',
@@ -1152,6 +1152,7 @@ export default function InfoPage({ anilistId, onBack }) {
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); fetchExisting(data.id) }}
           onDeleted={() => { setShowModal(false); setExisting(null) }}
+          isCompact={isCompact}
         />
       )}
     </div>

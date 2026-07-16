@@ -301,8 +301,6 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
         padding: isCompact ? '13px 20px' : '10px 20px',
         minHeight: isCompact ? '44px' : 'auto',
-        display: isCompact ? 'inline-flex' : undefined,
-        alignItems: isCompact ? 'center' : undefined,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',

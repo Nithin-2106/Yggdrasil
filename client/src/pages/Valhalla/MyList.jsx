@@ -285,8 +285,9 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
         borderLeft:   `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderRight:  `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
-        ppadding: isCompact ? '13px 20px' : '10px 20px',
-minHeight: isCompact ? '44px' : 'auto', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px',
+        minHeight: isCompact ? '44px' : 'auto',
+        cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}

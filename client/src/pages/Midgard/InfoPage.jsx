@@ -1030,6 +1030,7 @@ export default function InfoPage({ tmdbId, onBack }) {
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); fetchExisting(data.id) }}
           onDeleted={() => { setShowModal(false); setExisting(null) }}
+          isCompact={isCompact}
         />
       )}
     </div>
