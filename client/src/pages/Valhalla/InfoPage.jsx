@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import {
   fetchMangaDetail,
   detectMangaType,
@@ -224,7 +225,7 @@ function RatingSlider({ value, onChange }) {
 
 // ── Add / Edit modal ──────────────────────────────────────────────────────────
 
-function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted }) {
+function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, onDeleted }) {
   const type   = detectMangaType(mangaData)
   const format = detectMangaFormat(mangaData)
   const year   = getYear(mangaData)
@@ -324,9 +325,11 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
         onClick={e => { if (e.target === e.currentTarget) onClose() }}
         style={{
           position: 'fixed', inset: 0, zIndex: 500,
-          background: 'rgba(4,3,10,0.88)', backdropFilter: 'blur(8px)',
+          background: 'rgba(5,10,20,0.88)',
+          backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '24px', paddingTop: '80px',
+          padding: isCompact ? '12px' : '24px',
+          paddingTop: isCompact ? '56px' : '80px',
         }}
       >
         <div style={{
@@ -339,7 +342,7 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
 
           {/* Header */}
           <div style={{
-            padding: '20px 28px 16px', borderBottom: `1px solid ${C.borderPrimary}`,
+            padding: isCompact ? '16px 18px 12px' : '20px 28px 16px', borderBottom: `1px solid ${C.borderPrimary}`,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             position: 'sticky', top: 0, background: C.surface, zIndex: 10,
           }}>
@@ -359,7 +362,7 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
           </div>
 
           {/* Body */}
-          <div style={{ padding: '28px', display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+          <div style={{ padding: isCompact ? '18px' : '28px', display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
 
             {/* Left — poster */}
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -522,8 +525,12 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
 
           {/* Footer */}
           <div style={{
-            padding: '16px 28px 24px', borderTop: `1px solid ${C.borderPrimary}`,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: isCompact ? '14px 18px 18px' : '16px 28px 24px',
+            borderTop: `1px solid ${C.borderGold}`,
+            display: 'flex',
+            flexDirection: isCompact ? 'column-reverse' : 'row',
+            justifyContent: 'space-between', alignItems: isCompact ? 'stretch' : 'center',
+            gap: isCompact ? '10px' : 0,
             position: 'sticky', bottom: 0, background: C.surface,
           }}>
             <div>
@@ -531,18 +538,18 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
                 <button onClick={handleDelete} disabled={deleting} style={{
                   fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                   color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`,
-                  padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s',
+                  padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
                 }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.2)'}
                   onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
                 >{deleting ? 'Deleting...' : '✕ Delete'}</button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px',flexDirection: isCompact ? 'column' : 'row',width: isCompact ? '100%' : 'auto', }}>
               <button onClick={onClose} style={{
                 fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                 color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`,
-                padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s',
+                padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
               }}
                 onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
                 onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderPrimary }}
@@ -550,7 +557,7 @@ function AddToListModal({ mangaData, existingEntry, onClose, onSaved, onDeleted 
               <button onClick={handleSave} disabled={saving} style={{
                 fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                 color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`,
-                padding: '10px 28px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s',
+                padding: '10px 28px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s',
               }}
                 onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(167,139,250,0.2)' }}
                 onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.primarySoft }}
@@ -685,6 +692,7 @@ export default function InfoPage({ anilistId, onBack }) {
   const [loading, setLoading]       = useState(true)
   const [showModal, setShowModal]   = useState(false)
   const [showAllChars, setShowAllChars] = useState(false)
+  const isCompact = useIsCompact()
 
   // fetchExisting is stable after mount — defined with useCallback so it
   // can be called both inside the load effect and after modal saves
@@ -795,13 +803,23 @@ export default function InfoPage({ anilistId, onBack }) {
           }} />
         )}
 
-        <div style={{
+          <div style={{
           position: 'relative', zIndex: 1,
-          display: 'flex', gap: '52px', alignItems: 'flex-start', flexWrap: 'wrap',
-          padding: data.bannerImage ? '36px 0 52px' : '0',
+          display: 'flex',
+          gap: isCompact ? '24px' : '52px',
+          alignItems: isCompact ? 'center' : 'flex-start',
+          flexDirection: isCompact ? 'column' : 'row',
+          flexWrap: 'wrap',
+          padding: data.bannerImage ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
         }}>
           {/* Poster + button */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginLeft: '4%', flexShrink: 0 }}>
+            <div style={{
+            display: 'flex', flexDirection: 'column', gap: '12px',
+            marginLeft: isCompact ? 0 : '4%',
+            alignItems: isCompact ? 'center' : 'flex-start',
+            width: isCompact ? '100%' : 'auto',
+            flexShrink: 0,
+          }}>
             <div style={{
               width: '230px', height: '335px', background: C.surface,
               border: `1px solid ${tColor}55`, overflow: 'hidden', position: 'relative',
@@ -836,7 +854,13 @@ export default function InfoPage({ anilistId, onBack }) {
           </div>
 
           {/* Info column */}
-          <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Info column */}
+          <div style={{
+            flex: 1,
+            minWidth: isCompact ? '0' : '280px',
+            width: isCompact ? '100%' : 'auto',
+            display: 'flex', flexDirection: 'column', gap: '20px',
+          }}>
 
             {/* Badges */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

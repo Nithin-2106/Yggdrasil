@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import axios from 'axios'
 
 const API = '/api/media/manga'
@@ -265,7 +266,7 @@ function EmptyState({ status, searchQuery }) {
   )
 }
 
-function StatusTab({ label, count, active, onClick }) {
+function StatusTab({ label, count, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const color       = STATUS_COLOR[label] || C.primary
   const activeColor = label === 'All' ? C.primary : color
@@ -284,7 +285,8 @@ function StatusTab({ label, count, active, onClick }) {
         borderLeft:   `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderRight:  `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        ppadding: isCompact ? '13px 20px' : '10px 20px',
+minHeight: isCompact ? '44px' : 'auto', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -311,6 +313,7 @@ export default function MyList({ onNavigate }) {
   const [focused, setFocused]     = useState(false)
   const [sortKey, setSortKey]     = useState('createdAt')
   const [sortDir, setSortDir]     = useState('desc')
+  const isCompact = useIsCompact()
 
   useEffect(() => {
     axios.get(API)
@@ -368,7 +371,7 @@ export default function MyList({ onNavigate }) {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
           {STATUS_TABS.map(tab => (
-            <StatusTab key={tab} label={tab} count={counts[tab] || 0} active={activeTab === tab} onClick={() => setActiveTab(tab)} />
+            <StatusTab key={tab} label={tab} count={counts[tab] || 0} active={activeTab === tab} onClick={() => setActiveTab(tab)} isCompact={isCompact}/>
           ))}
         </div>
 

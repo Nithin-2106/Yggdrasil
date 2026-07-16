@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const TMDB_BASE = '/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
@@ -270,7 +271,7 @@ function DramaCard({ item, onNavigate }) {
   )
 }
 
-function SortTab({ mode, active, onClick }) {
+function SortTab({ mode, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -284,7 +285,7 @@ function SortTab({ mode, active, onClick }) {
         background: active ? C.electricSoft : hovered ? C.surfaceHover : 'transparent',
         border: 'none',
         borderBottom: `2px solid ${active ? C.electric : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -297,7 +298,7 @@ function SortTab({ mode, active, onClick }) {
   )
 }
 
-function TypePill({ filter, active, onClick }) {
+function TypePill({ filter, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const c = filter.color
   return (
@@ -311,7 +312,10 @@ function TypePill({ filter, active, onClick }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: isCompact ? '11px 18px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        minHeight: isCompact ? '44px' : 'auto',
+        display: isCompact ? 'inline-flex' : undefined,
+        alignItems: isCompact ? 'center' : undefined,
       }}
     >
       {filter.label}
@@ -341,6 +345,7 @@ function ScrollSentinel({ onVisible }) {
 export default function BrowsePage({ onNavigate }) {
   const [sortMode,   setSortMode]   = useState('popularity')
   const [typeFilter, setTypeFilter] = useState('Kdrama')
+  const isCompact = useIsCompact()
 
   const pool            = useRef([])
   const nextPageMap     = useRef({})
@@ -480,6 +485,7 @@ export default function BrowsePage({ onNavigate }) {
             key={mode.key} mode={mode}
             active={sortMode === mode.key}
             onClick={() => setSortMode(mode.key)}
+            isCompact={isCompact}
           />
         ))}
       </div>
@@ -489,7 +495,7 @@ export default function BrowsePage({ onNavigate }) {
         <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Realm</span>
         <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
         {TYPE_FILTERS.map(f => (
-          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} />
+          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} isCompact={isCompact} />
         ))}
 
         {/* Stats */}

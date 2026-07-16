@@ -1,5 +1,6 @@
 // client/src/pages/Alfheim/SearchPage.jsx
 import { useState, useEffect, useRef } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import { searchAnime, detectAnimeFormat, getAnimeYear } from '../../utils/jikanSearch'
 
 const C = {
@@ -51,7 +52,7 @@ function SkeletonCard() {
 }
 
 // ── Filter pill ───────────────────────────────────────────────────────────────
-function FilterPill({ label, color, active, onClick }) {
+function FilterPill({ label, color, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -66,7 +67,10 @@ function FilterPill({ label, color, active, onClick }) {
         color: active ? C.bg : hovered ? color : C.textMuted,
         background: active ? color : hovered ? `${color}18` : 'transparent',
         border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
-        padding: '6px 16px',
+        padding: isCompact ? '11px 16px' : '6px 16px',
+        minHeight: isCompact ? '44px' : 'auto',
+        display: isCompact ? 'inline-flex' : undefined,
+        alignItems: isCompact ? 'center' : undefined,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         whiteSpace: 'nowrap',
@@ -242,6 +246,7 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
   const [activeFilter, setFilter]   = useState('All')
   const [focused, setFocused]       = useState(false)
   const inputRef = useRef(null)
+  const isCompact = useIsCompact()
 
   // Run initial search if query passed from nav bar
   useEffect(() => {
@@ -359,6 +364,7 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
               color={f.color}
               active={activeFilter === f.label}
               onClick={() => setFilter(f.label)}
+              isCompact={isCompact}
             />
           ))}
           <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>

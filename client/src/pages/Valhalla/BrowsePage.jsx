@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const ANILIST  = 'https://graphql.anilist.co'
 const PER_PAGE = 25
@@ -241,7 +242,7 @@ function MangaCard({ item, onNavigate }) {
   )
 }
 
-function SortTab({ mode, active, onClick }) {
+function SortTab({ mode, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -255,7 +256,7 @@ function SortTab({ mode, active, onClick }) {
         background: active ? C.primarySoft : hovered ? C.surfaceHover : 'transparent',
         border: 'none',
         borderBottom: `2px solid ${active ? C.primary : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -268,7 +269,7 @@ function SortTab({ mode, active, onClick }) {
   )
 }
 
-function TypePill({ filter, active, onClick }) {
+function TypePill({ filter, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const c = filter.color
   return (
@@ -282,7 +283,9 @@ function TypePill({ filter, active, onClick }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
-        padding: '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: isCompact ? '11px 18px' : '6px 18px',minHeight: isCompact ? '44px' : 'auto',
+display: isCompact ? 'inline-flex' : undefined,
+alignItems: isCompact ? 'center' : undefined, cursor: 'pointer', transition: 'all 0.2s ease',
       }}
     >{filter.label}</button>
   )
@@ -308,6 +311,7 @@ function ScrollSentinel({ onVisible }) {
 export default function BrowsePage({ onNavigate }) {
   const [sortMode,   setSortMode]   = useState('trending')
   const [typeFilter, setTypeFilter] = useState('all')
+  const isCompact = useIsCompact()
 
   const pool        = useRef([])
   const nextPage    = useRef(1)
@@ -425,7 +429,7 @@ export default function BrowsePage({ onNavigate }) {
         overflowX: 'auto',
       }}>
         {SORT_MODES.map(mode => (
-          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} />
+          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} isCompact={isCompact}/>
         ))}
       </div>
 
@@ -437,7 +441,7 @@ export default function BrowsePage({ onNavigate }) {
         }}>Realm</span>
         <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
         {TYPE_FILTERS.map(f => (
-          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} />
+          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} isCompact={isCompact}/>
         ))}
 
         <div style={{

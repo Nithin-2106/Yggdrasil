@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import SearchPage  from './SearchPage'
 import InfoPage    from './InfoPage'
@@ -123,6 +124,45 @@ function SearchBar({ onSearch }) {
     </div>
   )
 }
+function SearchBarMobile({ onSearch }) {
+  const [query,   setQuery]   = useState('')
+  const [focused, setFocused] = useState(false)
+
+  const submit = () => {
+    if (query.trim()) { onSearch(query.trim()); setQuery('') }
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <button onClick={submit} style={{
+        position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)',
+        background: 'none', border: 'none',
+        color: focused ? C.primary : C.textDim,
+        fontSize: '16px', cursor: 'pointer', padding: 0, lineHeight: 1,
+        transition: 'color 0.25s', zIndex: 1,
+      }}>⌕</button>
+      <input
+        placeholder="Search manga..."
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          paddingLeft: '40px', paddingRight: '14px',
+          height: '48px', width: '100%',
+          background: C.input,
+          border: `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
+          color: C.text, fontSize: '14px',
+          fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+          outline: 'none', boxSizing: 'border-box',
+          transition: 'all 0.3s ease',
+          boxShadow: focused ? `0 0 18px rgba(167,139,250,0.15)` : 'none',
+        }}
+      />
+    </div>
+  )
+}
 
 // ── Nav link ──────────────────────────────────────────────────────────────────
 function NavLink({ label, active, onClick }) {
@@ -148,70 +188,257 @@ function NavLink({ label, active, onClick }) {
 }
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
-function Navbar({ activePage, onNavigate, onSearch }) {
+function HamburgerIcon({ open, color }) {
+  const bar = {
+    display: 'block',
+    height: '2px',
+    width: '100%',
+    background: color,
+    transition: 'transform 0.25s ease, opacity 0.2s ease',
+  }
+  return (
+    <div style={{ width: 20, height: 15, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <span style={{ ...bar, transform: open ? 'translateY(6.5px) rotate(45deg)' : 'none' }} />
+      <span style={{ ...bar, opacity: open ? 0 : 1 }} />
+      <span style={{ ...bar, transform: open ? 'translateY(-6.5px) rotate(-45deg)' : 'none' }} />
+    </div>
+  )
+}
+
+function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
   const navigate = useNavigate()
-  const NAV_LINKS = ['Dashboard', 'Browse', 'My List']
+  const links    = ['Dashboard', 'Browse', 'My List']
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Auto-close the mobile panel if the viewport grows past the breakpoint
+  useEffect(() => { if (!isCompact) setMenuOpen(false) }, [isCompact])
+
+  const handleNav = (page) => {
+    onNavigate(page)
+    setMenuOpen(false)
+  }
+
+  const handleSearchSubmit = (q) => {
+    onSearch(q)
+    setMenuOpen(false)
+  }
 
   return (
-    <nav style={{
-      position:'fixed', top:0, left:0, right:0, zIndex:100,
-      height:'64px',
-      background:'rgba(10,8,16,0.92)',
-      backdropFilter:'blur(20px)',
-      borderBottom:`1px solid ${C.borderPrimary}`,
-      display:'flex', alignItems:'center', padding:'0 36px',
-    }}>
-      {/* Top accent line */}
-      <div style={{
-        position:'absolute', top:0, left:'10%', right:'10%', height:'1px',
-        background:`linear-gradient(to right,transparent,${C.primary}88,transparent)`,
-      }} />
+    <>
+      <style>{`
+        @keyframes valhalla-mobile-menu-in {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Logo */}
-      <div style={{ flex:1, display:'flex', alignItems:'center', gap:'14px' }}>
-        <div style={{ fontFamily:'"Cinzel", serif', fontSize:'11px', letterSpacing:'0.3em', color:C.primary }}>⚔</div>
-        <div style={{ width:'1px', height:'20px', background:C.borderPrimary }} />
-        <span style={{
-          fontFamily:'"Cinzel", serif', fontSize:'16px', fontWeight:700,
-          letterSpacing:'0.25em', color:C.text,
-          textShadow:`0 0 20px ${C.primary}44`,
-        }}>VALHALLA</span>
-        <div style={{ fontSize:'10px', letterSpacing:'0.2em', color:C.textDim, fontFamily:'"Cinzel", serif', marginLeft:'4px' }}>ᚱᛖᚨᛚᛗ</div>
-      </div>
+      <nav style={{
+        position:       'fixed',
+        top:            0,
+        left:           0,
+        right:          0,
+        zIndex:         100,
+        height:         '64px',
+        background:     'rgba(10,8,16,0.92)',
+        backdropFilter: 'blur(20px)',
+        borderBottom:   `1px solid ${C.borderPrimary}`,
+        display:        'flex',
+        alignItems:     'center',
+        padding:        isCompact ? '0 16px' : '0 36px',
+      }}>
+        {/* Gold top accent */}
+        <div style={{
+          position:   'absolute',
+          top:        0,
+          left:       '10%',
+          right:      '10%',
+          height:     '1px',
+          background: `linear-gradient(to right, transparent, ${C.primary}88, transparent)`,
+        }} />
 
-      {/* Nav links */}
-      <div style={{ flex:1, display:'flex', justifyContent:'center', gap:'4px' }}>
-        {NAV_LINKS.map(link => (
-          <NavLink key={link} label={link} active={activePage === link} onClick={() => onNavigate(link)} />
-        ))}
-      </div>
+        {/* Logo */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+          <div style={{
+            fontFamily:    '"Cinzel", serif',
+            fontSize:      '11px',
+            letterSpacing: '0.3em',
+            color:         C.gold,
+            userSelect:    'none',
+          }}>⚔</div>
+          {!isCompact && <div style={{ width: '1px', height: '20px', background: C.borderPrimary }} />}
+          <span style={{
+            fontFamily:    '"Cinzel", serif',
+            fontSize:      isCompact ? '14px' : '16px',
+            fontWeight:    700,
+            letterSpacing: '0.25em',
+            color:         C.text,
+            textShadow:    `0 0 20px ${C.primary}44`,
+            whiteSpace:    'nowrap',
+          }}>
+            VALHALLA
+          </span>
+          {!isCompact && (
+            <div style={{
+              fontSize:      '10px',
+              letterSpacing: '0.2em',
+              color:         C.textDim,
+              fontFamily:    '"Cinzel", serif',
+              marginLeft:    '4px',
+            }}>
+              ᚱᛖᚨᛚᛗ
+            </div>
+          )}
+        </div>
 
-      {/* Right: search + profile + home */}
-      <div style={{ flex:1, display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'12px' }}>
-        <SearchBar onSearch={onSearch} />
-        <ProfileIcon borderColor="rgba(167,139,250,0.35)" size={34} />
-        <div style={{ fontFamily:'"Cinzel", serif', fontSize:'10px', color:C.borderPrimary, letterSpacing:'0.1em' }}>᛭</div>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            fontFamily:'"Cinzel", serif', fontSize:'11px', letterSpacing:'0.25em',
-            color:C.textMuted, background:'transparent',
-            border:`1px solid ${C.borderPrimary}`,
-            padding:'8px 18px', cursor:'pointer', transition:'all 0.3s ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = C.gold
-            e.currentTarget.style.borderColor = `${C.gold}88`
-            e.currentTarget.style.boxShadow = `0 0 16px ${C.goldSoft}`
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = C.textMuted
-            e.currentTarget.style.borderColor = C.borderPrimary
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        >ᛟ YGGDRASIL</button>
-      </div>
-    </nav>
+        {/* Nav links — desktop only */}
+        {!isCompact && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '4px' }}>
+            {links.map(link => (
+              <NavLink
+                key={link}
+                label={link}
+                active={activePage === link}
+                onClick={() => onNavigate(link)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Right side */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: isCompact ? '10px' : '12px' }}>
+          {!isCompact && <SearchBar onSearch={onSearch} />}
+
+          <ProfileIcon borderColor="rgba(167,139,250,0.35)" size={34} />
+
+          {!isCompact && (
+            <>
+              <div style={{
+                fontFamily:    '"Cinzel", serif',
+                fontSize:      '10px',
+                color:         C.borderPrimary,
+                userSelect:    'none',
+                letterSpacing: '0.1em',
+              }}>᛭</div>
+
+              <button
+                onClick={() => navigate('/')}
+                style={{
+                  fontFamily:    '"Cinzel", serif',
+                  fontSize:      '11px',
+                  letterSpacing: '0.25em',
+                  color:         C.textMuted,
+                  background:    'transparent',
+                  border:        `1px solid ${C.borderPrimary}`,
+                  padding:       '8px 18px',
+                  cursor:        'pointer',
+                  transition:    'all 0.3s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color       = C.gold
+                  e.currentTarget.style.borderColor = `${C.gold}88`
+                  e.currentTarget.style.boxShadow   = `0 0 16px ${C.goldSoft}`
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color       = C.textMuted
+                  e.currentTarget.style.borderColor = C.borderPrimary
+                  e.currentTarget.style.boxShadow   = 'none'
+                }}
+              >
+                ᛟ YGGDRASIL
+              </button>
+            </>
+          )}
+
+          {isCompact && (
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              style={{
+                width: 44, height: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: menuOpen ? C.primarySoft : 'transparent',
+                border: `1px solid ${menuOpen ? C.primary + '66' : C.borderPrimary}`,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+            >
+              <HamburgerIcon open={menuOpen} color={menuOpen ? C.primary : C.text} />
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* Mobile dropdown panel */}
+      {isCompact && menuOpen && (
+        <div style={{
+          position:       'fixed',
+          top:            '64px',
+          left:           0,
+          right:          0,
+          zIndex:         99,
+          background:     'rgba(10,8,16,0.97)',
+          backdropFilter: 'blur(20px)',
+          borderBottom:   `1px solid ${C.borderPrimary}`,
+          padding:        '20px 16px 28px',
+          display:        'flex',
+          flexDirection:  'column',
+          gap:            '20px',
+          animation:      'valhalla-mobile-menu-in 0.2s ease-out',
+        }}>
+          <div style={{ width: '100%' }}>
+            <SearchBarMobile onSearch={handleSearchSubmit} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {links.map(link => {
+              const active = activePage === link
+              return (
+                <button
+                  key={link}
+                  onClick={() => handleNav(link)}
+                  style={{
+                    textAlign:     'left',
+                    minHeight:     '48px',
+                    padding:       '0 14px',
+                    fontFamily:    '"Cinzel", serif',
+                    fontSize:      '13px',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    color:         active ? C.primary : C.textMuted,
+                    background:    active ? C.primarySoft : 'transparent',
+                    border:        'none',
+                    borderLeft:    `2px solid ${active ? C.primary : 'transparent'}`,
+                    cursor:        'pointer',
+                    transition:    'all 0.2s ease',
+                  }}
+                >
+                  {link}
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={() => { navigate('/'); setMenuOpen(false) }}
+            style={{
+              fontFamily:    '"Cinzel", serif',
+              fontSize:      '11px',
+              letterSpacing: '0.25em',
+              color:         C.textMuted,
+              background:    'transparent',
+              border:        `1px solid ${C.borderPrimary}`,
+              minHeight:     '48px',
+              cursor:        'pointer',
+              transition:    'all 0.3s ease',
+            }}
+          >
+            ᛟ YGGDRASIL
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -251,6 +478,7 @@ function PageTitle({ activePage, searchQuery }) {
 export default function Valhalla() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
+  const isCompact = useIsCompact()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const activePage      = searchParams.get('page') || 'Dashboard'
@@ -276,9 +504,10 @@ export default function Valhalla() {
         activePage={activePage}
         onNavigate={handleNavigate}
         onSearch={q => handleNavigate('Search', q)}
+        isCompact={isCompact}
       />
 
-      <main style={{ position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto', padding:'96px 36px 80px' }}>
+      <main style={{ position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto', padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px', }}>
         <PageTitle activePage={activePage} searchQuery={searchQuery} />
 
         <ErrorBoundary

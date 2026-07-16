@@ -1,5 +1,6 @@
 // client/src/pages/Alfheim/BrowsePage.jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const JIKAN    = 'https://api.jikan.moe/v4'
 const PAGE_SIZE = 24
@@ -186,7 +187,7 @@ function AnimeCard({ item, onNavigate }) {
   )
 }
 
-function SortTab({ mode, active, onClick }) {
+function SortTab({ mode, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -200,7 +201,7 @@ function SortTab({ mode, active, onClick }) {
         background: active ? C.primarySoft : hovered ? C.surfaceHover : 'transparent',
         border: 'none',
         borderBottom: `2px solid ${active ? C.primary : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -211,7 +212,7 @@ function SortTab({ mode, active, onClick }) {
   )
 }
 
-function FormatPill({ filter, active, onClick }) {
+function FormatPill({ filter, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const c = filter.color
   return (
@@ -225,7 +226,9 @@ function FormatPill({ filter, active, onClick }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
-        padding: '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: isCompact ? '11px 18px' : '6px 18px',minHeight: isCompact ? '44px' : 'auto',
+        display: isCompact ? 'inline-flex' : undefined,
+        alignItems: isCompact ? 'center' : undefined, cursor: 'pointer', transition: 'all 0.2s ease',
       }}
     >
       {filter.label}
@@ -258,6 +261,7 @@ export default function BrowsePage({ onNavigate }) {
   const [poolReady,     setPoolReady]     = useState(false)
   const [expanding,     setExpanding]     = useState(false)
   const [poolSize,      setPoolSize]      = useState(0)
+  const isCompact = useIsCompact()
 
   // Use refs so scroll callbacks always have fresh values
   const pool         = useRef([])
@@ -366,7 +370,7 @@ export default function BrowsePage({ onNavigate }) {
       {/* Sort tabs */}
       <div style={{ display: 'flex', marginBottom: '24px', borderBottom: `1px solid ${C.borderPrimary}`, overflowX: 'auto' }}>
         {SORT_MODES.map((mode) => (
-          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} />
+          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} isCompact={isCompact} />
         ))}
       </div>
 
@@ -375,7 +379,7 @@ export default function BrowsePage({ onNavigate }) {
         <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Format</span>
         <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
         {FORMAT_FILTERS.map((f) => (
-          <FormatPill key={f.key} filter={f} active={formatFilter === f.key} onClick={() => setFormatFilter(f.key)} />
+          <FormatPill key={f.key} filter={f} active={formatFilter === f.key} onClick={() => setFormatFilter(f.key)} isCompact={isCompact}/>
         ))}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
           {loading ? (

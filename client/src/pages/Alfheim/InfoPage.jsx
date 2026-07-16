@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const JIKAN = 'https://api.jikan.moe/v4'
 const API   = '/api/media/anime'
@@ -211,7 +212,7 @@ function RatingSlider({ value, onChange }) {
 }
 
 // ── Add/Edit modal ────────────────────────────────────────────────────────────
-function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted }) {
+function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted, isCompact }) {
   const format = detectFormat(animeData)
   const year   = getYear(animeData)
   const cover  = animeData.images?.jpg?.large_image_url || animeData.images?.jpg?.image_url || ''
@@ -308,7 +309,8 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted 
           position: 'fixed', inset: 0, zIndex: 500,
           background: 'rgba(4,8,16,0.88)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '24px', paddingTop: '80px',
+          padding: isCompact ? '12px' : '24px',
+paddingTop: isCompact ? '56px' : '80px',
         }}
       >
         <div
@@ -322,7 +324,7 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted 
           <Corners color={C.primary} size={12} opacity={0.4} />
 
           {/* Header */}
-          <div style={{ padding: '20px 28px 16px', borderBottom: `1px solid ${C.borderPrimary}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: C.surface, zIndex: 10 }}>
+          <div style={{ padding: isCompact ? '16px 18px 12px' : '20px 28px 16px', borderBottom: `1px solid ${C.borderPrimary}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: C.surface, zIndex: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontFamily: '"Cinzel", serif', fontSize: '14px', color: C.primary }}>ᚨ</span>
               <span style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.primary, textTransform: 'uppercase', fontWeight: 700 }}>
@@ -338,7 +340,14 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted 
           </div>
 
           {/* Body */}
-          <div style={{ padding: '28px', display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+          <div
+  style={{
+    padding: isCompact ? '18px' : '28px',
+    display: 'flex',
+    gap: isCompact ? '18px' : '28px',
+    flexWrap: 'wrap',
+  }}
+>
 
             {/* Left — poster */}
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -437,27 +446,56 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted 
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '16px 28px 24px', borderTop: `1px solid ${C.borderPrimary}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', bottom: 0, background: C.surface }}>
+          <div
+  style={{
+    padding: isCompact ? '14px 18px 18px' : '16px 28px 24px',
+    borderTop: `1px solid ${C.borderPrimary}`,
+    display: 'flex',
+    flexDirection: isCompact ? 'column-reverse' : 'row',
+    justifyContent: 'space-between',
+    alignItems: isCompact ? 'stretch' : 'center',
+    gap: isCompact ? '10px' : 0,
+    position: 'sticky',
+    bottom: 0,
+    background: C.surface,
+  }}
+>
             <div>
               {existingEntry && (
                 <button
                   onClick={handleDelete} disabled={deleting}
-                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px',
+minHeight: isCompact ? '44px' : 'auto',
+width: isCompact ? '100%' : 'auto',
+cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248,113,113,0.2)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = C.redSoft }}
                 >{deleting ? 'Deleting...' : '✕ Delete'}</button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div
+  style={{
+    display: 'flex',
+    gap: '10px',
+    flexDirection: isCompact ? 'column' : 'row',
+    width: isCompact ? '100%' : 'auto',
+  }}
+>
               <button
                 onClick={onClose}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`, padding: '10px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`, padding: '10px 20px',
+minHeight: isCompact ? '44px' : 'auto',
+width: isCompact ? '100%' : 'auto',
+cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderPrimary }}
               >Cancel</button>
               <button
                 onClick={handleSave} disabled={saving}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`, padding: '10px 28px', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s', opacity: saving ? 0.7 : 1 }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`, padding: '10px 28px',
+minHeight: isCompact ? '44px' : 'auto',
+width: isCompact ? '100%' : 'auto',
+cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s', opacity: saving ? 0.7 : 1 }}
                 onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = 'rgba(94,234,212,0.2)' }}
                 onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = C.primarySoft }}
               >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
@@ -609,6 +647,7 @@ function TrailerSection({ trailer, promos }) {
 export default function InfoPage({ malId, onBack }) {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isCompact = useIsCompact()
 
   const [data,         setData]         = useState(null)
   const [characters,   setChars]        = useState([])
@@ -718,12 +757,26 @@ export default function InfoPage({ malId, onBack }) {
       {/* Hero */}
       <div style={{ position: 'relative', marginBottom: '60px' }}>
         {backdrop && (
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
         )}
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: '52px', alignItems: 'flex-start', flexWrap: 'wrap', padding: backdrop ? '36px 0 52px' : '0' }}>
+        <div style={{
+          position: 'relative', zIndex: 1,
+          display: 'flex',
+          gap: isCompact ? '24px' : '52px',
+          alignItems: isCompact ? 'center' : 'flex-start',
+          flexDirection: isCompact ? 'column' : 'row',
+          flexWrap: 'wrap',
+          padding: backdrop ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
+        }}>
 
           {/* Poster + action buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginLeft: '4%', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: '12px',
+            marginLeft: isCompact ? 0 : '4%',
+            alignItems: isCompact ? 'center' : 'flex-start',
+            width: isCompact ? '100%' : 'auto',
+            flexShrink: 0,
+          }}>
             <div style={{ width: '230px', height: '335px', background: C.surface, border: `1px solid ${fColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${fColor}22, 0 0 50px ${fColor}0a` }}>
               <Corners color={fColor} size={13} opacity={0.55} />
               {cover
@@ -754,7 +807,12 @@ export default function InfoPage({ malId, onBack }) {
           </div>
 
           {/* Info column */}
-          <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{
+            flex: 1,
+            minWidth: isCompact ? '0' : '280px',
+            width: isCompact ? '100%' : 'auto',
+            display: 'flex', flexDirection: 'column', gap: '20px',
+          }}>
 
             {/* Badges */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -1002,6 +1060,7 @@ export default function InfoPage({ malId, onBack }) {
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); fetchExisting(data) }}
           onDeleted={() => { setShowModal(false); setExisting(null) }}
+          isCompact={isCompact}
         />
       )}
     </div>

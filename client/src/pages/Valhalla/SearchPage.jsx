@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import {
   searchManga,
   detectMangaType,
@@ -54,7 +55,7 @@ function SkeletonCard() {
   )
 }
 
-function FilterPill({ label, active, color, onClick }) {
+function FilterPill({ label, active, color, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -67,7 +68,10 @@ function FilterPill({ label, active, color, onClick }) {
         color: active ? C.bg : hovered ? color : C.textMuted,
         background: active ? color : hovered ? `${color}18` : 'transparent',
         border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
-        padding: '6px 16px', cursor: 'pointer',
+        padding: isCompact ? '11px 16px' : '6px 16px',
+minHeight: isCompact ? '44px' : 'auto',
+display: isCompact ? 'inline-flex' : undefined,
+alignItems: isCompact ? 'center' : undefined, cursor: 'pointer',
         transition: 'all 0.2s ease', whiteSpace: 'nowrap',
       }}
     >{label}</button>
@@ -208,6 +212,7 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
   const [activeFilter, setActiveFilter] = useState('All')
   const [focused, setFocused]   = useState(false)
   const inputRef = useRef(null)
+  const isCompact = useIsCompact()
 
   useEffect(() => {
     if (initialQuery) {
@@ -308,6 +313,7 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
               key={f.label} label={f.label} color={f.color}
               active={activeFilter === f.label}
               onClick={() => setActiveFilter(f.label)}
+              isCompact={isCompact}
             />
           ))}
           <span style={{

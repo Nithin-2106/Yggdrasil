@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProfileIcon from '../../components/ProfileIcon'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 const REALMS = [
   {
@@ -48,7 +49,7 @@ const REALMS = [
 ]
 
 // ── Enter button ──────────────────────────────────────────────────────────────
-function EnterButton({ onClick }) {
+function EnterButton({ onClick, isMobile }) {
   const [hovered, setHovered] = useState(false)
   return (
     <button
@@ -57,15 +58,16 @@ function EnterButton({ onClick }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", "Georgia", serif',
-        fontSize: 14,
-        letterSpacing: '0.45em',
+        fontSize: isMobile ? 12 : 14,
+        letterSpacing: isMobile ? '0.28em' : '0.45em',
         color: hovered ? '#55ff00' : '#e8f4f0',
         background: hovered ? 'rgba(77,255,210,0.07)' : 'transparent',
         border: '1px solid rgb(201,168,76)',
-        padding: '18px 52px',
+        padding: isMobile ? '16px 30px' : '18px 52px',
         cursor: 'pointer',
         textTransform: 'uppercase',
         transition: 'all 0.35s ease',
+        minHeight: '48px',
         boxShadow: hovered
           ? '0 0 50px rgba(77,255,210,0.45), inset 0 0 30px rgba(77,255,210,0.1)'
           : '0 0 20px rgba(77,255,210,0.1), inset 0 0 16px rgba(77,255,210,0.04)',
@@ -77,7 +79,7 @@ function EnterButton({ onClick }) {
 }
 
 // ── Realm card ────────────────────────────────────────────────────────────────
-function RealmCard({ realm, index, visible, onClick }) {
+function RealmCard({ realm, index, visible, onClick, isMobile }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -144,7 +146,7 @@ function RealmCard({ realm, index, visible, onClick }) {
 
       {/* Symbol */}
       <div style={{
-        fontSize: 36, marginBottom: 12, lineHeight: 1,
+        fontSize: isMobile ? 30 : 36, marginBottom: 12, lineHeight: 1,
         filter: hovered ? `drop-shadow(0 0 12px ${realm.accent})` : 'none',
         transform: hovered ? 'scale(1.15)' : 'scale(1)',
         transition: 'filter 0.4s, transform 0.4s',
@@ -153,13 +155,17 @@ function RealmCard({ realm, index, visible, onClick }) {
       </div>
 
       {/* Rune line */}
-      <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: 11, letterSpacing: '0.35em',
-        color: hovered ? realm.accent : 'rgba(201,168,76,0.35)',
-        marginBottom: 20, transition: 'color 0.4s', userSelect: 'none',
-      }}>
-        {realm.rune}
-      </div>
+      <div style={{ 
+  fontFamily: 'Cinzel, serif', 
+  color: hovered ? realm.accent : 'rgba(201,168,76,0.35)', 
+  marginBottom: 20, 
+  transition: 'color 0.4s', 
+  userSelect: 'none',
+  ...(isMobile ? { fontSize: 10, letterSpacing: '0.22em' } : { fontSize: 11, letterSpacing: '0.25em' })
+}}> 
+  {realm.rune} 
+</div>
+
 
       {/* Animated accent divider */}
       <div style={{
@@ -218,7 +224,8 @@ function RealmCard({ realm, index, visible, onClick }) {
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Yggdrasil() {
   const navigate = useNavigate()
-  const [phase,        setPhase]        = useState('landing') // 'landing' | 'realm'
+  const isMobile = useIsMobile()
+  const [phase, setPhase] = useState('landing')
   const [realmVisible, setRealmVisible] = useState(false)
 
   // Inject Google Fonts once on mount — avoids re-injecting on every render
@@ -248,17 +255,15 @@ export default function Yggdrasil() {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#050c14', overflow: 'hidden' }}>
-
-      {/* Profile icon */}
-      <div style={{ position: 'absolute', top: 20, right: 24, zIndex: 10 }}>
-        <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={36} />
+      <div style={{ position: 'absolute', top: 20, right: isMobile ? 16 : 24, zIndex: 10 }}>
+        <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={isMobile ? 32 : 36} />
       </div>
 
-      {/* Background image */}
+      {/* Background image — fill better on portrait screens */}
       <div style={{
         position: 'absolute', inset: 0,
         backgroundImage: 'url(/yggdrasil.png)',
-        backgroundSize: '80%',
+        backgroundSize: isMobile ? '160%' : '80%',
         backgroundPosition: 'center',
         filter: isLanding ? 'brightness(0.85)' : 'brightness(0.25) blur(2px)',
         transition: 'filter 1s ease',
@@ -272,12 +277,12 @@ export default function Yggdrasil() {
         transition: 'opacity 0.8s ease',
       }} />
 
-      {/* ── LANDING ── */}
+      {/* LANDING */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'space-between',
-        padding: '48px 0 72px',
+        padding: isMobile ? '40px 20px 56px' : '48px 0 72px',
         opacity: isLanding ? 1 : 0,
         pointerEvents: isLanding ? 'auto' : 'none',
         transition: 'opacity 0.5s ease',
@@ -285,8 +290,10 @@ export default function Yggdrasil() {
         <div style={{ textAlign: 'center' }}>
           <div style={{
             fontFamily: '"Cinzel Decorative", "Cinzel", "Georgia", serif',
-            fontSize: 'clamp(30px, 6vw, 74px)', fontWeight: 700,
-            letterSpacing: '0.25em', color: '#C9A84C',
+            fontSize: 'clamp(28px, 11vw, 74px)',
+            fontWeight: 700,
+            letterSpacing: isMobile ? '0.15em' : '0.25em',
+            color: '#C9A84C',
             textShadow: '0 0 80px rgba(201,168,76,0.5), 0 2px 6px rgba(0,0,0,0.9)',
             lineHeight: 1, userSelect: 'none',
           }}>
@@ -294,28 +301,31 @@ export default function Yggdrasil() {
           </div>
           <div style={{
             fontFamily: '"Cinzel", "Georgia", serif',
-            fontSize: 'clamp(15px, 1.4vw, 17px)',
-            letterSpacing: '0.5em', color: 'rgb(0,255,191)',
-            marginTop: 21, textTransform: 'uppercase', userSelect: 'none',
+            fontSize: isMobile ? 12 : 'clamp(15px, 1.4vw, 17px)',
+            letterSpacing: isMobile ? '0.3em' : '0.5em',
+            color: 'rgb(0,255,191)',
+            marginTop: 18, textTransform: 'uppercase', userSelect: 'none',
           }}>
             Keeper of Worlds
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-          <EnterButton onClick={handleEnter} />
+          <EnterButton onClick={handleEnter} isMobile={isMobile} />
           <div style={{
-            fontSize: 15, letterSpacing: '0.3em',
+            fontSize: isMobile ? 11 : 15,
+            letterSpacing: isMobile ? '0.15em' : '0.3em',
             color: 'rgb(255,187,0)',
             fontFamily: '"Cinzel", "Georgia", serif',
             userSelect: 'none',
+            textAlign: 'center',
           }}>
             ᛟ ᚹ ᛁ ᚷ ᛞ ᚱ ᚨ ᛊ ᛁ ᛚ ᛟ
           </div>
         </div>
       </div>
 
-      {/* ── REALM SELECTION ── */}
+      {/* REALM SELECTION */}
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
@@ -323,23 +333,22 @@ export default function Yggdrasil() {
         opacity: realmVisible ? 1 : 0,
         pointerEvents: phase === 'realm' ? 'auto' : 'none',
         transition: 'opacity 0.9s ease',
-        padding: 24, overflowY: 'auto',
+        padding: isMobile ? '20px 16px' : 24,
+        overflowY: 'auto',
       }}>
-
-        {/* Top ornament */}
         <div style={{
-          fontFamily: '"Cinzel", serif', fontSize: 18,
-          color: 'rgba(201,168,76,0.4)', letterSpacing: '0.5em',
+          fontFamily: '"Cinzel", serif', fontSize: isMobile ? 14 : 18,
+          color: 'rgba(201,168,76,0.4)', letterSpacing: isMobile ? '0.3em' : '0.5em',
           marginBottom: 6, userSelect: 'none',
         }}>
           ᛭ ᛭ ᛭
         </div>
 
-        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
           <div style={{
             fontFamily: '"Cinzel", "Georgia", serif',
-            fontSize: 'clamp(10px, 1.2vw, 12px)', letterSpacing: '0.6em',
+            fontSize: isMobile ? 9 : 'clamp(10px, 1.2vw, 12px)',
+            letterSpacing: isMobile ? '0.35em' : '0.6em',
             color: 'rgba(201,168,76,0.7)', textTransform: 'uppercase',
             marginBottom: 10, userSelect: 'none',
           }}>
@@ -347,47 +356,45 @@ export default function Yggdrasil() {
           </div>
           <div style={{
             fontFamily: '"Cinzel Decorative", "Cinzel", "Georgia", serif',
-            fontSize: 'clamp(26px, 3.5vw, 44px)', fontWeight: 700,
-            letterSpacing: '0.2em', color: '#C9A84C',
+            fontSize: 'clamp(24px, 9vw, 44px)',
+            fontWeight: 700,
+            letterSpacing: isMobile ? '0.12em' : '0.2em',
+            color: '#C9A84C',
             textShadow: '0 0 60px rgba(201,168,76,0.4)', userSelect: 'none',
           }}>
             YGGDRASIL
           </div>
         </div>
 
-        {/* Divider */}
-        <Divider mb={40} />
+        <Divider mb={isMobile ? 28 : 40} isMobile={isMobile} />
 
-        {/* Realm cards */}
         <div style={{
-          display: 'flex', gap: 16, flexWrap: 'wrap',
+          display: 'flex', gap: isMobile ? 20 : 16, flexWrap: 'wrap',
           justifyContent: 'center', width: '100%', maxWidth: 1040,
         }}>
           {REALMS.map((realm, i) => (
             <RealmCard
-              key={realm.id}
-              realm={realm}
-              index={i}
-              visible={realmVisible}
+              key={realm.id} realm={realm} index={i}
+              visible={realmVisible} isMobile={isMobile}
               onClick={() => navigate(realm.path)}
             />
           ))}
         </div>
 
-        {/* Bottom divider */}
-        <Divider mt={36} mb={0} dim />
+        <Divider mt={isMobile ? 24 : 36} mb={0} dim isMobile={isMobile} />
 
-        {/* Back button */}
         <button
           onClick={handleBack}
           style={{
             marginTop: 20,
             fontFamily: '"Cinzel", "Georgia", serif',
-            fontSize: 11, letterSpacing: '0.4em',
+            fontSize: isMobile ? 10 : 11,
+            letterSpacing: isMobile ? '0.25em' : '0.4em',
             color: 'rgba(200,220,215,0.35)',
             background: 'transparent', border: 'none',
             cursor: 'pointer', textTransform: 'uppercase',
-            transition: 'color 0.3s', padding: 8,
+            transition: 'color 0.3s', padding: 12,
+            minHeight: '44px',
           }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(201,168,76,0.8)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(200,220,215,0.35)'}
@@ -400,7 +407,7 @@ export default function Yggdrasil() {
 }
 
 // ── Divider helper ────────────────────────────────────────────────────────────
-function Divider({ mt = 0, mb = 0, dim = false }) {
+function Divider({ mt = 0, mb = 0, dim = false, isMobile = false }) {
   const goldBase = dim ? 'rgba(201,168,76,0.25)' : 'rgba(201,168,76,0.4)'
   const runeColor = dim ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.6)'
   return (
@@ -411,7 +418,7 @@ function Divider({ mt = 0, mb = 0, dim = false }) {
     }}>
       <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${goldBase})` }} />
       {dim
-        ? <div style={{ color: runeColor, fontSize: 12, letterSpacing: '0.4em', fontFamily: '"Cinzel", serif' }}>ᛟ ᚹ ᛁ ᚷ ᛞ ᚱ ᚨ ᛊ ᛁ ᛚ ᛟ</div>
+        ? <div style={{ color: runeColor, fontSize: isMobile ? 10 : 12, letterSpacing: isMobile ? '0.25em' : '0.4em', fontFamily: '"Cinzel", serif' }}>ᛟ ᚹ ᛁ ᚷ ᛞ ᚱ ᚨ ᛊ ᛁ ᛚ ᛟ</div>
         : <div style={{ color: runeColor, fontSize: 14, fontFamily: '"Cinzel", serif' }}>ᚦ</div>
       }
       <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${goldBase})` }} />

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const C = {
   bg:           '#080D1A',
@@ -49,7 +50,7 @@ function SkeletonCard() {
 }
 
 // ── Filter pill ───────────────────────────────────────────────────────────────
-function FilterPill({ label, active, color, onClick }) {
+function FilterPill({ label, active, color, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const c = color || C.electric
   return (
@@ -65,7 +66,10 @@ function FilterPill({ label, active, color, onClick }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: '6px 16px',
+        padding: isCompact ? '11px 16px' : '6px 16px',
+        minHeight: isCompact ? '44px' : 'auto',
+        display: isCompact ? 'inline-flex' : undefined,
+        alignItems: isCompact ? 'center' : undefined,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         whiteSpace: 'nowrap',
@@ -251,6 +255,7 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
   const [activeFilter, setActiveFilter] = useState('All')
   const [focused, setFocused]         = useState(false)
   const inputRef = useRef(null)
+  const isCompact = useIsCompact()
 
   const filters = [
     { label: 'All',    color: C.electric },
@@ -373,6 +378,7 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
               color={f.color}
               active={activeFilter === f.label}
               onClick={() => setActiveFilter(f.label)}
+              isCompact={isCompact}
             />
           ))}
           <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>

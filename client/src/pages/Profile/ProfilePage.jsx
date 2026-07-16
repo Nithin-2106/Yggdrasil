@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import axios from 'axios'
+import { useIsMobile } from '../../hooks/useMediaQuery'
 
 const AUTH_API = '/api/auth'
 
@@ -225,6 +226,7 @@ function LoginForm({ onSwitch }) {
 // ── Register Form ─────────────────────────────────────────────────────────────
 function RegisterForm({ onSwitch }) {
   const { login } = useAuth()
+  const isMobile = useIsMobile()
   const navigate  = useNavigate()
 
   const [username,     setUsername]     = useState('')
@@ -291,7 +293,7 @@ function RegisterForm({ onSwitch }) {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
         <div>
           <label style={labelStyle}>ᚲ Password</label>
           <input
@@ -557,7 +559,8 @@ function ProfileView() {
 export default function ProfilePage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const isMobile = useIsMobile()
+  const [mode, setMode] = useState('login')
 
   if (loading) {
     return (
@@ -599,7 +602,7 @@ export default function ProfilePage() {
       }} />
 
       {/* Back button */}
-      <div style={{ position: 'relative', zIndex: 1, padding: '28px 36px 0' }}>
+      <div style={{ position: 'relative', zIndex: 1, padding: isMobile ? '20px 16px 0' : '28px 36px 0' }}>
         <button
           onClick={() => navigate('/')}
           style={{
@@ -618,11 +621,11 @@ export default function ProfilePage() {
 
       {/* Main content */}
       <div style={{
-        position: 'relative', zIndex: 1,
-        minHeight: 'calc(100vh - 80px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '32px 24px 80px',
-      }}>
+  position: 'relative', zIndex: 1,
+  minHeight: 'calc(100vh - 80px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  padding: isMobile ? '20px 16px 56px' : '32px 24px 80px',
+}}>
         <div style={{ width: '100%', maxWidth: 460 }}>
 
           {/* Card */}
@@ -642,7 +645,7 @@ export default function ProfilePage() {
 
             {/* Header */}
             <div style={{
-              padding: '32px 36px 28px',
+              padding: isMobile ? '26px 20px 22px' : '32px 36px 28px',
               borderBottom: `1px solid ${C.borderGold}`,
               textAlign: 'center',
             }}>
@@ -699,22 +702,24 @@ export default function ProfilePage() {
             </div>
 
             {/* Body */}
-            <div style={{ padding: '32px 36px 36px' }}>
+            <div style={{ padding: isMobile ? '24px 20px 28px' : '32px 36px 36px' }}>
               {user
                 ? <ProfileView />
                 : mode === 'login'
                   ? <LoginForm    onSwitch={() => setMode('register')} />
-                  : <RegisterForm onSwitch={() => setMode('login')} />
+                  : <RegisterForm onSwitch={() => setMode('login')} isMobile={isMobile} />
               }
             </div>
 
             {/* Bottom rune row */}
             <div style={{
-              borderTop: `1px solid ${C.borderGold}`,
-              padding: 14, textAlign: 'center',
-              fontFamily: '"Cinzel", serif', fontSize: 11,
-              letterSpacing: '0.4em', color: C.textDim + '88',
-            }}>
+  borderTop: `1px solid ${C.borderGold}`,
+  padding: 14, textAlign: 'center',
+  fontFamily: '"Cinzel", serif',
+  fontSize: isMobile ? 9 : 11,
+  letterSpacing: isMobile ? '0.25em' : '0.4em',
+  color: C.textDim + '88',
+}}>
               ᛟ ᚹ ᛁ ᚷ ᛞ ᚱ ᚨ ᛊ ᛁ ᛚ ᛟ
             </div>
           </div>

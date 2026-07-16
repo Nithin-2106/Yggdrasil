@@ -1,5 +1,6 @@
 // client/src/pages/Alfheim/MyList.jsx
 import { useState, useEffect, useMemo } from 'react'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 import axios from 'axios'
 
 const API = '/api/media/anime'
@@ -229,7 +230,7 @@ function AnimeRow({ anime, index, onNavigate }) {
 }
 
 // ── Status tab ────────────────────────────────────────────────────────────────
-function StatusTab({ label, count, active, onClick }) {
+function StatusTab({ label, count, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const color = STATUS_COLOR[label] || C.primary
   return (
@@ -246,7 +247,9 @@ function StatusTab({ label, count, active, onClick }) {
         borderLeft:   `1px solid ${active ? color + '55' : C.borderPrimary}`,
         borderRight:  `1px solid ${active ? color + '55' : C.borderPrimary}`,
         borderBottom: `2px solid ${active ? color : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px',
+        minHeight: isCompact ? '44px' : 'auto',
+        cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -291,6 +294,7 @@ export default function MyList({ onNavigate }) {
   const [focused,     setFocused]     = useState(false)
   const [sortKey,     setSortKey]     = useState('createdAt')
   const [sortDir,     setSortDir]     = useState('desc')
+  const isCompact = useIsCompact()
 
   useEffect(() => {
     axios.get(API)
@@ -356,6 +360,7 @@ export default function MyList({ onNavigate }) {
               count={counts[tab] || 0}
               active={activeTab === tab}
               onClick={() => setActiveTab(tab)}
+              isCompact={isCompact}
             />
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
+import { useIsCompact } from '../../hooks/useMediaQuery'
 
 const API = '/api/media/drama'
 
@@ -279,7 +280,7 @@ function EmptyState({ status, searchQuery }) {
   )
 }
 
-function StatusTab({ label, count, active, onClick }) {
+function StatusTab({ label, count, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const color       = STATUS_COLOR[label] || C.electric
   const activeColor = label === 'All' ? C.electric : color
@@ -298,7 +299,11 @@ function StatusTab({ label, count, active, onClick }) {
         borderLeft:   `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderRight:  `1px solid ${active ? activeColor + '55' : hovered ? C.borderElec : C.borderGold}`,
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
-        padding: '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 20px' : '10px 20px',
+        minHeight: isCompact ? '44px' : 'auto',
+        display: isCompact ? 'inline-flex' : undefined,
+        alignItems: isCompact ? 'center' : undefined,
+        cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
       }}
@@ -328,6 +333,7 @@ export default function MyList({ onNavigate }) {
   const [focused, setFocused]     = useState(false)
   const [sortKey, setSortKey]     = useState('createdAt')
   const [sortDir, setSortDir]     = useState('desc')
+  const isCompact = useIsCompact()
 
   useEffect(() => {
     axios.get(API)
@@ -399,6 +405,7 @@ export default function MyList({ onNavigate }) {
               count={counts[tab] || 0}
               active={activeTab === tab}
               onClick={() => setActiveTab(tab)}
+              isCompact={isCompact}
             />
           ))}
         </div>
