@@ -10,6 +10,7 @@ const Alfheim     = lazy(() => import('./pages/Alfheim/Alfheim'))
 const Valhalla    = lazy(() => import('./pages/Valhalla/Valhalla'))
 const Midgard     = lazy(() => import('./pages/Midgard/Midgard'))
 const ProfilePage = lazy(() => import('./pages/Profile/ProfilePage'))
+const AnalyticsPage = lazy(() => import('./pages/Analytics/AnalyticsPage'))
 
 function RouteLoading() {
   return (
@@ -44,6 +45,7 @@ function App() {
             <Route path="/valhalla/*" element={<Valhalla />} />
             <Route path="/midgard/*"  element={<Midgard />} />
             <Route path="/profile"    element={<ProfilePage />} />
+            <Route path="/analytics"  element={<AnalyticsPage />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
