@@ -10,7 +10,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['logo3.png'],
+      includeAssets: ['logo.png'],
       manifest: {
         name: 'Yggdrasil',
         short_name: 'Yggdrasil',
