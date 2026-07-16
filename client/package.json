@@ -5,7 +5,7 @@
   "description": "Personal Asian media tracker — dramas, anime, and manga across three Norse realms.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.x"
   },
   "scripts": {
     "dev": "vite",

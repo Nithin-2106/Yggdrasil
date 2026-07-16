@@ -68,7 +68,7 @@ const position = isList ? null : (first ? parseInt(first) : null);
     if (!doc) return res.status(404).json({ message: 'List not found' })
     const idx = doc.entries.findIndex(e => e.position === validPosition)
     if (idx !== -1) {
-      doc.entries[idx] = { position: validPosition, anilistId: null, title: '', coverImage: '', year: null, format: '' }
+      doc.entries[idx] = { position: validPosition, malId: null, title: '', coverImage: '', year: null, format: '' }
       doc.markModified('entries')
       await doc.save()
     }
