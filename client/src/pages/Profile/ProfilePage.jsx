@@ -419,6 +419,7 @@ function ProfileView() {
 
   const [hoverLogout, setHoverLogout] = useState(false)
   const [hoverHome,   setHoverHome]   = useState(false)
+  const [hoverStats,  setHoverStats]  = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -518,6 +519,22 @@ function ProfileView() {
 
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+        <button
+          onClick={() => navigate('/analytics')}
+          onMouseEnter={() => setHoverStats(true)}
+          onMouseLeave={() => setHoverStats(false)}
+          style={{
+            fontFamily: '"Cinzel", serif', fontSize: 11, letterSpacing: '0.3em',
+            color: hoverStats ? C.electric : C.textMuted,
+            background: hoverStats ? C.electricSoft : 'transparent',
+            border: `1px solid ${hoverStats ? C.electric + 'aa' : C.borderGold}`,
+            padding: 13, cursor: 'pointer', textTransform: 'uppercase',
+            transition: 'all 0.25s',
+            boxShadow: hoverStats ? '0 0 24px rgba(56,189,248,0.14)' : 'none',
+          }}
+        >
+          ᛊ View Analytics
+        </button>
         <button
           onClick={() => navigate('/')}
           onMouseEnter={() => setHoverHome(true)}

@@ -256,22 +256,7 @@ export default function Yggdrasil() {
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#050c14', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 20, right: isMobile ? 16 : 24, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 12 }}>
-          <button
-            onClick={() => navigate('/analytics')}
-            title="Analytics"
-            style={{
-              width: isMobile ? 32 : 36, height: isMobile ? 32 : 36,
-              border: '1px solid rgba(201,168,76,0.4)', background: 'transparent', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              color: 'rgba(201,168,76,0.8)', fontFamily: '"Cinzel", serif',
-              fontSize: isMobile ? 14 : 16, transition: 'border-color 0.25s, box-shadow 0.25s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.9)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(201,168,76,0.3)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'; e.currentTarget.style.boxShadow = 'none' }}
-          >ᛊ</button>
-          <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={isMobile ? 32 : 36} />
-        </div>
+        <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={isMobile ? 32 : 36} />
       </div>
 
       {/* Background image — fill better on portrait screens */}
