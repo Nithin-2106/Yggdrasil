@@ -13,9 +13,9 @@ const REALMS = [
     glow: 'rgba(126,184,247,0.3)',
     border: 'rgba(126,184,247,0.45)',
     description: 'Where spirits dance between worlds, boundless and eternal',
-    symbol: '᛭',
+    symbol: '✶',
     rune: 'ᚨ ᛚ ᚠ ᚺ ᛖ ᛁ ᛗ',
-    nature: 'Light Elves · Sky · Wonder',
+    nature: 'Elves · Sky · Wonder',
     image: '/alfheim.png',
   },
   {
@@ -27,7 +27,7 @@ const REALMS = [
     glow: 'rgba(192,132,252,0.3)',
     border: 'rgba(192,132,252,0.45)',
     description: 'Hall of the chosen, where legends are written in ink and fate',
-    symbol: '⚔',
+    symbol: '⚔︎',
     rune: 'ᚹ ᚨ ᛚ ᚺ ᚨ ᛚ ᛚ ᚨ',
     nature: 'Warriors · Glory · Eternity',
     image: '/valhalla.png',
@@ -41,7 +41,7 @@ const REALMS = [
     glow: 'rgba(244,162,97,0.3)',
     border: 'rgba(244,162,97,0.45)',
     description: 'The world of mortals, where stories burn brightest of all',
-    symbol: '🜂',
+    symbol: '⟐',
     rune: 'ᛗ ᛁ ᛞ ᚷ ᚨ ᚱ ᛞ',
     nature: 'Mortals · Fire · Truth',
     image: '/midgard.png',
@@ -146,7 +146,7 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
 
       {/* Symbol */}
       <div style={{
-        fontSize: isMobile ? 30 : 36, marginBottom: 12, lineHeight: 1,
+        fontSize: isMobile ? 30 : 36, marginBottom: 12, lineHeight: 1,color: hovered ? realm.accent : '#d4c5a9',
         filter: hovered ? `drop-shadow(0 0 12px ${realm.accent})` : 'none',
         transform: hovered ? 'scale(1.15)' : 'scale(1)',
         transition: 'filter 0.4s, transform 0.4s',
