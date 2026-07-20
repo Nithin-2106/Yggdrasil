@@ -11,43 +11,42 @@ const API        = '/api/media/drama'
 const TOP10_API  = '/api/top10'
 
 // ── Palette ──────────────────────────────────────────────────────────────────
-// Derived from the requested #020066 #0500ff #3733ff #33b7ff #00a5ff #004266.
-// electric/violet/indigo carry the three drama-type identities (Kdrama/Cdrama/
-// Jdrama), gold carries ratings + top highlights, ember is the muted secondary.
-// green (Completed) and red (Dropped) are kept as semantic status colors.
+// Reworked so Korean/Chinese/Japanese are three genuinely distinct hues
+// (cyan / rose / amber) instead of three shades of blue, and the background
+// is a dark plum rather than navy so the realm doesn't read as monochrome.
 const C = {
-  bg:           '#03040f',
-  surface:      '#0A0F3D',
-  surfaceHover: '#101a52',
-  input:        '#060a2e',
-  ember:        '#004266',
-  emberSoft:    'rgba(0,66,102,0.18)',
-  gold:         '#00a5ff',
-  goldSoft:     'rgba(0,165,255,0.14)',
-  goldBright:   '#33b7ff',
-  electric:     '#33b7ff',
-  electricSoft: 'rgba(51,183,255,0.12)',
-  violet:       '#3733ff',
-  violetSoft:   'rgba(55,51,255,0.15)',
-  indigo:       '#0500ff',
-  indigoSoft:   'rgba(5,0,255,0.15)',
+  bg:           '#0B0710',
+  surface:      '#181227',
+  surfaceHover: '#221B33',
+  input:        '#120C1C',
+  ember:        '#7A3B12',
+  emberSoft:    'rgba(122,59,18,0.18)',
+  gold:         '#F0B429',
+  goldSoft:     'rgba(240,180,41,0.14)',
+  goldBright:   '#FFCB57',
+  electric:     '#38BDF8', // Korean
+  electricSoft: 'rgba(56,189,248,0.12)',
+  violet:       '#F5468C', // Chinese
+  violetSoft:   'rgba(245,70,140,0.15)',
+  indigo:       '#FF9F45', // Japanese
+  indigoSoft:   'rgba(255,159,69,0.15)',
   green:        '#22C55E',
   red:          '#EF4444',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderGold:   'rgba(0,165,255,0.2)',
-  borderElec:   'rgba(51,183,255,0.15)',
+  text:         '#EDEAF5',
+  textMuted:    '#9C93B4',
+  textDim:      '#453D5C',
+  borderGold:   'rgba(240,180,41,0.2)',
+  borderElec:   'rgba(56,189,248,0.15)',
 }
-
-
 
 // ── Drama type helpers ────────────────────────────────────────────────────────
 const ALLOWED_COUNTRIES = new Set(['KR', 'CN', 'TW', 'HK', 'JP'])
 const ALLOWED_LANGUAGES = new Set(['ko', 'zh', 'ja'])
-// 16 = Animation — this is what keeps anime out of Midgard. Every fetch below
-// now runs through isValidDrama() instead of duplicating this check inline.
-const BLOCKED_GENRES    = new Set([16, 10764, 10767, 10763, 10766])
+// 16 = Animation (TMDB TV genre) — this is what keeps anime out of Midgard.
+// Every fetch in this file runs through isValidDrama() instead of duplicating
+// this check inline, so there's exactly one place to adjust if TMDB ever
+// mis-tags something.
+const BLOCKED_GENRES = new Set([16, 10764, 10767, 10763, 10766])
 
 function isValidDrama(item) {
   const countries = (item.origin_country || []).map(c => c.toUpperCase())
@@ -153,9 +152,9 @@ function SectionHeader({ title, rune, count, right, isCompact }) {
 function HorizontalScroll({
   children,
   isCompact,
-  scrollAmount = 520,
-  gap          = '14px',
-  paddingTop   = '12px',
+  scrollAmount  = 520,
+  gap           = '14px',
+  paddingTop    = '12px',
   paddingBottom = '12px',
 }) {
   const ref                     = useRef(null)
@@ -189,28 +188,28 @@ function HorizontalScroll({
     ref.current?.scrollBy({ left: dir * scrollAmount, behavior: 'smooth' })
   }
 
-  const showArrows = !isCompact
-  const arrowVisible = (dir) => showArrows && (dir === -1 ? canLeft : canRight) && hovered
+  const showArrows    = !isCompact
+  const arrowVisible  = (dir) => showArrows && (dir === -1 ? canLeft : canRight) && hovered
 
   const arrowStyle = {
-    position:        'absolute',
-    top:             '50%',
-    transform:       'translateY(-50%)',
-    zIndex:          10,
-    width:           '34px',
-    height:          '34px',
-    borderRadius:    '50%',
-    background:      'rgba(3,4,15,0.75)',
-    backdropFilter:  'blur(6px)',
-    border:          `1px solid ${C.borderElec}`,
-    color:           C.electric,
-    fontSize:        '15px',
-    cursor:          'pointer',
-    display:         'flex',
-    alignItems:      'center',
-    justifyContent:  'center',
-    boxShadow:       '0 4px 14px rgba(0,0,0,0.5)',
-    transition:      'opacity 0.25s ease, border-color 0.2s ease, transform 0.2s ease',
+    position:       'absolute',
+    top:            '50%',
+    transform:      'translateY(-50%)',
+    zIndex:         10,
+    width:          '32px',
+    height:         '32px',
+    borderRadius:   '8px',
+    background:     'rgba(11,7,16,0.8)',
+    backdropFilter: 'blur(6px)',
+    border:         `1px solid ${C.borderGold}`,
+    color:          C.gold,
+    fontSize:       '14px',
+    cursor:         'pointer',
+    display:        'flex',
+    alignItems:     'center',
+    justifyContent: 'center',
+    boxShadow:      '0 4px 14px rgba(0,0,0,0.55)',
+    transition:     'opacity 0.25s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease',
   }
 
   return (
@@ -229,9 +228,17 @@ function HorizontalScroll({
             opacity:       arrowVisible(-1) ? 1 : 0,
             pointerEvents: arrowVisible(-1) ? 'auto' : 'none',
           }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = C.electric}
-          onMouseLeave={e => e.currentTarget.style.borderColor = C.borderElec}
-        >‹</button>
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = C.gold
+            e.currentTarget.style.color       = C.goldBright
+            e.currentTarget.style.transform   = 'translateY(-50%) translateX(-2px)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = C.borderGold
+            e.currentTarget.style.color       = C.gold
+            e.currentTarget.style.transform   = 'translateY(-50%)'
+          }}
+        >❮</button>
       )}
       <div
         ref={ref}
@@ -241,9 +248,10 @@ function HorizontalScroll({
           display:         'flex',
           gap,
           overflowX:       'auto',
+          overflowY:       'hidden',
           paddingBottom,
           paddingTop,
-          minWidth:        'max-content',
+          width:           '100%',
           scrollbarWidth:  'none',
           msOverflowStyle: 'none',
         }}
@@ -260,9 +268,17 @@ function HorizontalScroll({
             opacity:       arrowVisible(1) ? 1 : 0,
             pointerEvents: arrowVisible(1) ? 'auto' : 'none',
           }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = C.electric}
-          onMouseLeave={e => e.currentTarget.style.borderColor = C.borderElec}
-        >›</button>
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = C.gold
+            e.currentTarget.style.color       = C.goldBright
+            e.currentTarget.style.transform   = 'translateY(-50%) translateX(2px)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = C.borderGold
+            e.currentTarget.style.color       = C.gold
+            e.currentTarget.style.transform   = 'translateY(-50%)'
+          }}
+        >❯</button>
       )}
     </div>
   )
@@ -276,8 +292,8 @@ function TrendingCard({ item, onNavigate, isCompact }) {
   const year   = item.first_air_date ? item.first_air_date.split('-')[0] : null
   const rating = item.vote_average   ? item.vote_average.toFixed(1)       : null
 
-  const w = isCompact ? 104 : 160
-  const h = isCompact ? 145 : 220
+  const w = isCompact ? 96 : 160
+  const h = isCompact ? 134 : 220
 
   return (
     <div
@@ -323,13 +339,12 @@ function TrendingCard({ item, onNavigate, isCompact }) {
           }}>📺</div>
         )}
 
-        {/* Type badge — background made more transparent per polish pass */}
         <div style={{
           position:      'absolute',
           top:           '8px',
           left:          '8px',
           padding:       isCompact ? '2px 6px' : '3px 8px',
-          background:    'rgba(3,4,15,0.45)',
+          background:    'rgba(11,7,16,0.5)',
           backdropFilter:'blur(3px)',
           border:        `1px solid ${tColor}66`,
           fontSize:      isCompact ? '8px' : '9px',
@@ -338,14 +353,13 @@ function TrendingCard({ item, onNavigate, isCompact }) {
           fontFamily:    '"Cinzel", serif',
         }}>{typeLabel(type)}</div>
 
-        {/* Rating badge */}
         {rating && parseFloat(rating) > 0 && (
           <div style={{
             position:      'absolute',
             top:           '8px',
             right:         '8px',
             padding:       isCompact ? '2px 6px' : '3px 8px',
-            background:    'rgba(3,4,15,0.45)',
+            background:    'rgba(11,7,16,0.5)',
             backdropFilter:'blur(3px)',
             border:        `1px solid ${C.gold}55`,
             fontSize:      isCompact ? '9px' : '10px',
@@ -355,7 +369,6 @@ function TrendingCard({ item, onNavigate, isCompact }) {
           }}>★ {rating}</div>
         )}
 
-        {/* Hover glow */}
         <div style={{
           position:   'absolute',
           inset:      0,
@@ -493,12 +506,12 @@ function StatsRow({ dramas }) {
 
   return (
     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-      <StatCard label="Total"         value={dramas.length}                                            color={C.electric}   rune="ᛏ" />
-      <StatCard label="Watching"      value={dramas.filter(d => d.status === 'Watching').length}        color={C.electric}   rune="ᚹ" />
-      <StatCard label="Completed"     value={dramas.filter(d => d.status === 'Completed').length}       color={C.green}      rune="ᚲ" />
-      <StatCard label="Plan to Watch" value={dramas.filter(d => d.status === 'Plan to Watch').length}   color={C.violet}     rune="ᛈ" />
-      <StatCard label="On Hold"       value={dramas.filter(d => d.status === 'On Hold').length}         color={C.indigo}     rune="ᚺ" />
-      <StatCard label="Dropped"       value={dramas.filter(d => d.status === 'Dropped').length}         color={C.red}        rune="ᛞ" />
+      <StatCard label="Total"         value={dramas.length}                                          color={C.electric}   rune="ᛏ" />
+      <StatCard label="Watching"      value={dramas.filter(d => d.status === 'Watching').length}      color={C.electric}   rune="ᚹ" />
+      <StatCard label="Completed"     value={dramas.filter(d => d.status === 'Completed').length}     color={C.green}      rune="ᚲ" />
+      <StatCard label="Plan to Watch" value={dramas.filter(d => d.status === 'Plan to Watch').length} color={C.violet}     rune="ᛈ" />
+      <StatCard label="On Hold"       value={dramas.filter(d => d.status === 'On Hold').length}       color={C.indigo}     rune="ᚺ" />
+      <StatCard label="Dropped"       value={dramas.filter(d => d.status === 'Dropped').length}       color={C.red}        rune="ᛞ" />
       <StatCard label="Avg Rating"    value={avgRating}                                                color={C.goldBright} rune="★" />
     </div>
   )
@@ -534,12 +547,12 @@ function TrendingSection({ onNavigate, isCompact }) {
   if (loading) return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Trending This Week" rune="ᚦ" isCompact={isCompact} />
-      <div style={{ display: 'flex', gap: '14px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: isCompact ? '8px' : '14px', overflow: 'hidden' }}>
         {Array.from({ length: isCompact ? 4 : 6 }).map((_, i) => (
           <div key={i} style={{
             flexShrink:     0,
-            width:          isCompact ? '104px' : '160px',
-            height:         isCompact ? '145px' : '220px',
+            width:          isCompact ? '96px' : '160px',
+            height:         isCompact ? '134px' : '220px',
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
             backgroundSize: '200% 100%',
             animation:      'shimmer 1.4s infinite',
@@ -555,7 +568,7 @@ function TrendingSection({ onNavigate, isCompact }) {
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Trending This Week" rune="ᚦ" count={items.length} isCompact={isCompact} />
-      <HorizontalScroll isCompact={isCompact}>
+      <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
         {items.map(item => (
           <TrendingCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />
         ))}
@@ -571,8 +584,8 @@ function WatchingCard({ drama, onNavigate, isCompact }) {
     ? (drama.episodes.current / drama.episodes.total) * 100
     : null
 
-  const w = isCompact ? 104 : 150
-  const h = isCompact ? 145 : 210
+  const w = isCompact ? 96 : 150
+  const h = isCompact ? 134 : 210
 
   return (
     <div
@@ -623,7 +636,7 @@ function WatchingCard({ drama, onNavigate, isCompact }) {
           top:           '8px',
           left:          '8px',
           padding:       isCompact ? '2px 6px' : '3px 8px',
-          background:    'rgba(3,4,15,0.45)',
+          background:    'rgba(11,7,16,0.5)',
           backdropFilter:'blur(3px)',
           border:        `1px solid ${C.gold}55`,
           fontSize:      isCompact ? '8px' : '9px',
@@ -684,7 +697,7 @@ function CurrentlyWatchingSection({ dramas, onNavigate, isCompact }) {
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Currently Watching" rune="ᚹ" count={watching.length} isCompact={isCompact} />
-      <HorizontalScroll isCompact={isCompact}>
+      <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
         {watching.map(d => (
           <WatchingCard key={d._id} drama={d} onNavigate={onNavigate} isCompact={isCompact} />
         ))}
@@ -741,7 +754,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
         position:       'fixed',
         inset:          0,
         zIndex:         600,
-        background:     'rgba(3,4,15,0.92)',
+        background:     'rgba(11,7,16,0.92)',
         backdropFilter: 'blur(8px)',
         display:        'flex',
         alignItems:     'center',
@@ -761,7 +774,6 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
       }}>
         <Corners color={C.goldBright} size={12} opacity={0.4} />
 
-        {/* Header */}
         <div style={{
           padding:        '18px 24px 14px',
           borderBottom:   `1px solid ${C.borderGold}`,
@@ -787,7 +799,6 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
           >×</button>
         </div>
 
-        {/* Search bar */}
         <div style={{ padding: '20px 24px 16px', display: 'flex', gap: '10px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <span style={{
@@ -836,7 +847,6 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
           >{loading ? 'Searching…' : saving ? 'Saving…' : 'Search'}</button>
         </div>
 
-        {/* Results grid */}
         <div style={{
           padding:             '0 24px 24px',
           display:             'grid',
@@ -898,7 +908,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
   )
 }
 
-function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
+function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
   const [hovered,     setHovered]     = useState(false)
   const [showActions, setShowActions] = useState(false)
   const isEmpty = !entry.tmdbId
@@ -911,6 +921,9 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
     index <= 5  ? C.electric :
     C.violet
 
+  const posterW = isCompact ? 108 : 140
+  const posterH = isCompact ? 155 : 200
+
   return (
     <div
       style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'flex-end' }}
@@ -921,16 +934,16 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
           because every slot uses the same font size and flex-end alignment */}
       <div style={{
         fontFamily:      '"Cinzel Decorative", "Cinzel", serif',
-        fontSize:        'clamp(120px, 14vw, 180px)',
+        fontSize:        isCompact ? 'clamp(90px, 22vw, 120px)' : 'clamp(150px, 15vw, 210px)',
         fontWeight:      900,
         lineHeight:      1,
         color:           'transparent',
-        WebkitTextStroke:`3px ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
+        WebkitTextStroke:`${isCompact ? '2.5px' : '4px'} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
         textShadow:      hovered && !isEmpty
           ? `0 0 60px ${rankColor}44, 0 0 120px ${rankColor}22`
           : 'none',
         userSelect:      'none',
-        marginRight:     '-24px',
+        marginRight:     isCompact ? '-16px' : '-24px',
         zIndex:          1,
         transition:      'all 0.3s ease',
         letterSpacing:   '-0.05em',
@@ -943,8 +956,8 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
           else if (entry.tmdbId) onNavigate('Info', entry.tmdbId)
         }}
         style={{
-          width:        '140px',
-          height:       '200px',
+          width:        `${posterW}px`,
+          height:       `${posterH}px`,
           flexShrink:   0,
           position:     'relative',
           zIndex:       2,
@@ -1002,13 +1015,12 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
                 color: C.textDim, fontSize: '28px',
               }}>📺</div>
             )}
-            {/* Type badge — more transparent background */}
             <div style={{
               position:      'absolute',
               top:           '6px',
               left:          '6px',
               padding:       '2px 7px',
-              background:    'rgba(3,4,15,0.45)',
+              background:    'rgba(11,7,16,0.5)',
               backdropFilter:'blur(3px)',
               border:        `1px solid ${tColor}55`,
               fontSize:      '9px',
@@ -1048,7 +1060,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
               fontSize:      '9px',
               letterSpacing: '0.1em',
               color:         C.electric,
-              background:    'rgba(3,4,15,0.95)',
+              background:    'rgba(11,7,16,0.95)',
               border:        `1px solid ${C.electric}44`,
               padding:       '4px 10px',
               cursor:        'pointer',
@@ -1061,7 +1073,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate }) {
               fontSize:      '9px',
               letterSpacing: '0.1em',
               color:         C.red,
-              background:    'rgba(3,4,15,0.95)',
+              background:    'rgba(11,7,16,0.95)',
               border:        `1px solid ${C.red}44`,
               padding:       '4px 10px',
               cursor:        'pointer',
@@ -1088,15 +1100,19 @@ function normaliseEntries(rawEntries) {
 
 // Skeleton mirrors the real number+poster geometry (with shimmer) so switching
 // regions or loading fresh no longer feels like a broken/static state.
-function Top10Skeleton() {
+function Top10Skeleton({ isCompact }) {
+  const posterW = isCompact ? 108 : 140
+  const posterH = isCompact ? 155 : 200
+  const rankW   = isCompact ? 56 : 70
+
   return (
     <div style={{ display: 'flex', gap: '4px', paddingTop: '16px', overflow: 'hidden' }}>
       {Array.from({ length: 10 }).map((_, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0 }}>
           <div style={{
-            width:          '70px',
-            height:         '120px',
-            marginRight:    '-24px',
+            width:          `${rankW}px`,
+            height:         `${posterH * 0.6}px`,
+            marginRight:    isCompact ? '-16px' : '-24px',
             zIndex:         1,
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
             backgroundSize: '200% 100%',
@@ -1104,8 +1120,8 @@ function Top10Skeleton() {
             opacity:        0.5,
           }} />
           <div style={{
-            width:          '140px',
-            height:         '200px',
+            width:          `${posterW}px`,
+            height:         `${posterH}px`,
             position:       'relative',
             zIndex:         2,
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
@@ -1156,7 +1172,7 @@ function Top10Section({ onNavigate, isCompact }) {
   const regionTabColor = { Korean: C.electric, Chinese: C.violet, Japanese: C.indigo }
 
   return (
-    <div style={{ marginBottom: '72px' }}>
+    <div style={{ marginBottom: '52px' }}>
       <SectionHeader
         title="Top 10"
         rune="ᛏ"
@@ -1186,25 +1202,30 @@ function Top10Section({ onNavigate, isCompact }) {
       />
 
       {loading ? (
-        <Top10Skeleton />
+        <Top10Skeleton isCompact={isCompact} />
       ) : (
-        <div style={{ paddingBottom: '44px' }}>
-          <HorizontalScroll isCompact={isCompact} scrollAmount={460} gap="4px" paddingTop="16px" paddingBottom="0px">
-            {entries.map((entry, i) => (
-              <Top10Card
-                key={entry.position}
-                entry={entry}
-                index={i}
-                onEdit={() => {
-                  if (!user) { navigate('/profile'); return }
-                  setModalSlot(entry.position)
-                }}
-                onClear={() => clearSlot(entry.position)}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </HorizontalScroll>
-        </div>
+        <HorizontalScroll
+          isCompact={isCompact}
+          scrollAmount={isCompact ? 380 : 460}
+          gap="4px"
+          paddingTop="16px"
+          paddingBottom="60px"
+        >
+          {entries.map((entry, i) => (
+            <Top10Card
+              key={entry.position}
+              entry={entry}
+              index={i}
+              isCompact={isCompact}
+              onEdit={() => {
+                if (!user) { navigate('/profile'); return }
+                setModalSlot(entry.position)
+              }}
+              onClear={() => clearSlot(entry.position)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </HorizontalScroll>
       )}
 
       {modalSlot !== null && (
@@ -1257,12 +1278,12 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
   if (loading) return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Recently Released" rune="ᚾ" isCompact={isCompact} />
-      <div style={{ display: 'flex', gap: '14px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: isCompact ? '8px' : '14px', overflow: 'hidden' }}>
         {Array.from({ length: isCompact ? 4 : 5 }).map((_, i) => (
           <div key={i} style={{
             flexShrink:     0,
-            width:          isCompact ? '104px' : '160px',
-            height:         isCompact ? '145px' : '220px',
+            width:          isCompact ? '96px' : '160px',
+            height:         isCompact ? '134px' : '220px',
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
             backgroundSize: '200% 100%',
             animation:      'shimmer 1.4s infinite',
@@ -1278,7 +1299,7 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Recently Released" rune="ᚾ" count={items.length} isCompact={isCompact} />
-      <HorizontalScroll isCompact={isCompact}>
+      <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
         {items.map(item => (
           <TrendingCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />
         ))}
@@ -1287,7 +1308,9 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
   )
 }
 
-// ── 6. EXPLORE (random 6 with shuffle) ───────────────────────────────────────
+// ── 6. EXPLORE (random 10 with shuffle) ──────────────────────────────────────
+const EXPLORE_COUNT = 10
+
 function ExploreSection({ onNavigate, isCompact }) {
   const [pool,     setPool]     = useState([])
   const [shown,    setShown]    = useState([])
@@ -1295,10 +1318,10 @@ function ExploreSection({ onNavigate, isCompact }) {
   const [spinning, setSpinning] = useState(false)
   const shownIds               = useRef(new Set())
 
-  function pick6(arr, excludeIds) {
+  function pickN(arr, excludeIds, n) {
     const available = arr.filter(i => !excludeIds.has(i.id))
-    const source    = available.length >= 6 ? available : arr
-    return [...source].sort(() => Math.random() - 0.5).slice(0, 6)
+    const source    = available.length >= n ? available : arr
+    return [...source].sort(() => Math.random() - 0.5).slice(0, n)
   }
 
   useEffect(() => {
@@ -1332,7 +1355,7 @@ function ExploreSection({ onNavigate, isCompact }) {
         return isValidDrama(item)
       })
       setPool(all)
-      const initial = pick6(all, new Set())
+      const initial = pickN(all, new Set(), EXPLORE_COUNT)
       shownIds.current = new Set(initial.map(i => i.id))
       setShown(initial)
     }).catch(console.error)
@@ -1343,7 +1366,7 @@ function ExploreSection({ onNavigate, isCompact }) {
 
   const refresh = () => {
     setSpinning(true)
-    const next = pick6(pool, shownIds.current)
+    const next = pickN(pool, shownIds.current, EXPLORE_COUNT)
     shownIds.current = new Set(next.map(i => i.id))
     setShown(next)
     setTimeout(() => setSpinning(false), 400)
@@ -1382,8 +1405,8 @@ function ExploreSection({ onNavigate, isCompact }) {
   const shimmerBox = (i) => (
     <div key={i} style={{
       flexShrink:     isCompact ? 0 : undefined,
-      width:          isCompact ? '104px' : undefined,
-      height:         isCompact ? '145px' : '220px',
+      width:          isCompact ? '96px' : undefined,
+      height:         isCompact ? '134px' : '220px',
       background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
       backgroundSize: '200% 100%',
       animation:      'shimmer 1.4s infinite',
@@ -1397,9 +1420,9 @@ function ExploreSection({ onNavigate, isCompact }) {
 
       {isCompact ? (
         // Mobile: horizontal scroll (manual swipe, no scrollbar, no arrows)
-        <div className="hide-scroll" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+        <div className="hide-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
           {loading
-            ? Array.from({ length: 6 }).map((_, i) => shimmerBox(i))
+            ? Array.from({ length: EXPLORE_COUNT }).map((_, i) => shimmerBox(i))
             : shown.map(item => (
                 <TrendingCard key={item.id} item={item} onNavigate={onNavigate} isCompact />
               ))
@@ -1414,7 +1437,7 @@ function ExploreSection({ onNavigate, isCompact }) {
           transition:          'opacity 0.2s',
         }}>
           {loading
-            ? Array.from({ length: 6 }).map((_, i) => shimmerBox(i))
+            ? Array.from({ length: EXPLORE_COUNT }).map((_, i) => shimmerBox(i))
             : shown.map(item => (
                 <TrendingCard key={item.id} item={item} onNavigate={onNavigate} />
               ))
@@ -1444,8 +1467,8 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
       style={{
         display:    'flex',
         alignItems: 'center',
-        gap:        isCompact ? '10px' : '16px',
-        padding:    isCompact ? '10px 12px' : '14px 20px',
+        gap:        isCompact ? '8px' : '16px',
+        padding:    isCompact ? '10px' : '14px 20px',
         background: hovered
           ? `linear-gradient(90deg, ${C.surfaceHover}, ${C.surface})`
           : 'transparent',
@@ -1455,6 +1478,7 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
         transition: 'all 0.25s ease',
         position:   'relative',
         overflow:   'hidden',
+        minWidth:   0,
       }}
     >
       {hovered && (
@@ -1468,8 +1492,8 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
 
       {/* Thumbnail */}
       <div style={{
-        width:      isCompact ? '34px' : '42px',
-        height:     isCompact ? '48px' : '60px',
+        width:      isCompact ? '32px' : '42px',
+        height:     isCompact ? '46px' : '60px',
         flexShrink: 0,
         background: C.surface,
         border:     `1px solid ${hovered ? C.borderElec : C.borderGold}`,
@@ -1518,14 +1542,14 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
         </div>
       </div>
 
-      {/* Rating — comes before status now, and has a fixed width so it lines
-          up straight down the column regardless of the status label's length */}
+      {/* Rating — comes before status, fixed width so ratings line up in a
+          straight column regardless of the status label's length */}
       {drama.rating && (
         <div style={{
           fontSize:   isCompact ? '12px' : '14px',
           fontWeight: 700,
           color:      C.goldBright,
-          minWidth:   isCompact ? '28px' : '36px',
+          minWidth:   isCompact ? '24px' : '36px',
           textAlign:  'right',
           textShadow: `0 0 10px ${C.gold}`,
           fontFamily: '"Cinzel", serif',
@@ -1538,13 +1562,13 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
 
       {/* Status badge — fixed width, sits last */}
       <div style={{
-        fontSize:      isCompact ? '9px' : '10px',
+        fontSize:      isCompact ? '8px' : '10px',
         letterSpacing: '0.1em',
         color:         sc,
-        padding:       isCompact ? '3px 6px' : '4px 10px',
+        padding:       isCompact ? '3px 5px' : '4px 10px',
         border:        `1px solid ${sc}44`,
         background:    `${sc}0f`,
-        minWidth:      isCompact ? '76px' : '108px',
+        minWidth:      isCompact ? '58px' : '108px',
         textAlign:     'center',
         boxSizing:     'border-box',
         whiteSpace:    'nowrap',
@@ -1601,7 +1625,7 @@ export default function Dashboard({ onNavigate, isCompact = false }) {
   }, [])
 
   return (
-    <div>
+    <div style={{ width: '100%', overflowX: 'hidden' }}>
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -200% 0; }
