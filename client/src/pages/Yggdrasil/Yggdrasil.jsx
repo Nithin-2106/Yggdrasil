@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProfileIcon from '../../components/ProfileIcon'
 import { useIsMobile } from '../../hooks/useMediaQuery'
@@ -9,9 +9,9 @@ const REALMS = [
     name: 'Alfheim',
     subtitle: 'Realm of Anime',
     path: '/alfheim',
-    accent: '#7EB8F7',
-    glow: 'rgba(126,184,247,0.3)',
-    border: 'rgba(126,184,247,0.45)',
+    accent: '#4ADE80',
+    glow: 'rgba(74,222,128,0.32)',
+    border: 'rgba(74,222,128,0.5)',
     description: 'Where spirits dance between worlds, boundless and eternal',
     symbol: '✶',
     rune: 'ᚨ ᛚ ᚠ ᚺ ᛖ ᛁ ᛗ',
@@ -24,8 +24,8 @@ const REALMS = [
     subtitle: 'Realm of Manga',
     path: '/valhalla',
     accent: '#C084FC',
-    glow: 'rgba(192,132,252,0.3)',
-    border: 'rgba(192,132,252,0.45)',
+    glow: 'rgba(192,132,252,0.32)',
+    border: 'rgba(192,132,252,0.5)',
     description: 'Hall of the chosen, where legends are written in ink and fate',
     symbol: '⚔︎',
     rune: 'ᚹ ᚨ ᛚ ᚺ ᚨ ᛚ ᛚ ᚨ',
@@ -37,9 +37,9 @@ const REALMS = [
     name: 'Midgard',
     subtitle: 'Realm of Drama',
     path: '/midgard',
-    accent: '#F4A261',
-    glow: 'rgba(244,162,97,0.3)',
-    border: 'rgba(244,162,97,0.45)',
+    accent: '#38BDF8',
+    glow: 'rgba(56,189,248,0.32)',
+    border: 'rgba(56,189,248,0.5)',
     description: 'The world of mortals, where stories burn brightest of all',
     symbol: '⟐',
     rune: 'ᛗ ᛁ ᛞ ᚷ ᚨ ᚱ ᛞ',
@@ -48,9 +48,78 @@ const REALMS = [
   },
 ]
 
+const SCRAMBLE_CHARS = 'ᚨᛚᚠᚺᛖᛁᛗᚹᚨᛚᛚᚨᛗᛁᛞᚷᚨᚱᛞᛟᚦᚱᛊABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
+
+// ── Flip-fade text (per-character reveal) ───────────────────────────────────
+function FlipFadeText({ text, as = 'div', baseDelay = 0, stagger = 35, style }) {
+  const Tag = as
+  const chars = text.split('')
+  return (
+    <Tag style={{ ...style, perspective: 500 }}>
+      {chars.map((ch, i) => (
+        <span
+          key={i}
+          className="ygg-flip-char"
+          style={{ animationDelay: `${baseDelay + i * stagger}ms` }}
+        >
+          {ch === ' ' ? '\u00A0' : ch}
+        </span>
+      ))}
+    </Tag>
+  )
+}
+
+// ── Scramble/"generate" text hook ───────────────────────────────────────────
+function useScrambleText(finalText, { duration = 2500, delay = 500 } = {}) {
+  const [display, setDisplay] = useState(finalText)
+  useEffect(() => {
+    if (prefersReducedMotion()) return
+    let frameId
+    let startTimeout
+    const letters = finalText.split('')
+    const frameMs = 200
+    const totalFrames = Math.max(1, Math.round(duration / frameMs))
+    let frame = 0
+
+    const tick = () => {
+      frame++
+      const revealCount = Math.floor((frame / totalFrames) * letters.length)
+      setDisplay(
+        letters
+          .map((ch, i) => {
+            if (ch === ' ') return ' '
+            if (i < revealCount) return ch
+            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)]
+          })
+          .join('')
+      )
+      if (frame < totalFrames) {
+        frameId = setTimeout(tick, frameMs)
+      } else {
+        setDisplay(finalText)
+      }
+    }
+
+    startTimeout = setTimeout(tick, delay)
+    return () => {
+      clearTimeout(startTimeout)
+      clearTimeout(frameId)
+    }
+  }, [finalText, duration, delay])
+  return display
+}
+
 // ── Enter button ──────────────────────────────────────────────────────────────
 function EnterButton({ onClick, isMobile }) {
   const [hovered, setHovered] = useState(false)
+  const display = useScrambleText('ENTER THE TREE', { duration: 1600, delay: 500 })
+
   return (
     <button
       onClick={onClick}
@@ -68,12 +137,14 @@ function EnterButton({ onClick, isMobile }) {
         textTransform: 'uppercase',
         transition: 'all 0.35s ease',
         minHeight: '48px',
+        minWidth: isMobile ? 220 : 260,
         boxShadow: hovered
           ? '0 0 50px rgba(77,255,210,0.45), inset 0 0 30px rgba(77,255,210,0.1)'
           : '0 0 20px rgba(77,255,210,0.1), inset 0 0 16px rgba(77,255,210,0.04)',
+        fontVariantNumeric: 'tabular-nums',
       }}
     >
-      Enter the Tree
+      {display}
     </button>
   )
 }
@@ -81,6 +152,9 @@ function EnterButton({ onClick, isMobile }) {
 // ── Realm card ────────────────────────────────────────────────────────────────
 function RealmCard({ realm, index, visible, onClick, isMobile }) {
   const [hovered, setHovered] = useState(false)
+  // No real hover on touch devices — treat mobile cards as always "activated"
+  // so the accent glow, border, and background art are visible up front.
+  const active = isMobile || hovered
 
   return (
     <div
@@ -88,36 +162,36 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        flex: '1 1 260px',
-        maxWidth: 300,
-        padding: '36px 28px 32px',
-        border: `1px solid ${hovered ? realm.border : 'rgba(201,168,76,0.12)'}`,
-        background: hovered
-          ? 'linear-gradient(160deg, rgba(5,12,20,0.85), rgba(5,12,20,0.7))'
-          : 'rgba(5,12,20,0.55)',
+        flex: isMobile ? '1 1 100%' : '1 1 260px',
+        maxWidth: isMobile ? 260 : 300,
+        padding: isMobile ? '28px 20px 24px' : '36px 28px 32px',
+        border: `1px solid ${active ? realm.border : 'rgba(217,184,92,0.14)'}`,
+        background: active
+          ? 'linear-gradient(160deg, rgba(4,14,10,0.85), rgba(4,14,10,0.7))'
+          : 'rgba(4,14,10,0.55)',
         backdropFilter: 'blur(6px)',
         cursor: 'pointer',
         textAlign: 'center',
         // Stagger delay only on entry (when visible becomes true), not on hover changes
         transition: `opacity 0.6s ease ${index * 150}ms, transform 0.6s ease ${index * 150}ms, border 0.4s ease, box-shadow 0.4s ease, background 0.4s ease`,
-        boxShadow: hovered
+        boxShadow: active
           ? `0 0 80px ${realm.glow}, 0 0 0 1px ${realm.border}, inset 0 0 40px rgba(0,0,0,0.3)`
           : 'none',
         transform: visible
-          ? hovered ? 'translateY(-12px) scale(1.02)' : 'translateY(0) scale(1)'
+          ? hovered && !isMobile ? 'translateY(-12px) scale(1.02)' : 'translateY(0) scale(1)'
           : 'translateY(32px)',
         opacity: visible ? 1 : 0,
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Hover background image */}
+      {/* Background art */}
       <div style={{
         position: 'absolute', inset: 0,
         backgroundImage: `url(${realm.image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        opacity: hovered ? 0.30 : 0,
+        opacity: active ? 0.30 : 0,
         transition: 'opacity 0.5s ease',
         pointerEvents: 'none',
       }} />
@@ -129,7 +203,7 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
         { bottom: 10, left: 10,  borderBottom: true, borderLeft: true   },
         { bottom: 10, right: 10, borderBottom: true, borderRight: true  },
       ].map((pos, i) => {
-        const borderColor = hovered ? realm.accent : 'rgba(201,168,76,0.25)'
+        const borderColor = active ? realm.accent : 'rgba(217,184,92,0.25)'
         return (
           <div key={i} style={{
             position: 'absolute',
@@ -146,44 +220,43 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
 
       {/* Symbol */}
       <div style={{
-        fontSize: isMobile ? 30 : 36, marginBottom: 12, lineHeight: 1,color: hovered ? realm.accent : '#d4c5a9',
-        filter: hovered ? `drop-shadow(0 0 12px ${realm.accent})` : 'none',
-        transform: hovered ? 'scale(1.15)' : 'scale(1)',
+        fontSize: isMobile ? 26 : 36, marginBottom: 12, lineHeight: 1, color: active ? realm.accent : '#d4c5a9',
+        filter: active ? `drop-shadow(0 0 12px ${realm.accent})` : 'none',
+        transform: hovered && !isMobile ? 'scale(1.15)' : 'scale(1)',
         transition: 'filter 0.4s, transform 0.4s',
       }}>
         {realm.symbol}
       </div>
 
       {/* Rune line */}
-      <div style={{ 
-  fontFamily: 'Cinzel, serif', 
-  color: hovered ? realm.accent : 'rgba(201,168,76,0.35)', 
-  marginBottom: 20, 
-  transition: 'color 0.4s', 
-  userSelect: 'none',
-  ...(isMobile ? { fontSize: 10, letterSpacing: '0.22em' } : { fontSize: 11, letterSpacing: '0.25em' })
-}}> 
-  {realm.rune} 
-</div>
-
+      <div style={{
+        fontFamily: 'Cinzel, serif',
+        color: active ? realm.accent : 'rgba(217,184,92,0.35)',
+        marginBottom: isMobile ? 16 : 20,
+        transition: 'color 0.4s',
+        userSelect: 'none',
+        ...(isMobile ? { fontSize: 9, letterSpacing: '0.18em' } : { fontSize: 11, letterSpacing: '0.25em' })
+      }}>
+        {realm.rune}
+      </div>
 
       {/* Animated accent divider */}
       <div style={{
-        width: hovered ? '70%' : 28, height: 1,
+        width: active ? '70%' : 28, height: 1,
         background: `linear-gradient(to right, transparent, ${realm.accent}, transparent)`,
         margin: '0 auto 20px',
         transition: 'width 0.5s ease',
-        boxShadow: hovered ? `0 0 8px ${realm.accent}` : 'none',
+        boxShadow: active ? `0 0 8px ${realm.accent}` : 'none',
       }} />
 
       {/* Realm name */}
       <div style={{
         fontFamily: '"Cinzel Decorative", "Cinzel", "Georgia", serif',
-        fontSize: 'clamp(18px, 2vw, 24px)', fontWeight: 700,
+        fontSize: isMobile ? 'clamp(16px, 5vw, 20px)' : 'clamp(18px, 2vw, 24px)', fontWeight: 700,
         letterSpacing: '0.15em',
-        color: hovered ? realm.accent : '#d4c5a9',
+        color: active ? realm.accent : '#d4c5a9',
         marginBottom: 6, transition: 'all 0.35s ease',
-        textShadow: hovered ? `0 0 20px ${realm.accent}` : 'none',
+        textShadow: active ? `0 0 20px ${realm.accent}` : 'none',
         userSelect: 'none',
       }}>
         {realm.name}
@@ -193,7 +266,7 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
       <div style={{
         fontFamily: '"Cinzel", "Georgia", serif', fontSize: 10,
         letterSpacing: '0.4em', textTransform: 'uppercase',
-        color: hovered ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)',
+        color: active ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)',
         marginBottom: 18, transition: 'color 0.3s', userSelect: 'none',
       }}>
         {realm.subtitle}
@@ -203,7 +276,7 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
       <div style={{
         fontFamily: '"Cinzel", serif', fontSize: 9,
         letterSpacing: '0.25em', textTransform: 'uppercase',
-        color: hovered ? realm.accent : 'rgba(201,168,76,0.3)',
+        color: active ? realm.accent : 'rgba(217,184,92,0.3)',
         marginBottom: 16, transition: 'color 0.4s', userSelect: 'none',
       }}>
         {realm.nature}
@@ -212,7 +285,7 @@ function RealmCard({ realm, index, visible, onClick, isMobile }) {
       {/* Description */}
       <div style={{
         fontSize: 12, lineHeight: 1.7, fontStyle: 'italic', letterSpacing: '0.03em',
-        color: hovered ? 'rgba(220,215,200,0.7)' : 'rgba(200,195,180,0.3)',
+        color: active ? 'rgba(220,215,200,0.7)' : 'rgba(200,195,180,0.3)',
         transition: 'color 0.4s',
       }}>
         {realm.description}
@@ -227,16 +300,38 @@ export default function Yggdrasil() {
   const isMobile = useIsMobile()
   const [phase, setPhase] = useState('landing')
   const [realmVisible, setRealmVisible] = useState(false)
+  const stylesInjected = useRef(false)
 
-  // Inject Google Fonts once on mount — avoids re-injecting on every render
+  // Inject Google Fonts + animation keyframes once on mount.
   useEffect(() => {
-    const id = 'yggdrasil-fonts'
-    if (document.getElementById(id)) return
-    const link = document.createElement('link')
-    link.id   = id
-    link.rel  = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&display=swap'
-    document.head.appendChild(link)
+    const fontId = 'yggdrasil-fonts'
+    if (!document.getElementById(fontId)) {
+      const link = document.createElement('link')
+      link.id = fontId
+      link.rel = 'stylesheet'
+      link.href = 'https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&display=swap'
+      document.head.appendChild(link)
+    }
+
+    if (!stylesInjected.current && !document.getElementById('yggdrasil-anim-styles')) {
+      const style = document.createElement('style')
+      style.id = 'yggdrasil-anim-styles'
+      style.textContent = `
+        @keyframes yggFlipFade {
+          0% { opacity: 0; transform: rotateX(80deg) translateY(14px); }
+          100% { opacity: 1; transform: rotateX(0deg) translateY(0); }
+        }
+        .ygg-flip-char {
+          display: inline-block;
+          animation: yggFlipFade 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ygg-flip-char { animation: none !important; opacity: 1 !important; transform: none !important; }
+        }
+      `
+      document.head.appendChild(style)
+    }
+    stylesInjected.current = true
   }, [])
 
   const handleEnter = () => {
@@ -252,6 +347,8 @@ export default function Yggdrasil() {
   }
 
   const isLanding = phase === 'landing'
+  const bgImage = isMobile ? '/yggdrasil_mobile.png' : '/yggdrasil.png'
+  const bgSize = isMobile ? '100%' : '80%'
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#050c14', overflow: 'hidden' }}>
@@ -259,11 +356,11 @@ export default function Yggdrasil() {
         <ProfileIcon borderColor="rgba(201,168,76,0.4)" size={isMobile ? 32 : 36} />
       </div>
 
-      {/* Background image — fill better on portrait screens */}
+      {/* Background image */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'url(/yggdrasil.png)',
-        backgroundSize: isMobile ? '160%' : '80%',
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: bgSize,
         backgroundPosition: 'center',
         filter: isLanding ? 'brightness(0.85)' : 'brightness(0.25) blur(2px)',
         transition: 'filter 1s ease',
@@ -287,27 +384,35 @@ export default function Yggdrasil() {
         pointerEvents: isLanding ? 'auto' : 'none',
         transition: 'opacity 0.5s ease',
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            fontFamily: '"Cinzel Decorative", "Cinzel", "Georgia", serif',
-            fontSize: 'clamp(28px, 11vw, 74px)',
-            fontWeight: 700,
-            letterSpacing: isMobile ? '0.15em' : '0.25em',
-            color: '#C9A84C',
-            textShadow: '0 0 80px rgba(201,168,76,0.5), 0 2px 6px rgba(0,0,0,0.9)',
-            lineHeight: 1, userSelect: 'none',
-          }}>
-            YGGDRASIL
-          </div>
-          <div style={{
-            fontFamily: '"Cinzel", "Georgia", serif',
-            fontSize: isMobile ? 12 : 'clamp(15px, 1.4vw, 17px)',
-            letterSpacing: isMobile ? '0.3em' : '0.5em',
-            color: 'rgb(0,255,191)',
-            marginTop: 18, textTransform: 'uppercase', userSelect: 'none',
-          }}>
-            Keeper of Worlds
-          </div>
+        <div style={{ textAlign: 'center', marginTop: isMobile ? 30 : 0 }}>
+          <FlipFadeText
+            text="YGGDRASIL"
+            as="div"
+            baseDelay={150}
+            stagger={70}
+            style={{
+              fontFamily: '"Cinzel Decorative", "Cinzel", "Georgia", serif',
+              fontSize: 'clamp(28px, 11vw, 74px)',
+              fontWeight: 700,
+              letterSpacing: isMobile ? '0.15em' : '0.25em',
+              color: '#C9A84C',
+              textShadow: '0 0 80px rgba(201,168,76,0.5), 0 2px 6px rgba(0,0,0,0.9)',
+              lineHeight: 1, userSelect: 'none',
+            }}
+          />
+          <FlipFadeText
+            text="Keeper of Worlds"
+            as="div"
+            baseDelay={1100}
+            stagger={45}
+            style={{
+              fontFamily: '"Cinzel", "Georgia", serif',
+              fontSize: isMobile ? 12 : 'clamp(15px, 1.4vw, 17px)',
+              letterSpacing: isMobile ? '0.3em' : '0.5em',
+              color: 'rgb(0,255,191)',
+              marginTop: 18, textTransform: 'uppercase', userSelect: 'none',
+            }}
+          />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
@@ -329,26 +434,27 @@ export default function Yggdrasil() {
       <div style={{
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        alignItems: 'center',
+        justifyContent: isMobile ? 'flex-start' : 'center',
         opacity: realmVisible ? 1 : 0,
         pointerEvents: phase === 'realm' ? 'auto' : 'none',
         transition: 'opacity 0.9s ease',
-        padding: isMobile ? '20px 16px' : 24,
+        padding: isMobile ? '30px 14px 24px' : 24,
         overflowY: 'auto',
       }}>
         <div style={{
           fontFamily: '"Cinzel", serif', fontSize: isMobile ? 14 : 18,
           color: 'rgba(201,168,76,0.4)', letterSpacing: isMobile ? '0.3em' : '0.5em',
-          marginBottom: 6, userSelect: 'none',
+          marginBottom: 6, userSelect: 'none', flexShrink: 0,
         }}>
           ᛭ ᛭ ᛭
         </div>
 
-        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+        <div style={{ textAlign: 'center', marginBottom: 8, flexShrink: 0 }}>
           <div style={{
             fontFamily: '"Cinzel", "Georgia", serif',
             fontSize: isMobile ? 9 : 'clamp(10px, 1.2vw, 12px)',
-            letterSpacing: isMobile ? '0.35em' : '0.6em',
+            letterSpacing: isMobile ? '0.3em' : '0.6em',
             color: 'rgba(201,168,76,0.7)', textTransform: 'uppercase',
             marginBottom: 10, userSelect: 'none',
           }}>
@@ -366,10 +472,10 @@ export default function Yggdrasil() {
           </div>
         </div>
 
-        <Divider mb={isMobile ? 28 : 40} isMobile={isMobile} />
+        <Divider mb={isMobile ? 22 : 40} isMobile={isMobile} />
 
         <div style={{
-          display: 'flex', gap: isMobile ? 20 : 16, flexWrap: 'wrap',
+          display: 'flex', gap: 16, flexWrap: 'wrap',
           justifyContent: 'center', width: '100%', maxWidth: 1040,
         }}>
           {REALMS.map((realm, i) => (
@@ -381,7 +487,7 @@ export default function Yggdrasil() {
           ))}
         </div>
 
-        <Divider mt={isMobile ? 24 : 36} mb={0} dim isMobile={isMobile} />
+        <Divider mt={isMobile ? 20 : 36} mb={0} dim isMobile={isMobile} />
 
         <button
           onClick={handleBack}
@@ -394,7 +500,7 @@ export default function Yggdrasil() {
             background: 'transparent', border: 'none',
             cursor: 'pointer', textTransform: 'uppercase',
             transition: 'color 0.3s', padding: 12,
-            minHeight: '44px',
+            minHeight: '44px', flexShrink: 0,
           }}
           onMouseEnter={e => e.currentTarget.style.color = 'rgba(201,168,76,0.8)'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(200,220,215,0.35)'}
@@ -425,3 +531,5 @@ function Divider({ mt = 0, mb = 0, dim = false, isMobile = false }) {
     </div>
   )
 }
+
+
