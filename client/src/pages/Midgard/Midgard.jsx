@@ -10,25 +10,28 @@ import { useAuth } from '../../context/AuthContext'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { useIsCompact } from '../../hooks/useMediaQuery'
 
+// ── Shared Midgard palette ────────────────────────────────────────────────────
+// Kept in sync with Dashboard.jsx's C object so the navbar/watermark/glows and
+// the page content read as one cohesive realm instead of two different blues.
 const C = {
-  bg:           '#080D1A',
-  surface:      '#0F1829',
-  surfaceHover: '#141F33',
-  input:        '#0A1220',
-  ember:        '#C2410C',
-  emberSoft:    'rgba(194,65,12,0.15)',
-  gold:         '#CA8A04',
-  goldBright:   '#F59E0B',
-  goldSoft:     'rgba(202,138,4,0.2)',
+  bg:           '#0B0E1A',
+  surface:      '#141B2E',
+  surfaceHover: '#1B2438',
+  input:        '#0E1424',
+  gold:         '#D4A24C',
+  goldBright:   '#F0C36B',
+  goldSoft:     'rgba(212,162,76,0.18)',
+  ember:        '#B4552F',
+  emberSoft:    'rgba(180,85,47,0.16)',
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.12)',
-  violet:       '#7C3AED',
-  violetSoft:   'rgba(124,58,237,0.15)',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderGold:   'rgba(202,138,4,0.2)',
-  borderElec:   'rgba(56,189,248,0.15)',
+  violet:       '#A855F7',
+  violetSoft:   'rgba(168,85,247,0.15)',
+  text:         '#E9EDF6',
+  textMuted:    '#8C97B4',
+  textDim:      '#3E4A66',
+  borderGold:   'rgba(212,162,76,0.22)',
+  borderElec:   'rgba(56,189,248,0.16)',
 }
 
 // ── SVG Vegvisir watermark ────────────────────────────────────────────────────
@@ -48,8 +51,8 @@ function VegvisirWatermark() {
         zIndex:        0,
       }}
     >
-      <circle cx="100" cy="100" r="95" fill="none" stroke="#CA8A04" strokeWidth="1" />
-      <circle cx="100" cy="100" r="80" fill="none" stroke="#CA8A04" strokeWidth="0.5" />
+      <circle cx="100" cy="100" r="95" fill="none" stroke={C.gold} strokeWidth="1" />
+      <circle cx="100" cy="100" r="80" fill="none" stroke={C.gold} strokeWidth="0.5" />
       {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
         const rad      = (angle * Math.PI) / 180
         const x1       = 100 + 20 * Math.cos(rad)
@@ -68,15 +71,15 @@ function VegvisirWatermark() {
         const tip2x    = b2x + 14 * Math.cos(rad)
         const tip2y    = b2y + 14 * Math.sin(rad)
         return (
-          <g key={i} stroke="#CA8A04" strokeWidth="1.5" fill="none">
+          <g key={i} stroke={C.gold} strokeWidth="1.5" fill="none">
             <line x1={x1}  y1={y1}  x2={x2}    y2={y2}    />
             <line x1={b1x} y1={b1y} x2={tip1x} y2={tip1y} />
             <line x1={b2x} y1={b2y} x2={tip2x} y2={tip2y} />
           </g>
         )
       })}
-      <circle cx="100" cy="100" r="20" fill="none" stroke="#CA8A04" strokeWidth="1" />
-      <circle cx="100" cy="100" r="6"  fill="#CA8A04" opacity="0.5" />
+      <circle cx="100" cy="100" r="20" fill="none" stroke={C.gold} strokeWidth="1" />
+      <circle cx="100" cy="100" r="6"  fill={C.gold} opacity="0.5" />
     </svg>
   )
 }
@@ -262,7 +265,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
         right:          0,
         zIndex:         100,
         height:         '64px',
-        background:     'rgba(8,13,26,0.92)',
+        background:     'rgba(11,14,26,0.92)',
         backdropFilter: 'blur(20px)',
         borderBottom:   `1px solid ${C.borderGold}`,
         display:        'flex',
@@ -331,7 +334,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: isCompact ? '10px' : '12px' }}>
           {!isCompact && <SearchBar onSearch={onSearch} />}
 
-          <ProfileIcon borderColor="rgba(202,138,4,0.35)" size={34} />
+          <ProfileIcon borderColor="rgba(212,162,76,0.35)" size={34} />
 
           {!isCompact && (
             <>
@@ -401,7 +404,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
           left:           0,
           right:          0,
           zIndex:         99,
-          background:     'rgba(8,13,26,0.97)',
+          background:     'rgba(11,14,26,0.97)',
           backdropFilter: 'blur(20px)',
           borderBottom:   `1px solid ${C.borderGold}`,
           padding:        '20px 16px 28px',
@@ -476,7 +479,7 @@ function AmbientGlows() {
         left:          0,
         right:         0,
         height:        '180px',
-        background:    `linear-gradient(to top, ${C.ember}18, transparent)`,
+        background:    `linear-gradient(to top, ${C.ember}16, transparent)`,
         pointerEvents: 'none',
         zIndex:        0,
       }} />
@@ -583,7 +586,7 @@ export default function Midgard() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden' }}>
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap"
@@ -610,7 +613,7 @@ export default function Midgard() {
 
         <ErrorBoundary colors={C} realmName="Midgard" onReturnHome={() => handleNavigate('Dashboard')}>
           {activePage === 'Dashboard' && (
-            <Dashboard onNavigate={handleNavigate} />
+            <Dashboard onNavigate={handleNavigate} isCompact={isCompact} />
           )}
           {activePage === 'Browse' && (
             <BrowsePage onNavigate={handleNavigate} />
