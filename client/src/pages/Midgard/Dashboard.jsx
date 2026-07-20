@@ -11,9 +11,6 @@ const API        = '/api/media/drama'
 const TOP10_API  = '/api/top10'
 
 // ── Palette ──────────────────────────────────────────────────────────────────
-// Reworked so Korean/Chinese/Japanese are three genuinely distinct hues
-// (cyan / rose / amber) instead of three shades of blue, and the background
-// is a dark plum rather than navy so the realm doesn't read as monochrome.
 const C = {
   bg:           '#0B0710',
   surface:      '#181227',
@@ -43,9 +40,9 @@ const C = {
 const ALLOWED_COUNTRIES = new Set(['KR', 'CN', 'TW', 'HK', 'JP'])
 const ALLOWED_LANGUAGES = new Set(['ko', 'zh', 'ja'])
 // 16 = Animation (TMDB TV genre) — this is what keeps anime out of Midgard.
-// Every fetch in this file runs through isValidDrama() instead of duplicating
-// this check inline, so there's exactly one place to adjust if TMDB ever
-// mis-tags something.
+// Every fetch in this file (and the Top 10 search modal) runs through
+// isValidDrama() instead of duplicating this check inline, so there's
+// exactly one place to adjust if TMDB ever mis-tags something.
 const BLOCKED_GENRES = new Set([16, 10764, 10767, 10763, 10766])
 
 function isValidDrama(item) {
@@ -70,7 +67,15 @@ function getDramaType(item) {
   return 'Drama'
 }
 
-function typeLabel(type) {
+// `compact` gives a short code (KR/CN/JP) for tight mobile card corners
+// where the full word would collide with an adjacent badge.
+function typeLabel(type, compact = false) {
+  if (compact) {
+    if (type === 'Kdrama') return 'KR'
+    if (type === 'Cdrama') return 'CN'
+    if (type === 'Jdrama') return 'JP'
+    return type
+  }
   if (type === 'Kdrama') return 'Korean'
   if (type === 'Cdrama') return 'Chinese'
   if (type === 'Jdrama') return 'Japanese'
@@ -98,16 +103,20 @@ function Corners({ color = C.goldBright, size = 12, opacity = 0.4 }) {
   )
 }
 
+// Title + optional right-side content, always on one row (wraps only if the
+// viewport is genuinely too narrow) so region tabs / refresh buttons sit
+// next to the title on mobile instead of stacking below it.
 function SectionHeader({ title, rune, count, right, isCompact }) {
   return (
     <div style={{ marginBottom: '20px' }}>
       <div style={{
-        display:       'flex',
-        alignItems:    isCompact ? 'flex-start' : 'center',
-        flexDirection: isCompact && right ? 'column' : 'row',
-        gap:           isCompact ? '12px' : '14px',
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: right ? 'space-between' : 'flex-start',
+        flexWrap:       'wrap',
+        gap:            isCompact ? '10px' : '14px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isCompact ? '10px' : '14px', minWidth: 0 }}>
           <span style={{
             fontFamily:    '"Cinzel", serif',
             fontSize:      '16px',
@@ -135,9 +144,7 @@ function SectionHeader({ title, rune, count, right, isCompact }) {
             }}>{count}</span>
           )}
         </div>
-        {right && (
-          <div style={{ marginLeft: isCompact ? 0 : 'auto' }}>{right}</div>
-        )}
+        {right && <div>{right}</div>}
       </div>
       <div style={{
         height:     '1px',
@@ -160,7 +167,6 @@ function HorizontalScroll({
   const ref                     = useRef(null)
   const [canLeft,  setCanLeft]  = useState(false)
   const [canRight, setCanRight] = useState(false)
-  const [hovered,  setHovered]  = useState(false)
 
   const check = useCallback(() => {
     const el = ref.current
@@ -188,8 +194,7 @@ function HorizontalScroll({
     ref.current?.scrollBy({ left: dir * scrollAmount, behavior: 'smooth' })
   }
 
-  const showArrows    = !isCompact
-  const arrowVisible  = (dir) => showArrows && (dir === -1 ? canLeft : canRight) && hovered
+  const showArrows = !isCompact
 
   const arrowStyle = {
     position:       'absolute',
@@ -199,7 +204,7 @@ function HorizontalScroll({
     width:          '32px',
     height:         '32px',
     borderRadius:   '8px',
-    background:     'rgba(11,7,16,0.8)',
+    background:     'rgba(11,7,16,0.85)',
     backdropFilter: 'blur(6px)',
     border:         `1px solid ${C.borderGold}`,
     color:          C.gold,
@@ -208,26 +213,17 @@ function HorizontalScroll({
     display:        'flex',
     alignItems:     'center',
     justifyContent: 'center',
-    boxShadow:      '0 4px 14px rgba(0,0,0,0.55)',
-    transition:     'opacity 0.25s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease',
+    boxShadow:      '0 4px 14px rgba(0,0,0,0.6)',
+    transition:     'border-color 0.2s ease, transform 0.2s ease, color 0.2s ease',
   }
 
   return (
-    <div
-      style={{ position: 'relative', overflow: 'visible' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div style={{ position: 'relative', overflow: 'visible' }}>
       {showArrows && canLeft && (
         <button
           onClick={() => scroll(-1)}
           aria-label="Scroll left"
-          style={{
-            ...arrowStyle,
-            left:          '-16px',
-            opacity:       arrowVisible(-1) ? 1 : 0,
-            pointerEvents: arrowVisible(-1) ? 'auto' : 'none',
-          }}
+          style={{ ...arrowStyle, left: '8px' }}
           onMouseEnter={e => {
             e.currentTarget.style.borderColor = C.gold
             e.currentTarget.style.color       = C.goldBright
@@ -251,7 +247,10 @@ function HorizontalScroll({
           overflowY:       'hidden',
           paddingBottom,
           paddingTop,
+          paddingLeft:     showArrows && canLeft  ? '44px' : 0,
+          paddingRight:    showArrows && canRight ? '44px' : 0,
           width:           '100%',
+          boxSizing:       'border-box',
           scrollbarWidth:  'none',
           msOverflowStyle: 'none',
         }}
@@ -262,12 +261,7 @@ function HorizontalScroll({
         <button
           onClick={() => scroll(1)}
           aria-label="Scroll right"
-          style={{
-            ...arrowStyle,
-            right:         '-16px',
-            opacity:       arrowVisible(1) ? 1 : 0,
-            pointerEvents: arrowVisible(1) ? 'auto' : 'none',
-          }}
+          style={{ ...arrowStyle, right: '8px' }}
           onMouseEnter={e => {
             e.currentTarget.style.borderColor = C.gold
             e.currentTarget.style.color       = C.goldBright
@@ -351,7 +345,7 @@ function TrendingCard({ item, onNavigate, isCompact }) {
           letterSpacing: '0.15em',
           color:         tColor,
           fontFamily:    '"Cinzel", serif',
-        }}>{typeLabel(type)}</div>
+        }}>{typeLabel(type, isCompact)}</div>
 
         {rating && parseFloat(rating) > 0 && (
           <div style={{
@@ -490,9 +484,10 @@ function StatCard({ label, value, color, rune }) {
       <div style={{
         fontSize:      '10px',
         letterSpacing: '0.25em',
-        color:         C.textMuted,
+        color:         hovered ? color : C.textMuted,
         textTransform: 'uppercase',
         fontFamily:    '"Cinzel", serif',
+        transition:    'color 0.35s',
       }}>{label}</div>
     </div>
   )
@@ -580,6 +575,7 @@ function TrendingSection({ onNavigate, isCompact }) {
 // ── 3. CURRENTLY WATCHING ─────────────────────────────────────────────────────
 function WatchingCard({ drama, onNavigate, isCompact }) {
   const [hovered, setHovered] = useState(false)
+  const tColor = typeColor(drama.type)
   const progress = drama.episodes?.total
     ? (drama.episodes.current / drama.episodes.total) * 100
     : null
@@ -604,11 +600,11 @@ function WatchingCard({ drama, onNavigate, isCompact }) {
         width:      `${w}px`,
         height:     `${h}px`,
         background: C.surface,
-        border:     `1px solid ${hovered ? C.electric + '88' : C.borderGold}`,
+        border:     `1px solid ${hovered ? tColor + '88' : C.borderGold}`,
         overflow:   'hidden',
         position:   'relative',
         boxShadow:  hovered
-          ? `0 12px 40px ${C.electricSoft}, 0 0 0 1px ${C.electric}33`
+          ? `0 12px 40px ${tColor}22, 0 0 0 1px ${tColor}33`
           : '0 4px 16px rgba(0,0,0,0.5)',
         transition: 'all 0.3s ease',
       }}>
@@ -638,22 +634,22 @@ function WatchingCard({ drama, onNavigate, isCompact }) {
           padding:       isCompact ? '2px 6px' : '3px 8px',
           background:    'rgba(11,7,16,0.5)',
           backdropFilter:'blur(3px)',
-          border:        `1px solid ${C.gold}55`,
+          border:        `1px solid ${tColor}66`,
           fontSize:      isCompact ? '8px' : '9px',
           letterSpacing: '0.15em',
-          color:         C.gold,
+          color:         tColor,
           fontFamily:    '"Cinzel", serif',
-        }}>{typeLabel(drama.type)}</div>
+        }}>{typeLabel(drama.type, isCompact)}</div>
 
         <div style={{
           position:   'absolute',
           inset:      0,
-          background: `linear-gradient(to top, ${C.electric}22, transparent)`,
+          background: `linear-gradient(to top, ${tColor}33, transparent)`,
           opacity:    hovered ? 1 : 0,
           transition: 'opacity 0.3s',
         }} />
 
-        {hovered && <Corners color={C.electric} size={10} opacity={0.7} />}
+        {hovered && <Corners color={tColor} size={10} opacity={0.7} />}
       </div>
 
       {progress !== null && (
@@ -661,8 +657,8 @@ function WatchingCard({ drama, onNavigate, isCompact }) {
           <div style={{
             height:     '100%',
             width:      `${progress}%`,
-            background: `linear-gradient(to right, ${C.ember}, ${C.electric})`,
-            boxShadow:  `0 0 6px ${C.electric}`,
+            background: `linear-gradient(to right, ${C.ember}, ${tColor})`,
+            boxShadow:  `0 0 6px ${tColor}`,
             transition: 'width 0.5s ease',
           }} />
         </div>
@@ -719,7 +715,9 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
     setLoading(true)
     try {
       const res = await searchDramas(query)
-      setResults(res.slice(0, 12))
+      // Same isValidDrama guard used by every discover fetch, so anime
+      // (or non-drama TV) can't slip into a Top 10 slot via search.
+      setResults(res.filter(isValidDrama).slice(0, 12))
     } catch {
       setResults([])
     } finally {
@@ -930,24 +928,32 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
       onMouseEnter={() => { setHovered(true); setShowActions(true) }}
       onMouseLeave={() => { setHovered(false); setShowActions(false) }}
     >
-      {/* Big rank number — sized up per polish pass, row height stays fixed
-          because every slot uses the same font size and flex-end alignment */}
+      {/* Rank number — locked to exactly the poster's height via a fixed-height,
+          overflow-hidden wrapper, so it can never render taller than the slot
+          (that overshoot used to make the row look misaligned / scrollable). */}
       <div style={{
-        fontFamily:      '"Cinzel Decorative", "Cinzel", serif',
-        fontSize:        isCompact ? 'clamp(90px, 22vw, 120px)' : 'clamp(150px, 15vw, 210px)',
-        fontWeight:      900,
-        lineHeight:      1,
-        color:           'transparent',
-        WebkitTextStroke:`${isCompact ? '2.5px' : '4px'} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
-        textShadow:      hovered && !isEmpty
-          ? `0 0 60px ${rankColor}44, 0 0 120px ${rankColor}22`
-          : 'none',
-        userSelect:      'none',
-        marginRight:     isCompact ? '-16px' : '-24px',
-        zIndex:          1,
-        transition:      'all 0.3s ease',
-        letterSpacing:   '-0.05em',
-      }}>{index + 1}</div>
+        height:        `${posterH}px`,
+        display:       'flex',
+        alignItems:    'flex-end',
+        overflow:      'hidden',
+        marginRight:   isCompact ? '-16px' : '-24px',
+        zIndex:        1,
+      }}>
+        <div style={{
+          fontFamily:      '"Cinzel Decorative", "Cinzel", serif',
+          fontSize:        isCompact ? '92px' : '150px',
+          fontWeight:      900,
+          lineHeight:      1,
+          color:           'transparent',
+          WebkitTextStroke:`${isCompact ? '2.5px' : '4px'} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
+          textShadow:      hovered && !isEmpty
+            ? `0 0 60px ${rankColor}44, 0 0 120px ${rankColor}22`
+            : 'none',
+          userSelect:      'none',
+          transition:      'all 0.3s ease',
+          letterSpacing:   '-0.05em',
+        }}>{index + 1}</div>
+      </div>
 
       {/* Poster */}
       <div
@@ -1027,7 +1033,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
               color:         tColor,
               fontFamily:    '"Cinzel", serif',
               letterSpacing: '0.1em',
-            }}>{typeLabel(entry.type)}</div>
+            }}>{typeLabel(entry.type, isCompact)}</div>
 
             <div style={{
               position:   'absolute',
@@ -1388,6 +1394,7 @@ function ExploreSection({ onNavigate, isCompact }) {
         padding:       '6px 14px',
         cursor:        'pointer',
         transition:    'all 0.2s',
+        whiteSpace:    'nowrap',
       }}
       onMouseEnter={e => e.currentTarget.style.background = C.electricSoft}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -1404,8 +1411,8 @@ function ExploreSection({ onNavigate, isCompact }) {
 
   const shimmerBox = (i) => (
     <div key={i} style={{
-      flexShrink:     isCompact ? 0 : undefined,
-      width:          isCompact ? '96px' : undefined,
+      flexShrink:     0,
+      width:          isCompact ? '96px' : '160px',
       height:         isCompact ? '134px' : '220px',
       background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
       backgroundSize: '200% 100%',
@@ -1414,36 +1421,23 @@ function ExploreSection({ onNavigate, isCompact }) {
     }} />
   )
 
+  // Unified with every other section: HorizontalScroll gives desktop real
+  // scroll arrows (the old grid just wrapped to a new row with no way to
+  // scroll), and mobile keeps its swipeable strip.
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Explore New" rune="ᚱ" right={RefreshButton} isCompact={isCompact} />
 
-      {isCompact ? (
-        // Mobile: horizontal scroll (manual swipe, no scrollbar, no arrows)
-        <div className="hide-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+      <div style={{ opacity: spinning ? 0.4 : 1, transition: 'opacity 0.2s' }}>
+        <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
           {loading
             ? Array.from({ length: EXPLORE_COUNT }).map((_, i) => shimmerBox(i))
             : shown.map(item => (
-                <TrendingCard key={item.id} item={item} onNavigate={onNavigate} isCompact />
+                <TrendingCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />
               ))
           }
-        </div>
-      ) : (
-        <div style={{
-          display:             'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap:                 '14px',
-          opacity:             spinning ? 0.4 : 1,
-          transition:          'opacity 0.2s',
-        }}>
-          {loading
-            ? Array.from({ length: EXPLORE_COUNT }).map((_, i) => shimmerBox(i))
-            : shown.map(item => (
-                <TrendingCard key={item.id} item={item} onNavigate={onNavigate} />
-              ))
-          }
-        </div>
-      )}
+        </HorizontalScroll>
+      </div>
     </div>
   )
 }
@@ -1520,7 +1514,7 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
         <div style={{
           fontSize:      isCompact ? '12px' : '14px',
           fontWeight:    600,
-          color:         hovered ? C.text : '#9BAEC8',
+          color:         hovered ? C.text : C.textMuted,
           transition:    'color 0.25s',
           whiteSpace:    'nowrap',
           overflow:      'hidden',
@@ -1535,7 +1529,7 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
           letterSpacing: '0.05em',
         }}>
           <span style={{ color: C.gold + 'aa', fontFamily: '"Cinzel", serif' }}>
-            {typeLabel(drama.type)}
+            {typeLabel(drama.type, isCompact)}
           </span>
           {drama.year && <span>{drama.year}</span>}
           {!isCompact && drama.genres?.[0] && <span>{drama.genres[0]}</span>}
