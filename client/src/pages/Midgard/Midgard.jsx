@@ -602,7 +602,7 @@ export default function Midgard() {
       <main style={{
         position:  'relative',
         zIndex:    1,
-        maxWidth:  '1200px',
+        maxWidth:  '1800px',
         margin:    '0 auto',
         padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px',
       }}>
