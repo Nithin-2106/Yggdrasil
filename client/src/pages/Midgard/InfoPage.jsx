@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -8,35 +8,40 @@ const TMDB_BASE = '/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
 const API       = '/api/media/drama'
 
+// ── Palette — matched to Dashboard.jsx ──────────────────────────────────────
 const C = {
-  bg:           '#080D1A',
-  surface:      '#0D1526',
-  surfaceHover: '#111E33',
-  input:        '#0A1220',
-  ember:        '#C2410C',
-  gold:         '#CA8A04',
-  goldBright:   '#F59E0B',
-  goldSoft:     'rgba(202,138,4,0.15)',
+  bg:           '#0B0710',
+  surface:      '#181227',
+  surfaceHover: '#221B33',
+  input:        '#120C1C',
+  ember:        '#7A3B12',
+  emberSoft:    'rgba(122,59,18,0.18)',
+  gold:         '#F0B429',
+  goldSoft:     'rgba(240,180,41,0.14)',
+  goldBright:   '#FFCB57',
   electric:     '#38BDF8',
-  electricSoft: 'rgba(56,189,248,0.1)',
-  violet:       '#7C3AED',
+  electricSoft: 'rgba(56,189,248,0.12)',
+  violet:       '#F5468C',
+  violetSoft:   'rgba(245,70,140,0.15)',
+  indigo:       '#FF9F45',
+  indigoSoft:   'rgba(255,159,69,0.15)',
   green:        '#22C55E',
   greenSoft:    'rgba(34,197,94,0.12)',
   red:          '#EF4444',
   redSoft:      'rgba(239,68,68,0.12)',
-  text:         '#F0F4FC',
-  textMuted:    '#9BAFC8',
-  textDim:      '#4A607A',
-  borderGold:   'rgba(202,138,4,0.25)',
-  borderElec:   'rgba(56,189,248,0.2)',
+  text:         '#EDEAF5',
+  textMuted:    '#9C93B4',
+  textDim:      '#453D5C',
+  borderGold:   'rgba(240,180,41,0.2)',
+  borderElec:   'rgba(56,189,248,0.15)',
 }
 
 const STATUS_CONFIG = {
-  'Watching':      { color: '#38BDF8', icon: '▶', rune: 'ᚹ' },
-  'Completed':     { color: '#22C55E', icon: '✓', rune: 'ᚲ' },
-  'Dropped':       { color: '#EF4444', icon: '✕', rune: 'ᛞ' },
-  'Plan to Watch': { color: '#7C3AED', icon: '◷', rune: 'ᛈ' },
-  'On Hold':       { color: '#F59E0B', icon: '⏸', rune: 'ᛟ' },
+  'Watching':      { color: C.electric, icon: '▶', rune: 'ᚹ' },
+  'Completed':     { color: C.green,    icon: '✓', rune: 'ᚲ' },
+  'Dropped':       { color: C.red,      icon: '✕', rune: 'ᛞ' },
+  'Plan to Watch': { color: C.violet,   icon: '◷', rune: 'ᛈ' },
+  'On Hold':       { color: C.indigo,   icon: '⏸', rune: 'ᛟ' },
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -51,7 +56,7 @@ function detectType(item) {
 function typeColor(type) {
   if (type === 'Kdrama') return C.electric
   if (type === 'Cdrama') return C.violet
-  if (type === 'Jdrama') return C.goldBright
+  if (type === 'Jdrama') return C.indigo
   return C.electric
 }
 
@@ -82,12 +87,12 @@ function SkeletonBlock({ w = '100%', h = '16px', style = {} }) {
   )
 }
 
-function Spinner() {
+function Spinner({ isCompact }) {
   return (
     <div style={{ padding: '0 0 60px' }}>
       <SkeletonBlock w="120px" h="14px" style={{ marginBottom: '36px' }} />
-      <div style={{ display: 'flex', gap: '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
-        <SkeletonBlock w="230px" h="335px" style={{ flexShrink: 0, marginLeft: '4%' }} />
+      <div style={{ display: 'flex', gap: isCompact ? '24px' : '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
+        <SkeletonBlock w={isCompact ? '190px' : '230px'} h={isCompact ? '276px' : '335px'} style={{ flexShrink: 0, marginLeft: isCompact ? 0 : '4%' }} />
         <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <SkeletonBlock w="80px" h="26px" />
@@ -134,7 +139,7 @@ function SectionDivider({ title, rune, right }) {
       <h3 style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.35em', color: C.goldBright, margin: 0, textTransform: 'uppercase' }}>
         {title}
       </h3>
-      <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, rgba(202,138,4,0.4), transparent)' }} />
+      <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, rgba(240,180,41,0.4), transparent)' }} />
       {right && <span style={{ fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>{right}</span>}
     </div>
   )
@@ -203,6 +208,38 @@ function RatingSlider({ value, onChange }) {
   )
 }
 
+// ── Times-watched stepper ─────────────────────────────────────────────────────
+function StepperControl({ value, onChange }) {
+  const btnStyle = {
+    width: '34px', height: '34px', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: C.input, border: `1px solid ${C.borderGold}`,
+    color: C.electric, fontSize: '17px', fontFamily: '"Cinzel", serif',
+    cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.15s, background 0.15s',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0, (value || 0) - 1))}
+        style={btnStyle}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = C.electric; e.currentTarget.style.background = C.electricSoft }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderGold; e.currentTarget.style.background = C.input }}
+      >−</button>
+      <span style={{ minWidth: '30px', textAlign: 'center', fontFamily: '"Cinzel", serif', fontSize: '18px', fontWeight: 700, color: C.text }}>
+        {value || 0}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange((value || 0) + 1)}
+        style={btnStyle}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = C.electric; e.currentTarget.style.background = C.electricSoft }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderGold; e.currentTarget.style.background = C.input }}
+      >+</button>
+    </div>
+  )
+}
+
 // ── Add/Edit modal ────────────────────────────────────────────────────────────
 function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, onDeleted }) {
   const type = detectType(tmdbData)
@@ -240,6 +277,19 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
   const set   = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const setEp = (k, v) => setForm(f => ({ ...f, episodes: { ...f.episodes, [k]: v === '' ? null : Number(v) } }))
   const coverSrc = coverOverride || form.coverImage
+
+  // Setting status to Completed maxes out the episode count and defaults
+  // times-watched to at least 1 — never downgrades an existing higher count.
+  const setStatus = (newStatus) => {
+    setForm(f => {
+      const next = { ...f, status: newStatus }
+      if (newStatus === 'Completed') {
+        if (f.episodes?.total) next.episodes = { ...f.episodes, current: f.episodes.total }
+        if (!f.rewatchCount || f.rewatchCount < 1) next.rewatchCount = 1
+      }
+      return next
+    })
+  }
 
   const addPlat = () => {
     if (!platName.trim()) return
@@ -306,7 +356,7 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
         onClick={e => { if (e.target === e.currentTarget) onClose() }}
         style={{
           position: 'fixed', inset: 0, zIndex: 500,
-          background: 'rgba(5,10,20,0.88)',
+          background: 'rgba(11,7,16,0.9)',
           backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: isCompact ? '12px' : '24px',
@@ -345,8 +395,8 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
           <div style={{ padding: isCompact ? '18px' : '28px', display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
 
             {/* Left — poster */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ maxWidth: '160px' }}>
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', width: isCompact ? '100%' : 'auto', alignItems: isCompact ? 'center' : 'flex-start' }}>
+              <div style={{ maxWidth: '160px', textAlign: isCompact ? 'center' : 'left' }}>
                 <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
                   {tmdbData.name || tmdbData.original_name}
                 </div>
@@ -359,7 +409,7 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>📺</div>
                 }
               </div>
-              <div>
+              <div style={{ width: '160px' }}>
                 <label style={lbl}>ᛈ Cover URL</label>
                 <input
                   placeholder="Paste image URL..."
@@ -373,13 +423,13 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
             </div>
 
             {/* Right — fields */}
-            <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ flex: 1, minWidth: isCompact ? '0' : '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
               <div>
                 <label style={lbl}>ᛊ Status</label>
                 <select
                   value={form.status}
-                  onChange={e => set('status', e.target.value)}
+                  onChange={e => setStatus(e.target.value)}
                   onFocus={() => setFocused('status')}
                   onBlur={() => setFocused('')}
                   style={{ ...inputStyle('status'), cursor: 'pointer' }}
@@ -393,8 +443,8 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
               </div>
 
               <div>
-                <label style={lbl}>ᚹ Episodes & Rewatch</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <label style={lbl}>ᚹ Episodes</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                   <input type="number" min="0" placeholder="Current" value={form.episodes?.current ?? ''}
                     onChange={e => setEp('current', e.target.value)}
                     onFocus={() => setFocused('epCurrent')} onBlur={() => setFocused('')}
@@ -406,16 +456,18 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
                     onFocus={() => setFocused('epTotal')} onBlur={() => setFocused('')}
                     style={{ ...inputStyle('epTotal'), width: '72px', flexShrink: 0 }}
                   />
-                  <span style={{ color: C.textDim, fontSize: '11px', letterSpacing: '0.15em', fontFamily: '"Cinzel", serif', flexShrink: 0, marginLeft: '6px' }}>ᚲ</span>
-                  <input type="number" min="0" placeholder="Rewatch" value={form.rewatchCount || ''}
-                    onChange={e => set('rewatchCount', e.target.value === '' ? 0 : Number(e.target.value))}
-                    onFocus={() => setFocused('rewatch')} onBlur={() => setFocused('')}
-                    style={{ ...inputStyle('rewatch'), width: '80px', flexShrink: 0 }}
-                  />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={lbl}>ᚲ No. of Times Watched</label>
+                <StepperControl
+                  value={form.rewatchCount}
+                  onChange={v => set('rewatchCount', v)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={lbl}>ᛞ Date Started</label>
                   <input type="date" value={form.dateStarted?.split('T')[0] ?? ''}
@@ -449,7 +501,7 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
                       <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                     <input placeholder="Platform" value={platName} onChange={e => setPlatName(e.target.value)}
                       onFocus={() => setFocused('platName')} onBlur={() => setFocused('')}
                       style={{ ...inputStyle('platName'), flex: 1 }}
@@ -459,7 +511,7 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
                       style={{ ...inputStyle('platUrl'), flex: 2 }}
                     />
                     <button onClick={addPlat}
-                      style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: isCompact ? '38px' : 'auto' }}
                     >+ Add</button>
                   </div>
                 </div>
@@ -494,20 +546,20 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
             <div>
               {existingEntry && (
                 <button onClick={handleDelete} disabled={deleting}
-                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.2)'}
                   onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
                 >{deleting ? 'Deleting...' : '✕ Delete'}</button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '10px',flexDirection: isCompact ? 'column' : 'row',width: isCompact ? '100%' : 'auto', }}>
+            <div style={{ display: 'flex', gap: '10px', flexDirection: isCompact ? 'column' : 'row', width: isCompact ? '100%' : 'auto' }}>
               <button onClick={onClose}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderGold}`, padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderGold}`, padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
                 onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderGold }}
               >Cancel</button>
               <button onClick={handleSave} disabled={saving}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}55`, padding: '10px 28px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.electric, background: C.electricSoft, border: `1px solid ${C.electric}55`, padding: '10px 28px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s' }}
                 onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(56,189,248,0.2)' }}
                 onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.electricSoft }}
               >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
@@ -541,16 +593,17 @@ function CastCard({ person }) {
 }
 
 // ── Image grid ────────────────────────────────────────────────────────────────
-function ImageGrid({ images, type = 'backdrop' }) {
+function ImageGrid({ images, type = 'backdrop', isCompact }) {
   const [lightbox, setLightbox] = useState(null)
   const [showAll, setShowAll]   = useState(false)
   const [hov, setHov]           = useState(null)
   const isBack  = type === 'backdrop'
   const visible = showAll ? images : images.slice(0, 6)
+  const minCol  = isBack ? (isCompact ? 140 : 200) : (isCompact ? 90 : 110)
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: isBack ? 'repeat(auto-fill, minmax(200px, 1fr))' : 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: '8px' }}>
         {visible.map((img, i) => (
           <div
             key={i}
@@ -573,7 +626,7 @@ function ImageGrid({ images, type = 'backdrop' }) {
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(5,10,20,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(11,7,16,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', padding: isCompact ? '16px' : 0 }}
         >
           <img src={lightbox} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', border: `1px solid ${C.borderGold}` }} />
         </div>
@@ -583,7 +636,7 @@ function ImageGrid({ images, type = 'backdrop' }) {
 }
 
 // ── Trailer section ───────────────────────────────────────────────────────────
-function TrailerSection({ videos }) {
+function TrailerSection({ videos, isCompact }) {
   const [active, setActive] = useState(null)
   const trailers = (videos || []).filter(v => v.site === 'YouTube')
   if (!trailers.length) return <div style={{ color: C.textDim, fontSize: '13px' }}>No trailers available</div>
@@ -595,11 +648,11 @@ function TrailerSection({ videos }) {
           <div
             key={v.key}
             onClick={() => setActive(active === v.key ? null : v.key)}
-            style={{ flexShrink: 0, width: '190px', cursor: 'pointer' }}
+            style={{ flexShrink: 0, width: isCompact ? '150px' : '190px', cursor: 'pointer' }}
           >
-            <div style={{ position: 'relative', height: '107px', border: `1px solid ${active === v.key ? C.electric + '88' : C.borderGold}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+            <div style={{ position: 'relative', height: isCompact ? '84px' : '107px', border: `1px solid ${active === v.key ? C.electric + '88' : C.borderGold}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
               <img src={`https://img.youtube.com/vi/${v.key}/mqdefault.jpg`} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,13,26,0.45)' }}>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,7,16,0.45)' }}>
                 <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: active === v.key ? C.electric : 'rgba(56,189,248,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', transition: 'background 0.2s' }}>▶</div>
               </div>
             </div>
@@ -621,10 +674,11 @@ function TrailerSection({ videos }) {
 }
 
 // ── Main InfoPage ─────────────────────────────────────────────────────────────
-export default function InfoPage({ tmdbId, onBack }) {
+export default function InfoPage({ tmdbId }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isCompact = useIsCompact()
+  const trailerSectionRef = useRef(null)
 
   const [data, setData]         = useState(null)
   const [credits, setCredits]   = useState(null)
@@ -637,7 +691,6 @@ export default function InfoPage({ tmdbId, onBack }) {
   const [showAllCast,  setShowAllCast]  = useState(false)
   const [showTrailers, setShowTrailers] = useState(false)
 
-  // ── FIXED: hoisted so useEffect can safely reference it ───────────────────
   const fetchExisting = useCallback(async (tmdbIdToMatch) => {
     try {
       const r = await axios.get(API)
@@ -677,10 +730,22 @@ export default function InfoPage({ tmdbId, onBack }) {
       .finally(() => setLoading(false))
   }, [tmdbId, fetchExisting])
 
+  const toggleTrailers = () => {
+    setShowTrailers(s => {
+      const next = !s
+      if (next) {
+        setTimeout(() => {
+          trailerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 60)
+      }
+      return next
+    })
+  }
+
   if (loading) return (
     <>
       <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
-      <Spinner />
+      <Spinner isCompact={isCompact} />
     </>
   )
 
@@ -703,6 +768,9 @@ export default function InfoPage({ tmdbId, onBack }) {
   const trailerCount = (videos?.results || []).filter(v => v.site === 'YouTube').length
   const statusCfg   = existing ? (STATUS_CONFIG[existing.status] || {}) : null
 
+  const posterW = isCompact ? 190 : 230
+  const posterH = isCompact ? 276 : 335
+
   const myRatingColor = (r) => {
     if (!r) return C.textDim
     if (r >= 8) return C.green
@@ -718,18 +786,8 @@ export default function InfoPage({ tmdbId, onBack }) {
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       `}</style>
 
-      {/* ── Back ── */}
-      <div style={{ marginBottom: '36px' }}>
-        <button
-          onClick={onBack}
-          style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.25em', color: C.textDim, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = C.electric}
-          onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-        >← Back to Search</button>
-      </div>
-
       {/* ── Hero ── */}
-      <div style={{ position: 'relative', marginBottom: '60px' }}>
+      <div style={{ position: 'relative', marginBottom: isCompact ? '40px' : '60px' }}>
         {backdrop && (
           <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
         )}
@@ -751,7 +809,7 @@ export default function InfoPage({ tmdbId, onBack }) {
             width: isCompact ? '100%' : 'auto',
             flexShrink: 0,
           }}>
-            <div style={{ width: '230px', height: '335px', background: C.surface, border: `1px solid ${tColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${tColor}22, 0 0 50px ${tColor}0a` }}>
+            <div style={{ width: `${posterW}px`, height: `${posterH}px`, background: C.surface, border: `1px solid ${tColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${tColor}22, 0 0 50px ${tColor}0a` }}>
               <Corners color={tColor} size={13} opacity={0.55} />
               {poster
                 ? <img src={poster} alt={data.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -759,9 +817,9 @@ export default function InfoPage({ tmdbId, onBack }) {
               }
             </div>
 
-            <div style={{ width: '230px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+            <div style={{ width: `${posterW}px`, display: 'flex', flexDirection: 'column', gap: '9px' }}>
               <button
-                onClick={() => setShowTrailers(s => !s)}
+                onClick={toggleTrailers}
                 style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: showTrailers ? C.bg : C.electric, background: showTrailers ? C.electric : C.electricSoft, border: `1px solid ${C.electric}66`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
               >
                 ▶ Trailers {trailerCount > 0 && <span style={{ fontSize: '10px', opacity: 0.7 }}>({trailerCount})</span>}
@@ -769,7 +827,7 @@ export default function InfoPage({ tmdbId, onBack }) {
 
               <button
                 onClick={() => { if (!user) { navigate('/profile'); return } setShowModal(true) }}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.goldBright, background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(202,138,4,0.12)', border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.goldBright, background: existing ? `${statusCfg?.color || C.green}15` : C.goldSoft, border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
@@ -798,9 +856,9 @@ export default function InfoPage({ tmdbId, onBack }) {
 
             {/* Title */}
             <div>
-              <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(26px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${tColor}18` }}>
+              <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${tColor}18` }}>
                 {data.name}
-                {year && <span style={{ fontSize: 'clamp(15px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
+                {year && <span style={{ fontSize: 'clamp(14px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
               </h2>
               {data.original_name && data.original_name !== data.name && (
                 <div style={{ fontSize: '14px', color: C.textMuted, marginTop: '8px', fontStyle: 'italic', letterSpacing: '0.04em' }}>{data.original_name}</div>
@@ -808,12 +866,12 @@ export default function InfoPage({ tmdbId, onBack }) {
             </div>
 
             {/* Ratings */}
-            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {tmdbRating && parseFloat(tmdbRating) > 0 && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ TMDB</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: C.goldBright, textShadow: `0 0 24px rgba(245,158,11,0.5)`, lineHeight: 1 }}>★ {tmdbRating}</span>
+                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: C.goldBright, textShadow: `0 0 24px rgba(240,180,41,0.5)`, lineHeight: 1 }}>★ {tmdbRating}</span>
                     <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
                   </div>
                   {data.vote_count > 0 && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px', letterSpacing: '0.05em' }}>{data.vote_count.toLocaleString()} votes</div>}
@@ -822,7 +880,7 @@ export default function InfoPage({ tmdbId, onBack }) {
               <div>
                 <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>★ Mine</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
+                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
                     {existing?.rating || '—'}
                   </span>
                   <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
@@ -832,7 +890,7 @@ export default function InfoPage({ tmdbId, onBack }) {
             </div>
 
             {/* Seasons / Episodes / Runtime / My Progress */}
-            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
               {[
                 data.number_of_seasons > 0 && { label: 'Seasons',     value: data.number_of_seasons, rune: 'ᚢ' },
                 data.number_of_episodes > 0 && { label: 'Episodes',    value: data.number_of_episodes, rune: 'ᚹ' },
@@ -868,9 +926,9 @@ export default function InfoPage({ tmdbId, onBack }) {
 
       {/* ── Trailers ── */}
       {showTrailers && (
-        <div style={{ marginBottom: '56px' }}>
+        <div ref={trailerSectionRef} style={{ marginBottom: '56px', scrollMarginTop: '16px' }}>
           <SectionDivider title="Trailers" rune="▶" right={`${trailerCount} available`} />
-          <TrailerSection videos={videos?.results} />
+          <TrailerSection videos={videos?.results} isCompact={isCompact} />
         </div>
       )}
 
@@ -878,7 +936,7 @@ export default function InfoPage({ tmdbId, onBack }) {
       {existing?.review && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="My Review" rune="ᚾ" />
-          <div style={{ padding: '22px 26px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '22px 26px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
             <Corners color={C.gold} size={10} opacity={0.2} />
             <p style={{ fontSize: '14px', color: C.textMuted, lineHeight: 1.85, margin: 0, letterSpacing: '0.02em', fontStyle: 'italic' }}>"{existing.review}"</p>
           </div>
@@ -889,7 +947,7 @@ export default function InfoPage({ tmdbId, onBack }) {
       {data.overview && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="Synopsis" rune="ᛊ" />
-          <div style={{ padding: '24px 28px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '24px 28px', background: C.surface, border: `1px solid ${C.borderGold}`, position: 'relative' }}>
             <Corners color={C.gold} size={10} opacity={0.2} />
             <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>{data.overview}</p>
           </div>
@@ -902,7 +960,7 @@ export default function InfoPage({ tmdbId, onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
 
           {/* TMDB data grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
             {[
               { label: 'Status',      value: data.status,        rune: 'ᛊ' },
               { label: 'First Aired', value: data.first_air_date, rune: 'ᛞ' },
@@ -923,7 +981,7 @@ export default function InfoPage({ tmdbId, onBack }) {
             const myRows = [
               existing.dateStarted    && { label: 'My Start Date', value: existing.dateStarted.split('T')[0],              rune: 'ᛞ' },
               existing.dateCompleted  && { label: 'My End Date',   value: existing.dateCompleted.split('T')[0],            rune: 'ᛞ' },
-              existing.rewatchCount > 0 && { label: 'Rewatched',   value: `${existing.rewatchCount}×`,                    rune: 'ᚲ' },
+              existing.rewatchCount > 0 && { label: 'Times Watched', value: `${existing.rewatchCount}×`,                   rune: 'ᚲ' },
               existing.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ' },
             ].filter(Boolean)
 
@@ -932,7 +990,7 @@ export default function InfoPage({ tmdbId, onBack }) {
             return (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᛗ My Entry</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
                   {myRows.map(row => (
                     <div key={row.label} style={{ padding: '14px 16px', background: `${C.electric}08`, border: `1px solid ${C.electric}33` }}>
                       <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.electric + 'aa', fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
@@ -1007,7 +1065,7 @@ export default function InfoPage({ tmdbId, onBack }) {
                 <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Backdrops <span style={{ color: C.electric + '88', marginLeft: '8px' }}>({backdrops.length})</span>
                 </div>
-                <ImageGrid images={backdrops} type="backdrop" />
+                <ImageGrid images={backdrops} type="backdrop" isCompact={isCompact} />
               </div>
             )}
             {posters.length > 0 && (
@@ -1015,7 +1073,7 @@ export default function InfoPage({ tmdbId, onBack }) {
                 <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>
                   Posters <span style={{ color: C.electric + '88', marginLeft: '8px' }}>({posters.length})</span>
                 </div>
-                <ImageGrid images={posters} type="poster" />
+                <ImageGrid images={posters} type="poster" isCompact={isCompact} />
               </div>
             )}
           </div>
