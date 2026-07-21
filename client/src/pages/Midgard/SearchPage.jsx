@@ -2,27 +2,30 @@ import { useState, useEffect, useRef } from 'react'
 import { searchDramas, detectDramaType } from '../../utils/tmdbSearch'
 import { useIsCompact } from '../../hooks/useMediaQuery'
 
+// Kept in sync with Dashboard.jsx's C object so Search reads as the same realm.
 const C = {
-  bg:           '#080D1A',
-  surface:      '#0F1829',
-  surfaceHover: '#141F33',
-  input:        '#0A1220',
-  gold:         '#CA8A04',
-  goldBright:   '#F59E0B',
+  bg:           '#0B0710',
+  surface:      '#181227',
+  surfaceHover: '#221B33',
+  input:        '#120C1C',
+  gold:         '#F0B429',
+  goldBright:   '#FFCB57',
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.12)',
-  violet:       '#7C3AED',
-  ember:        '#C2410C',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderGold:   'rgba(202,138,4,0.2)',
+  violet:       '#F5468C',
+  indigo:       '#FF9F45',
+  ember:        '#7A3B12',
+  text:         '#EDEAF5',
+  textMuted:    '#9C93B4',
+  textDim:      '#453D5C',
+  borderGold:   'rgba(240,180,41,0.2)',
 }
+
+const TYPE_COLOR = { Kdrama: C.electric, Cdrama: C.violet, Jdrama: C.indigo }
 
 function detectType(item) {
   const label = detectDramaType(item)
-  const colorMap = { Kdrama: C.electric, Cdrama: C.violet, Jdrama: C.goldBright }
-  return { label, color: colorMap[label] || C.textMuted }
+  return { label, color: TYPE_COLOR[label] || C.textMuted }
 }
 
 function typeLabel(type) {
@@ -66,10 +69,11 @@ function FilterPill({ label, active, color, onClick, isCompact }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: isCompact ? '11px 16px' : '6px 16px',
-        minHeight: isCompact ? '44px' : 'auto',
-        display: isCompact ? 'inline-flex' : undefined,
-        alignItems: isCompact ? 'center' : undefined,
+        padding: isCompact ? '10px 14px' : '6px 16px',
+        minHeight: isCompact ? '40px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         whiteSpace: 'nowrap',
@@ -135,7 +139,7 @@ function ResultCard({ item, onSelect }) {
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
           padding: '3px 8px',
-          background: 'rgba(8,13,26,0.92)',
+          background: 'rgba(11,7,16,0.92)',
           border: `1px solid ${type.color}66`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: type.color,
@@ -149,7 +153,7 @@ function ResultCard({ item, onSelect }) {
           <div style={{
             position: 'absolute', top: '8px', right: '8px',
             padding: '3px 8px',
-            background: 'rgba(8,13,26,0.92)',
+            background: 'rgba(11,7,16,0.92)',
             border: `1px solid ${C.gold}55`,
             fontSize: '10px',
             color: C.goldBright,
@@ -247,13 +251,13 @@ function EmptyResults({ query }) {
 
 // ── Main SearchPage ───────────────────────────────────────────────────────────
 export default function SearchPage({ query: initialQuery, onSelectDrama }) {
-  const [query, setQuery]             = useState(initialQuery || '')
-  const [results, setResults]         = useState([])
-  const [filtered, setFiltered]       = useState([])
-  const [loading, setLoading]         = useState(false)
-  const [searched, setSearched]       = useState(false)
+  const [query, setQuery]               = useState(initialQuery || '')
+  const [results, setResults]           = useState([])
+  const [filtered, setFiltered]         = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [searched, setSearched]         = useState(false)
   const [activeFilter, setActiveFilter] = useState('All')
-  const [focused, setFocused]         = useState(false)
+  const [focused, setFocused]           = useState(false)
   const inputRef = useRef(null)
   const isCompact = useIsCompact()
 
@@ -261,8 +265,23 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
     { label: 'All',    color: C.electric },
     { label: 'Kdrama', color: C.electric },
     { label: 'Cdrama', color: C.violet },
-    { label: 'Jdrama', color: C.goldBright },
+    { label: 'Jdrama', color: C.indigo },
   ]
+
+  const runSearch = async (q) => {
+    if (!q.trim()) return
+    setLoading(true)
+    setSearched(true)
+    setActiveFilter('All')
+    try {
+      const res = await searchDramas(q)
+      setResults(res)
+    } catch {
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Auto-search when query arrives from navbar
   useEffect(() => {
@@ -282,21 +301,6 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
     }
   }, [results, activeFilter])
 
-  const runSearch = async (q) => {
-    if (!q.trim()) return
-    setLoading(true)
-    setSearched(true)
-    setActiveFilter('All')
-    try {
-      const res = await searchDramas(q)
-      setResults(res)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') runSearch(query)
   }
@@ -308,6 +312,8 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* Search bar row */}
@@ -366,11 +372,22 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
         </button>
       </div>
 
-      {/* Filter pills — only after first search with results */}
+      {/* Filter pills — single scrollable line on mobile, wraps on desktop */}
       {searched && !loading && results.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Filter</span>
-          <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
+        <div
+          className={isCompact ? 'hide-scroll' : undefined}
+          style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '28px',
+            alignItems: 'center',
+            flexWrap: isCompact ? 'nowrap' : 'wrap',
+            overflowX: isCompact ? 'auto' : 'visible',
+            paddingBottom: isCompact ? '2px' : 0,
+          }}
+        >
+          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Filter</span>
+          <div style={{ width: '1px', height: '16px', background: C.borderGold, flexShrink: 0 }} />
           {filters.map(f => (
             <FilterPill
               key={f.label}
@@ -381,7 +398,12 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
               isCompact={isCompact}
             />
           ))}
-          <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
+          <span style={{
+            marginLeft: isCompact ? '8px' : 'auto',
+            flexShrink: 0,
+            fontSize: '11px', color: C.textDim,
+            fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+          }}>
             <span style={{ color: C.electric }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
           </span>
         </div>
