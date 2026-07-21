@@ -290,7 +290,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
             letterSpacing: '0.3em',
             color:         C.gold,
             userSelect:    'none',
-          }}>ᛗ</div>
+          }}>⟐</div>
           {!isCompact && <div style={{ width: '1px', height: '20px', background: C.borderGold }} />}
           <span style={{
             fontFamily:    '"Cinzel", serif',
@@ -520,7 +520,7 @@ function PageHeader({ activePage, searchQuery }) {
   return (
     <div style={{ marginBottom: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '1px' }}>
-        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.gold + '66' }}>ᛗ</span>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.gold + '66' }}>⟐</span>
         <div style={{
           fontSize:      '10px',
           letterSpacing: '0.45em',
@@ -607,7 +607,7 @@ export default function Midgard() {
         zIndex:    1,
         maxWidth:  '1800px',
         margin:    '0 auto',
-        padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px',
+        padding:   isCompact ? '84px 16px 56px' : '96px 96px 80px',
       }}>
         <PageHeader activePage={activePage} searchQuery={searchQuery} />
 
