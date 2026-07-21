@@ -22,7 +22,7 @@ const C = {
   red:          '#EF4444',
   text:         '#EDEAF5',
   textMuted:    '#9C93B4',
-  textDim:      '#453D5C',
+  textDim:      '#A48AEF',
   borderGold:   'rgba(240,180,41,0.2)',
   borderElec:   'rgba(56,189,248,0.15)',
 }
