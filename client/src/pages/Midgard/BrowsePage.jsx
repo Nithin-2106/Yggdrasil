@@ -4,20 +4,22 @@ import { useIsCompact } from '../../hooks/useMediaQuery'
 const TMDB_BASE = '/api/tmdb'
 const IMG_BASE  = 'https://image.tmdb.org/t/p'
 
+// Kept in sync with Dashboard.jsx's C object so Browse reads as the same realm.
 const C = {
-  bg:           '#080D1A',
-  surface:      '#0F1829',
-  surfaceHover: '#141F33',
-  ember:        '#C2410C',
-  gold:         '#CA8A04',
-  goldBright:   '#F59E0B',
+  bg:           '#0B0710',
+  surface:      '#181227',
+  surfaceHover: '#221B33',
+  ember:        '#7A3B12',
+  gold:         '#F0B429',
+  goldBright:   '#FFCB57',
   electric:     '#38BDF8',
   electricSoft: 'rgba(56,189,248,0.12)',
-  violet:       '#7C3AED',
-  text:         '#E8EDF5',
-  textMuted:    '#8899B4',
-  textDim:      '#3D4F6B',
-  borderGold:   'rgba(202,138,4,0.2)',
+  violet:       '#F5468C',
+  indigo:       '#FF9F45',
+  text:         '#EDEAF5',
+  textMuted:    '#9C93B4',
+  textDim:      '#453D5C',
+  borderGold:   'rgba(240,180,41,0.2)',
 }
 
 const BLOCKED_GENRES  = new Set([16, 10764, 10767, 10763, 10766])
@@ -34,9 +36,9 @@ const SORT_MODES = [
 ]
 
 const TYPE_FILTERS = [
-  { key: 'Kdrama', label: 'Korean',   color: C.electric,   countries: ['KR'] },
-  { key: 'Cdrama', label: 'Chinese',  color: C.violet,     countries: ['CN', 'TW', 'HK'] },
-  { key: 'Jdrama', label: 'Japanese', color: C.goldBright, countries: ['JP'] },
+  { key: 'Kdrama', label: 'Korean',   color: C.electric, countries: ['KR'] },
+  { key: 'Cdrama', label: 'Chinese',  color: C.violet,   countries: ['CN', 'TW', 'HK'] },
+  { key: 'Jdrama', label: 'Japanese', color: C.indigo,   countries: ['JP'] },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -52,7 +54,7 @@ function getDramaType(item) {
 function typeColor(type) {
   if (type === 'Kdrama') return C.electric
   if (type === 'Cdrama') return C.violet
-  if (type === 'Jdrama') return C.goldBright
+  if (type === 'Jdrama') return C.indigo
   return C.electric
 }
 
@@ -98,7 +100,6 @@ function getExtraParams(sortMode) {
   return ''
 }
 
-// ── FIXED: removed the double-? bug. URL is now properly constructed ──────────
 async function fetchPagesForCountry(country, sortMode, startPage, count) {
   const sortParam  = getSortParam(sortMode)
   const extraParam = getExtraParams(sortMode)
@@ -224,7 +225,7 @@ function DramaCard({ item, onNavigate }) {
 
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
-          padding: '3px 8px', background: 'rgba(8,13,26,0.92)',
+          padding: '3px 8px', background: 'rgba(11,7,16,0.92)',
           border: `1px solid ${tColor}66`,
           fontSize: '9px', letterSpacing: '0.15em',
           color: tColor, fontFamily: '"Cinzel", serif',
@@ -233,7 +234,7 @@ function DramaCard({ item, onNavigate }) {
         {rating && parseFloat(rating) > 0 && (
           <div style={{
             position: 'absolute', top: '8px', right: '8px',
-            padding: '3px 8px', background: 'rgba(8,13,26,0.92)',
+            padding: '3px 8px', background: 'rgba(11,7,16,0.92)',
             border: `1px solid ${C.gold}55`,
             fontSize: '10px', color: C.goldBright,
             fontFamily: '"Cinzel", serif', fontWeight: 700,
@@ -288,6 +289,7 @@ function SortTab({ mode, active, onClick, isCompact }) {
         padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
       <span style={{ color: active ? C.electric : C.gold + '66', fontSize: '13px' }}>
@@ -312,10 +314,12 @@ function TypePill({ filter, active, onClick, isCompact }) {
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: isCompact ? '11px 18px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
-        minHeight: isCompact ? '44px' : 'auto',
-        display: isCompact ? 'inline-flex' : undefined,
-        alignItems: isCompact ? 'center' : undefined,
+        padding: isCompact ? '10px 16px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        minHeight: isCompact ? '40px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
       }}
     >
       {filter.label}
@@ -347,16 +351,16 @@ export default function BrowsePage({ onNavigate }) {
   const [typeFilter, setTypeFilter] = useState('Kdrama')
   const isCompact = useIsCompact()
 
-  const pool            = useRef([])
-  const nextPageMap     = useRef({})
-  const exhaustedMap    = useRef({})
-  const currentKey      = useRef('')
+  const pool         = useRef([])
+  const nextPageMap   = useRef({})
+  const exhaustedMap  = useRef({})
+  const currentKey    = useRef('')
 
-  const [visibleCount,  setVisibleCount]  = useState(PAGE_SIZE)
-  const [loading,       setLoading]       = useState(true)
-  const [poolReady,     setPoolReady]     = useState(false)
-  const [expanding,     setExpanding]     = useState(false)
-  const [poolSize,      setPoolSize]      = useState(0)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [loading,      setLoading]      = useState(true)
+  const [poolReady,    setPoolReady]    = useState(false)
+  const [expanding,    setExpanding]    = useState(false)
+  const [poolSize,     setPoolSize]     = useState(0)
 
   // ── Build initial pool ────────────────────────────────────────────────────
   useEffect(() => {
@@ -457,9 +461,9 @@ export default function BrowsePage({ onNavigate }) {
     })
   }, [poolReady, loading, expandPool])
 
-  const filterDef  = TYPE_FILTERS.find(f => f.key === typeFilter)
-  const tColor     = filterDef?.color || C.electric
-  const displayed  = pool.current.slice(0, visibleCount)
+  const filterDef    = TYPE_FILTERS.find(f => f.key === typeFilter)
+  const tColor       = filterDef?.color || C.electric
+  const displayed    = pool.current.slice(0, visibleCount)
   const allExhausted = filterDef
     ? filterDef.countries.every(c => exhaustedMap.current[c])
     : true
@@ -472,14 +476,19 @@ export default function BrowsePage({ onNavigate }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* ── Sort tabs ── */}
-      <div style={{
-        display: 'flex', marginBottom: '24px',
-        borderBottom: `1px solid ${C.borderGold}`,
-        overflowX: 'auto',
-      }}>
+      <div
+        className="hide-scroll"
+        style={{
+          display: 'flex', marginBottom: '24px',
+          borderBottom: `1px solid ${C.borderGold}`,
+          overflowX: 'auto',
+        }}
+      >
         {SORT_MODES.map(mode => (
           <SortTab
             key={mode.key} mode={mode}
@@ -490,33 +499,47 @@ export default function BrowsePage({ onNavigate }) {
         ))}
       </div>
 
-      {/* ── Type filter row ── */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Realm</span>
-        <div style={{ width: '1px', height: '16px', background: C.borderGold }} />
+      {/* ── Realm (country) filter row — single scrollable line on mobile ── */}
+      <div
+        className={isCompact ? 'hide-scroll' : undefined}
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: isCompact ? '12px' : '16px',
+          alignItems: 'center',
+          flexWrap: isCompact ? 'nowrap' : 'wrap',
+          overflowX: isCompact ? 'auto' : 'visible',
+          paddingBottom: isCompact ? '2px' : 0,
+        }}
+      >
+        <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Realm</span>
+        <div style={{ width: '1px', height: '16px', background: C.borderGold, flexShrink: 0 }} />
         {TYPE_FILTERS.map(f => (
           <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} isCompact={isCompact} />
         ))}
+      </div>
 
-        {/* Stats */}
-        <div style={{
-          marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px',
-          fontSize: '11px', color: C.textDim,
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-        }}>
-          {loading ? (
-            <span style={{ color: C.textDim }}>Fetching realm…</span>
-          ) : (
-            <>
-              <span><span style={{ color: tColor }}>{displayed.length}</span><span style={{ color: C.textDim }}> shown</span></span>
-              <span style={{ color: C.borderGold }}>·</span>
-              <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span><span style={{ color: C.textDim }}> loaded</span></span>
-              {expanding && (
-                <><span style={{ color: C.borderGold }}>·</span><span style={{ color: C.gold + '88' }}>expanding…</span></>
-              )}
-            </>
-          )}
-        </div>
+      {/* ── Stats row — own line, so it never crowds the filter row on mobile ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '16px',
+        justifyContent: isCompact ? 'flex-start' : 'flex-end',
+        marginBottom: '20px',
+        fontSize: '11px', color: C.textDim,
+        fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+        flexWrap: 'wrap',
+      }}>
+        {loading ? (
+          <span style={{ color: C.textDim }}>Fetching realm…</span>
+        ) : (
+          <>
+            <span><span style={{ color: tColor }}>{displayed.length}</span><span style={{ color: C.textDim }}> shown</span></span>
+            <span style={{ color: C.borderGold }}>·</span>
+            <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span><span style={{ color: C.textDim }}> loaded</span></span>
+            {expanding && (
+              <><span style={{ color: C.borderGold }}>·</span><span style={{ color: C.gold + '88' }}>expanding…</span></>
+            )}
+          </>
+        )}
       </div>
 
       {/* ── Divider ── */}
