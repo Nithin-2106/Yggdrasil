@@ -40,6 +40,13 @@ const FORMAT_COLOR = {
   Series:  C.primary,
 }
 
+const SORT_OPTIONS = [
+  { key: 'title',         label: 'Title' },
+  { key: 'year',          label: 'Year' },
+  { key: 'dateCompleted', label: 'Date Completed' },
+  { key: 'rating',        label: 'My Score' },
+]
+
 const COLUMNS = [
   { key: 'index',         label: '#',         sortable: false, width: '52px'  },
   { key: 'cover',         label: 'Poster',    sortable: false, width: '100px', rune: 'ᛈ' },
@@ -50,9 +57,17 @@ const COLUMNS = [
   { key: 'rating',        label: 'My Score',  sortable: true,  width: '140px', rune: '★'  },
 ]
 
+const TOTAL_COLUMNS = COLUMNS.length
+
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function emptyMessage(status, searchQuery) {
+  if (searchQuery) return `No results for "${searchQuery}"`
+  if (status === 'All') return 'No entries yet in this realm'
+  return `Nothing under "${status}" yet`
 }
 
 // ── Score display ─────────────────────────────────────────────────────────────
@@ -73,6 +88,14 @@ function ScoreDisplay({ rating }) {
         {rating}
       </span>
     </div>
+  )
+}
+
+function SortIndicator({ direction }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.primary }}>
+      {direction === 'asc' ? '↑' : '↓'}
+    </span>
   )
 }
 
@@ -104,11 +127,7 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
     >
       {col.rune && <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '13px' }}>{col.rune}</span>}
       {col.label}
-      {isActive && (
-        <span style={{ marginLeft: '6px', fontSize: '13px', color: C.primary }}>
-          {sortDir === 'asc' ? '↑' : '↓'}
-        </span>
-      )}
+      {isActive && <SortIndicator direction={sortDir} />}
       {!isActive && col.sortable && hovered && (
         <span style={{ marginLeft: '6px', fontSize: '12px', color: C.textDim, opacity: 0.5 }}>↕</span>
       )}
@@ -116,12 +135,14 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
   )
 }
 
-// ── Anime row ─────────────────────────────────────────────────────────────────
+// ── Anime row (desktop table) ───────────────────────────────────────────────
 function AnimeRow({ anime, index, onNavigate }) {
   const [hovered, setHovered] = useState(false)
   const sc = STATUS_COLOR[anime.status] || C.textMuted
   const fc = FORMAT_COLOR[anime.format] || C.primary
   const canNavigate = !!anime.malId
+
+  const goToInfo = () => { if (canNavigate) onNavigate('Info', anime.malId) }
 
   const tdBase = {
     borderBottom: `1px solid ${C.borderPrimary}33`,
@@ -149,7 +170,7 @@ function AnimeRow({ anime, index, onNavigate }) {
       {/* Poster */}
       <td style={{ ...tdBase, padding: '8px 10px', width: '100px' }}>
         <div
-          onClick={() => canNavigate && onNavigate('Info', anime.malId)}
+          onClick={goToInfo}
           style={{
             width: '95px', height: '134px', background: C.input,
             border: `1px solid ${hovered && canNavigate ? sc + '99' : C.borderPrimary}`,
@@ -170,7 +191,7 @@ function AnimeRow({ anime, index, onNavigate }) {
       <td style={{ ...tdBase, padding: '14px 18px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <span
-            onClick={() => canNavigate && onNavigate('Info', anime.malId)}
+            onClick={goToInfo}
             style={{
               fontSize: '16px', fontWeight: 600,
               color: hovered ? C.primary : C.text,
@@ -185,17 +206,10 @@ function AnimeRow({ anime, index, onNavigate }) {
             {anime.title}
           </span>
           {!canNavigate && (
-            <span
-              style={{
-                fontSize: '10px',
-                color: C.textDim + '88',
-                fontFamily: '"Cinzel", serif',
-                letterSpacing: '0.1em',
-            }}
-          >
-            (no MAL link — re-add to enable)
-          </span>
-)}
+            <span style={{ fontSize: '10px', color: C.textDim + '88', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
+              (no MAL link — re-add to enable)
+            </span>
+          )}
           <span style={{ fontSize: '11px', letterSpacing: '0.12em', color: sc, padding: '4px 10px', border: `1px solid ${sc}55`, background: `${sc}10`, fontFamily: '"Cinzel", serif', whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>
             {anime.status}
           </span>
@@ -247,8 +261,9 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
         borderLeft:   `1px solid ${active ? color + '55' : C.borderPrimary}`,
         borderRight:  `1px solid ${active ? color + '55' : C.borderPrimary}`,
         borderBottom: `2px solid ${active ? color : 'transparent'}`,
-        padding: isCompact ? '13px 20px' : '10px 20px',
-        minHeight: isCompact ? '44px' : 'auto',
+        padding: isCompact ? '11px 18px' : '10px 20px',
+        minHeight: isCompact ? '40px' : 'auto',
+        flexShrink: 0,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
@@ -264,20 +279,141 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
   )
 }
 
+// ── Mobile floating card ─────────────────────────────────────────────────────
+function MobileAnimeCard({ anime, onNavigate }) {
+  const sc = STATUS_COLOR[anime.status] || C.textMuted
+  const fc = FORMAT_COLOR[anime.format] || C.primary
+  const canNavigate = !!anime.malId
+
+  const meta = [anime.format, anime.year].filter(Boolean).join(' · ')
+
+  return (
+    <div
+      onClick={() => canNavigate && onNavigate('Info', anime.malId)}
+      style={{
+        display: 'flex', gap: '12px',
+        padding: '12px',
+        background: C.surface,
+        border: `1px solid ${C.borderPrimary}`,
+        borderLeft: `3px solid ${sc}`,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        cursor: canNavigate ? 'pointer' : 'default',
+      }}
+    >
+      <div style={{
+        width: '76px', height: '108px', flexShrink: 0,
+        background: C.input,
+        border: `1px solid ${C.borderPrimary}`,
+        overflow: 'hidden',
+      }}>
+        {anime.coverImage
+          ? <img src={anime.coverImage} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: C.textDim }}>✦</div>
+        }
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{
+          fontSize: '14px', fontWeight: 600, color: C.text, lineHeight: 1.3,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{anime.title}</span>
+
+        {meta && (
+          <span style={{ fontSize: '11px', color: fc, fontFamily: '"Cinzel", serif', letterSpacing: '0.05em' }}>
+            {meta}
+          </span>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: 'auto', flexWrap: 'wrap' }}>
+          {anime.rating ? (
+            <span style={{ fontSize: '12px', color: C.gold, fontFamily: '"Cinzel", serif', fontWeight: 700 }}>
+              ★ {anime.rating}
+            </span>
+          ) : (
+            <span style={{ fontSize: '11px', color: C.textDim }}>—</span>
+          )}
+          {anime.dateCompleted && (
+            <span style={{ fontSize: '10px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>
+              {formatDate(anime.dateCompleted)}
+            </span>
+          )}
+        </div>
+
+        <span style={{
+          fontSize: '9px', letterSpacing: '0.1em', color: sc,
+          padding: '2px 8px', border: `1px solid ${sc}55`, background: `${sc}12`,
+          fontFamily: '"Cinzel", serif', alignSelf: 'flex-start',
+        }}>{anime.status}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Mobile sort popup ─────────────────────────────────────────────────────────
+function SortPopup({ sortKey, sortDir, onSort, onClose }) {
+  return (
+    <div
+      onClick={e => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(5,12,16,0.88)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+    >
+      <div style={{
+        width: '100%', maxWidth: '480px',
+        background: C.surface, border: `1px solid ${C.borderPrimary}`,
+        borderBottom: 'none',
+        padding: '20px 20px calc(96px + env(safe-area-inset-bottom, 0px))',
+        boxShadow: '0 -20px 60px rgba(0,0,0,0.6)',
+        maxHeight: '80vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+          <span style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.25em', color: C.primary }}>
+            SORT BY
+          </span>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer' }}
+          >×</button>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {SORT_OPTIONS.map(opt => {
+            const active = sortKey === opt.key
+            return (
+              <button
+                key={opt.key}
+                onClick={() => onSort(opt.key)}
+                style={{
+                  fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.1em',
+                  color: active ? C.primary : C.textMuted,
+                  background: active ? C.primarySoft : 'transparent',
+                  border: `1px solid ${active ? C.primary + '66' : C.borderPrimary}`,
+                  padding: '9px 14px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                {opt.label}
+                {active && <span style={{ fontSize: '11px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyState({ status, searchQuery }) {
   return (
     <tr>
-      <td colSpan={7}>
+      <td colSpan={TOTAL_COLUMNS}>
         <div style={{ padding: '64px 24px', textAlign: 'center' }}>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '32px', color: C.primary + '22', letterSpacing: '0.4em', marginBottom: '16px' }}>ᚨ</div>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : status === 'All'
-                ? 'No entries yet in this realm'
-                : `Nothing under "${status}" yet`
-            }
+            {emptyMessage(status, searchQuery)}
           </div>
         </div>
       </td>
@@ -294,6 +430,7 @@ export default function MyList({ onNavigate }) {
   const [focused,     setFocused]     = useState(false)
   const [sortKey,     setSortKey]     = useState('createdAt')
   const [sortDir,     setSortDir]     = useState('desc')
+  const [sortOpen,    setSortOpen]    = useState(false)
   const isCompact = useIsCompact()
 
   useEffect(() => {
@@ -302,7 +439,6 @@ export default function MyList({ onNavigate }) {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
-
 
   const counts = useMemo(() => {
     const map = { All: anime.length }
@@ -351,50 +487,111 @@ export default function MyList({ onNavigate }) {
 
   return (
     <div>
-      {/* Tabs + search */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {STATUS_TABS.map((tab) => (
-            <StatusTab
-              key={tab} label={tab}
-              count={counts[tab] || 0}
-              active={activeTab === tab}
-              onClick={() => setActiveTab(tab)}
-              isCompact={isCompact}
-            />
-          ))}
-        </div>
+      <style>{`
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-        {/* Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <span style={{ position: 'absolute', left: '12px', color: focused ? C.primary : C.textDim, fontSize: '15px', pointerEvents: 'none', transition: 'color 0.2s' }}>⌕</span>
-          <input
-            placeholder="Filter by title..."
-            value={searchQuery}
-            onChange={(e) => setSearch(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            style={{
-              paddingLeft: '34px', paddingRight: '28px', height: '40px',
-              width: focused ? '230px' : '180px',
-              background: C.input,
-              border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
-              color: C.text, fontSize: '13px',
-              fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
-              outline: 'none', transition: 'all 0.3s ease',
-              boxShadow: focused ? `0 0 16px ${C.primarySoft}` : 'none',
-            }}
-          />
-          {searchQuery && (
+      {/* ── Controls ── */}
+      {isCompact ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {STATUS_TABS.map((tab) => (
+              <StatusTab
+                key={tab} label={tab}
+                count={counts[tab] || 0}
+                active={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                isCompact
+              />
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <span style={{ position: 'absolute', left: '12px', color: focused ? C.primary : C.textDim, fontSize: '15px', pointerEvents: 'none' }}>⌕</span>
+              <input
+                placeholder="Filter by title..."
+                value={searchQuery}
+                onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={{
+                  paddingLeft: '34px', paddingRight: '28px',
+                  height: '44px', width: '100%', boxSizing: 'border-box',
+                  background: C.input,
+                  border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
+                  color: C.text, fontSize: '13px',
+                  fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+                  outline: 'none', transition: 'all 0.3s ease',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearch('')}
+                  style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0 }}
+                >×</button>
+              )}
+            </div>
+
             <button
-              onClick={() => setSearch('')}
-              style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0 }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = C.text }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim }}
-            >×</button>
-          )}
+              onClick={() => setSortOpen(true)}
+              aria-label="Sort"
+              style={{
+                width: '44px', height: '44px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: sortKey !== 'createdAt' ? C.primarySoft : C.surface,
+                border: `1px solid ${sortKey !== 'createdAt' ? C.primary + '66' : C.borderPrimary}`,
+                color: sortKey !== 'createdAt' ? C.primary : C.gold,
+                fontSize: '16px', cursor: 'pointer',
+              }}
+            >☰</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {STATUS_TABS.map((tab) => (
+              <StatusTab
+                key={tab} label={tab}
+                count={counts[tab] || 0}
+                active={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                isCompact={false}
+              />
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: '12px', color: focused ? C.primary : C.textDim, fontSize: '15px', pointerEvents: 'none', transition: 'color 0.2s' }}>⌕</span>
+            <input
+              placeholder="Filter by title..."
+              value={searchQuery}
+              onChange={(e) => setSearch(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={{
+                paddingLeft: '34px', paddingRight: '28px', height: '40px',
+                width: focused ? '230px' : '180px',
+                background: C.input,
+                border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
+                color: C.text, fontSize: '13px',
+                fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+                outline: 'none', transition: 'all 0.3s ease',
+                boxShadow: focused ? `0 0 16px ${C.primarySoft}` : 'none',
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0 }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = C.text }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim }}
+              >×</button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Count */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '10px 0 0' }}>
@@ -406,10 +603,25 @@ export default function MyList({ onNavigate }) {
       {/* Divider */}
       <div style={{ height: '1px', margin: '12px 0 0', background: `linear-gradient(to right, ${C.primary}88, ${C.aurora}44, transparent)` }} />
 
-      {/* Table */}
+      {/* List / Table */}
       {loading ? (
         <div style={{ padding: '64px', textAlign: 'center', fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim }}>
           Loading the realm...
+        </div>
+      ) : isCompact ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', color: C.primary + '22', letterSpacing: '0.4em', marginBottom: '14px' }}>ᚨ</div>
+              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.25em', color: C.textDim, textTransform: 'uppercase' }}>
+                {emptyMessage(activeTab, searchQuery)}
+              </div>
+            </div>
+          ) : (
+            filtered.map((a) => (
+              <MobileAnimeCard key={a._id} anime={a} onNavigate={onNavigate} />
+            ))
+          )}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -431,6 +643,15 @@ export default function MyList({ onNavigate }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {sortOpen && (
+        <SortPopup
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={handleSort}
+          onClose={() => setSortOpen(false)}
+        />
       )}
     </div>
   )

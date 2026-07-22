@@ -10,6 +10,7 @@ import ProfileIcon from '../../components/ProfileIcon'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { useAuth } from '../../context/AuthContext'
 
+// ── Shared Alfheim palette ────────────────────────────────────────────────────
 const C = {
   bg:           '#050C10',
   surface:      '#0A1A20',
@@ -27,39 +28,52 @@ const C = {
   borderPrimary:'rgba(94,234,212,0.2)',
 }
 
-// ── Vegvisir watermark ────────────────────────────────────────────────────────
+// ── SVG Vegvisir watermark ────────────────────────────────────────────────────
 function VegvisirWatermark() {
-  const spokes = [0, 45, 90, 135, 180, 225, 270, 315]
   return (
     <svg
       viewBox="0 0 200 200"
       style={{
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '700px', height: '700px',
-        opacity: 0.04, pointerEvents: 'none', zIndex: 0,
+        position:      'fixed',
+        top:           '50%',
+        left:          '50%',
+        transform:     'translate(-50%, -50%)',
+        width:         '700px',
+        height:        '700px',
+        opacity:       0.04,
+        pointerEvents: 'none',
+        zIndex:        0,
       }}
     >
-      <circle cx="100" cy="100" r="95" fill="none" stroke="#5EEAD4" strokeWidth="1" />
-      <circle cx="100" cy="100" r="80" fill="none" stroke="#5EEAD4" strokeWidth="0.5" />
-      {spokes.map((angle, i) => {
-        const rad    = (angle * Math.PI) / 180
-        const cos    = Math.cos(rad), sin = Math.sin(rad)
-        const x1     = 100 + 20 * cos,  y1 = 100 + 20 * sin
-        const x2     = 100 + 80 * cos,  y2 = 100 + 80 * sin
-        const bx     = 100 + 55 * cos,  by = 100 + 55 * sin
-        const perp   = rad + Math.PI / 2
-        const pc     = Math.cos(perp),  ps = Math.sin(perp)
+      <circle cx="100" cy="100" r="95" fill="none" stroke={C.primary} strokeWidth="1" />
+      <circle cx="100" cy="100" r="80" fill="none" stroke={C.primary} strokeWidth="0.5" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+        const rad      = (angle * Math.PI) / 180
+        const x1       = 100 + 20 * Math.cos(rad)
+        const y1       = 100 + 20 * Math.sin(rad)
+        const x2       = 100 + 80 * Math.cos(rad)
+        const y2       = 100 + 80 * Math.sin(rad)
+        const bx       = 100 + 55 * Math.cos(rad)
+        const by       = 100 + 55 * Math.sin(rad)
+        const perpRad  = rad + Math.PI / 2
+        const b1x      = bx + 10 * Math.cos(perpRad)
+        const b1y      = by + 10 * Math.sin(perpRad)
+        const b2x      = bx - 10 * Math.cos(perpRad)
+        const b2y      = by - 10 * Math.sin(perpRad)
+        const tip1x    = b1x + 14 * Math.cos(rad)
+        const tip1y    = b1y + 14 * Math.sin(rad)
+        const tip2x    = b2x + 14 * Math.cos(rad)
+        const tip2y    = b2y + 14 * Math.sin(rad)
         return (
-          <g key={i} stroke="#5EEAD4" strokeWidth="1.5" fill="none">
-            <line x1={x1} y1={y1} x2={x2} y2={y2} />
-            <line x1={bx + 10 * pc} y1={by + 10 * ps} x2={bx + 24 * cos + 10 * pc} y2={by + 24 * sin + 10 * ps} />
-            <line x1={bx - 10 * pc} y1={by - 10 * ps} x2={bx + 24 * cos - 10 * pc} y2={by + 24 * sin - 10 * ps} />
+          <g key={i} stroke={C.primary} strokeWidth="1.5" fill="none">
+            <line x1={x1}  y1={y1}  x2={x2}    y2={y2}    />
+            <line x1={b1x} y1={b1y} x2={tip1x} y2={tip1y} />
+            <line x1={b2x} y1={b2y} x2={tip2x} y2={tip2y} />
           </g>
         )
       })}
-      <circle cx="100" cy="100" r="20" fill="none" stroke="#7EB8F7" strokeWidth="1" />
-      <circle cx="100" cy="100" r="6"  fill="#7EB8F7" opacity="0.5" />
+      <circle cx="100" cy="100" r="20" fill="none" stroke={C.primary} strokeWidth="1" />
+      <circle cx="100" cy="100" r="6"  fill={C.primary} opacity="0.5" />
     </svg>
   )
 }
@@ -70,10 +84,10 @@ function SearchBar({ onSearch }) {
   const [focused, setFocused] = useState(false)
 
   const submit = () => {
-    const q = query.trim()
-    if (!q) return
-    onSearch(q)
-    setQuery('')
+    if (query.trim()) {
+      onSearch(query.trim())
+      setQuery('')
+    }
   }
 
   return (
@@ -81,30 +95,44 @@ function SearchBar({ onSearch }) {
       <button
         onClick={submit}
         style={{
-          position: 'absolute', left: '10px', top: '50%',
-          transform: 'translateY(-50%)',
-          background: 'none', border: 'none',
-          color: focused ? C.primary : C.textDim,
-          fontSize: '15px', cursor: 'pointer',
-          padding: 0, lineHeight: 1, transition: 'color 0.25s', zIndex: 1,
+          position:   'absolute',
+          left:       '10px',
+          top:        '50%',
+          transform:  'translateY(-50%)',
+          background: 'none',
+          border:     'none',
+          color:      focused ? C.primary : C.textDim,
+          fontSize:   '15px',
+          cursor:     'pointer',
+          padding:    0,
+          lineHeight: 1,
+          transition: 'color 0.25s',
+          zIndex:     1,
         }}
-      >⌕</button>
+      >
+        ⌕
+      </button>
       <input
+        placeholder="Search anime..."
         value={query}
         onChange={e => setQuery(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && submit()}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        placeholder="Search anime..."
         style={{
-          paddingLeft: '32px', paddingRight: '12px',
-          height: '34px', width: focused ? '220px' : '160px',
-          background: C.input,
-          border: `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
-          color: C.text, fontSize: '12px',
-          fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
-          outline: 'none', transition: 'all 0.3s ease',
-          boxShadow: focused ? '0 0 18px rgba(94,234,212,0.15)' : 'none',
+          paddingLeft:  '32px',
+          paddingRight: '12px',
+          height:       '34px',
+          width:        focused ? '220px' : '160px',
+          background:   C.input,
+          border:       `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
+          color:        C.text,
+          fontSize:     '12px',
+          fontFamily:   '"Cinzel", serif',
+          letterSpacing:'0.05em',
+          outline:      'none',
+          transition:   'all 0.3s ease',
+          boxShadow:    focused ? '0 0 18px rgba(94,234,212,0.15)' : 'none',
         }}
       />
     </div>
@@ -144,14 +172,14 @@ function SearchBarMobile({ onSearch }) {
           fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
           outline: 'none', boxSizing: 'border-box',
           transition: 'all 0.3s ease',
-          boxShadow: focused ? `0 0 18px rgba(94,234,212,0.15)` : 'none',
+          boxShadow: focused ? '0 0 18px rgba(94,234,212,0.15)' : 'none',
         }}
       />
     </div>
   )
 }
 
-// ── Nav link button ───────────────────────────────────────────────────────────
+// ── Nav link ──────────────────────────────────────────────────────────────────
 function NavLink({ label, active, onClick }) {
   const [hovered, setHovered] = useState(false)
   return (
@@ -160,21 +188,26 @@ function NavLink({ label, active, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
-        color: active ? C.primary : hovered ? C.text : C.textMuted,
-        background: active ? C.primarySoft : 'transparent',
-        border: 'none',
-        borderBottom: `2px solid ${active ? C.primary : 'transparent'}`,
-        padding: '8px 22px', cursor: 'pointer',
-        transition: 'all 0.25s ease',
-        textShadow: active ? `0 0 12px ${C.primary}` : 'none',
+        fontFamily:    '"Cinzel", serif',
+        fontSize:      '11px',
+        letterSpacing: '0.2em',
+        color:         active ? C.primary : hovered ? C.text : C.textMuted,
+        background:    active ? C.primarySoft : 'transparent',
+        border:        'none',
+        borderBottom:  active ? `2px solid ${C.primary}` : '2px solid transparent',
+        padding:       '8px 22px',
+        cursor:        'pointer',
+        transition:    'all 0.25s ease',
+        textTransform: 'uppercase',
+        textShadow:    active ? `0 0 12px ${C.primary}` : 'none',
       }}
-    >{label}</button>
+    >
+      {label}
+    </button>
   )
 }
 
-// ── Top navigation bar ────────────────────────────────────────────────────────
+// ── Navbar ────────────────────────────────────────────────────────────────────
 function HamburgerIcon({ open, color }) {
   const bar = {
     display: 'block',
@@ -226,7 +259,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
         right:          0,
         zIndex:         100,
         height:         '64px',
-        background:     'rgba(6,11,20,0.92)',
+        background:     'rgba(5,12,16,0.92)',
         backdropFilter: 'blur(20px)',
         borderBottom:   `1px solid ${C.borderPrimary}`,
         display:        'flex',
@@ -365,7 +398,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
           left:           0,
           right:          0,
           zIndex:         99,
-          background:     'rgba(6,11,20,0.97)',
+          background:     'rgba(5,12,16,0.97)',
           backdropFilter: 'blur(20px)',
           borderBottom:   `1px solid ${C.borderPrimary}`,
           padding:        '20px 16px 28px',
@@ -429,38 +462,97 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
   )
 }
 
+// ── Ambient background glows ──────────────────────────────────────────────────
+function AmbientGlows() {
+  return (
+    <>
+      {/* Aurora — bottom */}
+      <div style={{
+        position:      'fixed',
+        bottom:        0,
+        left:          0,
+        right:         0,
+        height:        '180px',
+        background:    `linear-gradient(to top, ${C.aurora}12, transparent)`,
+        pointerEvents: 'none',
+        zIndex:        0,
+      }} />
+      {/* Primary — top left */}
+      <div style={{
+        position:      'fixed',
+        top:           0,
+        left:          0,
+        width:         '400px',
+        height:        '400px',
+        background:    `radial-gradient(ellipse at top left, ${C.primary}0f, transparent 70%)`,
+        pointerEvents: 'none',
+        zIndex:        0,
+      }} />
+      {/* Aurora — bottom right */}
+      <div style={{
+        position:      'fixed',
+        bottom:        0,
+        right:         0,
+        width:         '400px',
+        height:        '400px',
+        background:    `radial-gradient(ellipse at bottom right, ${C.aurora}0f, transparent 70%)`,
+        pointerEvents: 'none',
+        zIndex:        0,
+      }} />
+    </>
+  )
+}
+
 // ── Page title bar ────────────────────────────────────────────────────────────
 function PageTitle({ activePage, searchQuery }) {
-  const title = activePage === 'Search' ? 'SEARCH'
-    : activePage === 'Info'   ? 'ANIME INFO'
-    : activePage === 'Browse' ? 'BROWSE'
-    : activePage.toUpperCase()
+  const title =
+    activePage === 'Search' ? 'SEARCH'     :
+    activePage === 'Info'   ? 'ANIME INFO' :
+    activePage === 'Browse' ? 'BROWSE'     :
+    activePage.toUpperCase()
 
   return (
     <div style={{ marginBottom: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '1px' }}>
         <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.primary + '66' }}>ᚨ</span>
         <div style={{
-          fontSize: '10px', letterSpacing: '0.45em', color: C.textDim,
-          textTransform: 'uppercase', fontFamily: '"Cinzel", serif',
-        }}>Realm of Light Elves · Anime</div>
+          fontSize:      '10px',
+          letterSpacing: '0.45em',
+          color:         C.textDim,
+          textTransform: 'uppercase',
+          fontFamily:    '"Cinzel", serif',
+        }}>
+          Realm of Light Elves · Anime
+        </div>
       </div>
+
       <h1 style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: 'clamp(22px, 3vw, 34px)', fontWeight: 700,
-        letterSpacing: '0.2em', color: C.text, margin: 0,
-        textShadow: `0 0 40px ${C.primary}33`,
-      }}>{title}</h1>
+        fontFamily:    '"Cinzel", serif',
+        fontSize:      'clamp(22px, 3vw, 34px)',
+        fontWeight:    700,
+        letterSpacing: '0.2em',
+        color:         C.text,
+        margin:        0,
+        textShadow:    `0 0 40px ${C.primary}33`,
+      }}>
+        {title}
+      </h1>
+
       {activePage === 'Search' && searchQuery && (
         <div style={{
-          fontSize: '12px', letterSpacing: '0.2em', color: C.textMuted,
-          marginTop: '6px', fontFamily: '"Cinzel", serif',
+          fontSize:      '12px',
+          letterSpacing: '0.2em',
+          color:         C.textMuted,
+          marginTop:     '6px',
+          fontFamily:    '"Cinzel", serif',
         }}>
           ᛭ results for <span style={{ color: C.primary }}>"{searchQuery}"</span>
         </div>
       )}
+
       <div style={{
-        height: '1px', marginTop: '16px',
+        height:     '1px',
+        marginTop:  '16px',
         background: `linear-gradient(to right, ${C.primary}88, ${C.aurora}44, transparent)`,
       }} />
     </div>
@@ -471,9 +563,8 @@ function PageTitle({ activePage, searchQuery }) {
 export default function Alfheim() {
   const { user }    = useAuth()
   const navigate    = useNavigate()
-  const isCompact = useIsCompact()
+  const isCompact   = useIsCompact()
   const [searchParams, setSearchParams] = useSearchParams()
-
 
   const activePage      = searchParams.get('page') || 'Dashboard'
   const searchQuery     = searchParams.get('q') || ''
@@ -490,101 +581,55 @@ export default function Alfheim() {
   }
 
   return (
-  <div style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap"
-    />
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, overflowX: 'hidden' }}>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap"
+      />
 
-    {/* Ambient background layers */}
-    <VegvisirWatermark />
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '400px',
-        height: '400px',
-        background: `radial-gradient(ellipse at top left, ${C.primary}0f, transparent 70%)`,
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    />
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        right: 0,
-        width: '400px',
-        height: '400px',
-        background: `radial-gradient(ellipse at bottom right, ${C.aurora}0f, transparent 70%)`,
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    />
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '180px',
-        background: 'linear-gradient(to top, rgba(52,211,153,0.04), transparent)',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    />
+      <VegvisirWatermark />
+      <AmbientGlows />
 
-    <Navbar
-      activePage={activePage}
-      onNavigate={handleNavigate}
-      onSearch={q => handleNavigate('Search', q)}
-      isCompact={isCompact}
-    />
+      <Navbar
+        activePage={activePage}
+        onNavigate={handleNavigate}
+        onSearch={q => handleNavigate('Search', q)}
+        isCompact={isCompact}
+      />
 
-    <main
-      style={{
-        position: 'relative',
-        zIndex: 1,
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: isCompact ? '84px 16px 56px' : '96px 36px 80px',
-      }}
-    >
-      <PageTitle activePage={activePage} searchQuery={searchQuery} />
+      <main style={{
+        position:  'relative',
+        zIndex:    1,
+        maxWidth:  '1200px',
+        margin:    '0 auto',
+        padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px',
+      }}>
+        <PageTitle activePage={activePage} searchQuery={searchQuery} />
 
-      <ErrorBoundary
-        colors={C}
-        realmName="Alfheim"
-        onReturnHome={() => handleNavigate('Dashboard')}
-      >
-        {activePage === 'Dashboard' && (
-          <Dashboard onNavigate={handleNavigate} />
-        )}
-
-        {activePage === 'Browse' && (
-          <BrowsePage onNavigate={handleNavigate} />
-        )}
-
-        {activePage === 'My List' && (
-          <MyList onNavigate={handleNavigate} />
-        )}
-
-        {activePage === 'Search' && (
-          <SearchPage
-            query={searchQuery}
-            onSelectAnime={item => handleNavigate('Info', item.mal_id)}
-          />
-        )}
-
-        {activePage === 'Info' && (
-          <InfoPage
-            malId={selectedAnimeId}
-            onBack={() => handleNavigate('Search', searchQuery)}
-          />
-        )}
-      </ErrorBoundary>
-    </main>
-  </div>
-)
+        <ErrorBoundary colors={C} realmName="Alfheim" onReturnHome={() => handleNavigate('Dashboard')}>
+          {activePage === 'Dashboard' && (
+            <Dashboard onNavigate={handleNavigate} isCompact={isCompact} />
+          )}
+          {activePage === 'Browse' && (
+            <BrowsePage onNavigate={handleNavigate} />
+          )}
+          {activePage === 'My List' && (
+            <MyList onNavigate={handleNavigate} />
+          )}
+          {activePage === 'Search' && (
+            <SearchPage
+              query={searchQuery}
+              onSelectAnime={item => handleNavigate('Info', item.mal_id)}
+            />
+          )}
+          {activePage === 'Info' && (
+            <InfoPage
+              malId={selectedAnimeId}
+              onBack={() => handleNavigate('Search', searchQuery)}
+            />
+          )}
+        </ErrorBoundary>
+      </main>
+    </div>
+  )
 }

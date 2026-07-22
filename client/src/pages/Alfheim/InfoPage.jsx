@@ -1,5 +1,5 @@
 // client/src/pages/Alfheim/InfoPage.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -118,13 +118,12 @@ function SkeletonBlock({ w = '100%', h = '16px', style = {} }) {
   )
 }
 
-function Spinner() {
+function Spinner({ isCompact }) {
   return (
     <div style={{ padding: '0 0 60px' }}>
-      <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
       <SkeletonBlock w="120px" h="14px" style={{ marginBottom: '36px' }} />
-      <div style={{ display: 'flex', gap: '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
-        <SkeletonBlock w="230px" h="335px" style={{ flexShrink: 0, marginLeft: '4%' }} />
+      <div style={{ display: 'flex', gap: isCompact ? '24px' : '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
+        <SkeletonBlock w={isCompact ? '190px' : '230px'} h={isCompact ? '276px' : '335px'} style={{ flexShrink: 0, marginLeft: isCompact ? 0 : '4%' }} />
         <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <SkeletonBlock w="80px" h="26px" />
@@ -156,9 +155,8 @@ function Spinner() {
 }
 
 // ── Rating slider ─────────────────────────────────────────────────────────────
-function RatingSlider({ value, onChange }) {
+function RatingSlider({ value, onChange, isCompact }) {
   const [hovered, setHovered] = useState(null)
-  // Half-step increments: 1, 1.5, 2 … 10
   const steps = []
   for (let i = 1; i <= 10; i += 0.5) steps.push(i)
   const display = hovered !== null ? hovered : value
@@ -171,11 +169,12 @@ function RatingSlider({ value, onChange }) {
         </span>
         <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
       </div>
-      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: isCompact ? '2px' : '3px', width: '100%' }}>
         {steps.map((step) => {
           const isActive = value && step <= value
           const isHov    = hovered !== null && step <= hovered
           const col      = myRatingColor(step)
+          const isWhole  = step % 1 === 0
           return (
             <button
               key={step}
@@ -184,14 +183,17 @@ function RatingSlider({ value, onChange }) {
               onMouseLeave={() => setHovered(null)}
               title={step.toString()}
               style={{
-                width: step % 1 === 0 ? '26px' : '13px', height: '26px',
+                flex: isWhole ? '2 1 0' : '1 1 0',
+                minWidth: 0,
+                height: isCompact ? '28px' : '30px',
                 background: (isHov || isActive) ? col : C.surface,
                 border: `1px solid ${(isHov || isActive) ? col : C.borderPrimary}`,
                 cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
+                padding: 0,
               }}
             >
-              {step % 1 === 0 && (
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
+              {isWhole && (
+                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isCompact ? '8px' : '10px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
                   {step}
                 </span>
               )}
@@ -207,6 +209,38 @@ function RatingSlider({ value, onChange }) {
           onMouseLeave={(e) => { e.currentTarget.style.color = C.textDim }}
         >× Clear rating</button>
       )}
+    </div>
+  )
+}
+
+// ── Rewatch stepper ────────────────────────────────────────────────────────────
+function StepperControl({ value, onChange }) {
+  const btnStyle = {
+    width: '34px', height: '34px', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: C.input, border: `1px solid ${C.borderPrimary}`,
+    color: C.primary, fontSize: '17px', fontFamily: '"Cinzel", serif',
+    cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.15s, background 0.15s',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0, (value || 0) - 1))}
+        style={btnStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.primary; e.currentTarget.style.background = C.primarySoft }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.background = C.input }}
+      >−</button>
+      <span style={{ minWidth: '30px', textAlign: 'center', fontFamily: '"Cinzel", serif', fontSize: '18px', fontWeight: 700, color: C.text }}>
+        {value || 0}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange((value || 0) + 1)}
+        style={btnStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.primary; e.currentTarget.style.background = C.primarySoft }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.background = C.input }}
+      >+</button>
     </div>
   )
 }
@@ -247,6 +281,19 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted,
   const set   = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const setEp = (k, v) => setForm((f) => ({ ...f, episodes: { ...f.episodes, [k]: v === '' ? null : Number(v) } }))
   const coverSrc = coverOverride || form.coverImage
+
+  // Setting status to Completed maxes out the episode count and defaults
+  // the rewatch count to at least 1 — never downgrades an existing higher count.
+  const setStatus = (newStatus) => {
+    setForm((f) => {
+      const next = { ...f, status: newStatus }
+      if (newStatus === 'Completed') {
+        if (f.episodes?.total) next.episodes = { ...f.episodes, current: f.episodes.total }
+        if (!f.rewatchCount || f.rewatchCount < 1) next.rewatchCount = 1
+      }
+      return next
+    })
+  }
 
   const addPlat = () => {
     if (!platName.trim()) return
@@ -310,7 +357,7 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted,
           background: 'rgba(4,8,16,0.88)', backdropFilter: 'blur(8px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: isCompact ? '12px' : '24px',
-paddingTop: isCompact ? '56px' : '80px',
+          paddingTop: isCompact ? '56px' : '80px',
         }}
       >
         <div
@@ -340,18 +387,11 @@ paddingTop: isCompact ? '56px' : '80px',
           </div>
 
           {/* Body */}
-          <div
-  style={{
-    padding: isCompact ? '18px' : '28px',
-    display: 'flex',
-    gap: isCompact ? '18px' : '28px',
-    flexWrap: 'wrap',
-  }}
->
+          <div style={{ padding: isCompact ? '18px' : '28px', display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
 
             {/* Left — poster */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ maxWidth: '160px' }}>
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', width: isCompact ? '100%' : 'auto', alignItems: isCompact ? 'center' : 'flex-start' }}>
+              <div style={{ maxWidth: '160px', textAlign: isCompact ? 'center' : 'left' }}>
                 <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
                   {animeData.title_english || animeData.title}
                 </div>
@@ -364,7 +404,7 @@ paddingTop: isCompact ? '56px' : '80px',
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>✦</div>
                 }
               </div>
-              <div>
+              <div style={{ width: '160px' }}>
                 <label style={lbl}>ᛈ Cover URL</label>
                 <input
                   placeholder="Paste image URL..."
@@ -378,11 +418,11 @@ paddingTop: isCompact ? '56px' : '80px',
             </div>
 
             {/* Right — fields */}
-            <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ flex: 1, minWidth: isCompact ? '0' : '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
               <div>
                 <label style={lbl}>ᛊ Status</label>
-                <select value={form.status} onChange={(e) => set('status', e.target.value)} onFocus={() => setFocused('status')} onBlur={() => setFocused('')} style={{ ...inputStyle('status'), cursor: 'pointer' }}>
+                <select value={form.status} onChange={(e) => setStatus(e.target.value)} onFocus={() => setFocused('status')} onBlur={() => setFocused('')} style={{ ...inputStyle('status'), cursor: 'pointer' }}>
                   <option>Watching</option>
                   <option>Completed</option>
                   <option>Dropped</option>
@@ -392,17 +432,20 @@ paddingTop: isCompact ? '56px' : '80px',
               </div>
 
               <div>
-                <label style={lbl}>ᚹ Episodes & Rewatch</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <label style={lbl}>ᚹ Episodes</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                   <input type="number" min="0" placeholder="Current" value={form.episodes?.current ?? ''} onChange={(e) => setEp('current', e.target.value)} onFocus={() => setFocused('epCurrent')} onBlur={() => setFocused('')} style={{ ...inputStyle('epCurrent'), width: '72px', flexShrink: 0 }} />
                   <span style={{ color: C.textDim, fontSize: '14px', flexShrink: 0 }}>/</span>
                   <input type="number" min="0" placeholder="Total" value={form.episodes?.total ?? ''} onChange={(e) => setEp('total', e.target.value)} onFocus={() => setFocused('epTotal')} onBlur={() => setFocused('')} style={{ ...inputStyle('epTotal'), width: '72px', flexShrink: 0 }} />
-                  <span style={{ color: C.textDim, fontSize: '11px', letterSpacing: '0.15em', fontFamily: '"Cinzel", serif', flexShrink: 0, marginLeft: '6px' }}>ᚲ</span>
-                  <input type="number" min="0" placeholder="Rewatch" value={form.rewatchCount || ''} onChange={(e) => set('rewatchCount', e.target.value === '' ? 0 : Number(e.target.value))} onFocus={() => setFocused('rewatch')} onBlur={() => setFocused('')} style={{ ...inputStyle('rewatch'), width: '80px', flexShrink: 0 }} />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={lbl}>ᚲ No. of Times Rewatched</label>
+                <StepperControl value={form.rewatchCount} onChange={(v) => set('rewatchCount', v)} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={lbl}>ᛞ Date Started</label>
                   <input type="date" value={form.dateStarted?.split('T')[0] ?? ''} onChange={(e) => set('dateStarted', e.target.value)} onFocus={() => setFocused('dateStart')} onBlur={() => setFocused('')} style={inputStyle('dateStart')} />
@@ -415,7 +458,7 @@ paddingTop: isCompact ? '56px' : '80px',
 
               <div>
                 <label style={lbl}>★ My Rating</label>
-                <RatingSlider value={form.rating} onChange={(v) => set('rating', v)} />
+                <RatingSlider value={form.rating} onChange={(v) => set('rating', v)} isCompact={isCompact} />
               </div>
 
               <div>
@@ -428,10 +471,10 @@ paddingTop: isCompact ? '56px' : '80px',
                       <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                     <input placeholder="Platform" value={platName} onChange={(e) => setPlatName(e.target.value)} onFocus={() => setFocused('platName')} onBlur={() => setFocused('')} style={{ ...inputStyle('platName'), flex: 1 }} />
                     <input placeholder="URL (optional)" value={platUrl} onChange={(e) => setPlatUrl(e.target.value)} onFocus={() => setFocused('platUrl')} onBlur={() => setFocused('')} style={{ ...inputStyle('platUrl'), flex: 2 }} />
-                    <button onClick={addPlat} style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add</button>
+                    <button onClick={addPlat} style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}44`, padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap', minHeight: isCompact ? '38px' : 'auto' }}>+ Add</button>
                   </div>
                 </div>
               </div>
@@ -447,55 +490,39 @@ paddingTop: isCompact ? '56px' : '80px',
 
           {/* Footer */}
           <div
-  style={{
-    padding: isCompact ? '14px 18px 18px' : '16px 28px 24px',
-    borderTop: `1px solid ${C.borderPrimary}`,
-    display: 'flex',
-    flexDirection: isCompact ? 'column-reverse' : 'row',
-    justifyContent: 'space-between',
-    alignItems: isCompact ? 'stretch' : 'center',
-    gap: isCompact ? '10px' : 0,
-    position: 'sticky',
-    bottom: 0,
-    background: C.surface,
-  }}
->
+            style={{
+              padding: isCompact ? '14px 18px 18px' : '16px 28px 24px',
+              borderTop: `1px solid ${C.borderPrimary}`,
+              display: 'flex',
+              flexDirection: isCompact ? 'column-reverse' : 'row',
+              justifyContent: 'space-between',
+              alignItems: isCompact ? 'stretch' : 'center',
+              gap: isCompact ? '10px' : 0,
+              position: 'sticky',
+              bottom: 0,
+              background: C.surface,
+            }}
+          >
             <div>
               {existingEntry && (
                 <button
                   onClick={handleDelete} disabled={deleting}
-                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px',
-minHeight: isCompact ? '44px' : 'auto',
-width: isCompact ? '100%' : 'auto',
-cursor: 'pointer', transition: 'all 0.2s' }}
+                  style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`, padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248,113,113,0.2)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = C.redSoft }}
                 >{deleting ? 'Deleting...' : '✕ Delete'}</button>
               )}
             </div>
-            <div
-  style={{
-    display: 'flex',
-    gap: '10px',
-    flexDirection: isCompact ? 'column' : 'row',
-    width: isCompact ? '100%' : 'auto',
-  }}
->
+            <div style={{ display: 'flex', gap: '10px', flexDirection: isCompact ? 'column' : 'row', width: isCompact ? '100%' : 'auto' }}>
               <button
                 onClick={onClose}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`, padding: '10px 20px',
-minHeight: isCompact ? '44px' : 'auto',
-width: isCompact ? '100%' : 'auto',
-cursor: 'pointer', transition: 'all 0.2s' }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`, padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderPrimary }}
               >Cancel</button>
               <button
                 onClick={handleSave} disabled={saving}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`, padding: '10px 28px',
-minHeight: isCompact ? '44px' : 'auto',
-width: isCompact ? '100%' : 'auto',
-cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s', opacity: saving ? 0.7 : 1 }}
+                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`, padding: '10px 28px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s', opacity: saving ? 0.7 : 1 }}
                 onMouseEnter={(e) => { if (!saving) e.currentTarget.style.background = 'rgba(94,234,212,0.2)' }}
                 onMouseLeave={(e) => { if (!saving) e.currentTarget.style.background = C.primarySoft }}
               >{saving ? 'Saving...' : existingEntry ? '✓ Update' : '✓ Submit'}</button>
@@ -539,16 +566,17 @@ function CharacterCard({ entry }) {
 }
 
 // ── Image grid with lightbox ──────────────────────────────────────────────────
-function ImageGrid({ images }) {
+function ImageGrid({ images, isCompact }) {
   const [lightbox, setLightbox] = useState(null)
   const [showAll, setShowAll]   = useState(false)
   const [hov, setHov]           = useState(null)
   const list    = images || []
   const visible = showAll ? list : list.slice(0, 6)
+  const minCol  = isCompact ? 90 : 110
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: '8px' }}>
         {visible.map((img, i) => {
           const src = img.jpg?.large_image_url || img.jpg?.image_url || img.webp?.large_image_url || ''
           return (
@@ -580,7 +608,7 @@ function ImageGrid({ images }) {
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(4,8,16,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(4,8,16,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', padding: isCompact ? '16px' : 0 }}
         >
           <img src={lightbox} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', border: `1px solid ${C.borderPrimary}` }} />
         </div>
@@ -590,7 +618,7 @@ function ImageGrid({ images }) {
 }
 
 // ── Trailer section ───────────────────────────────────────────────────────────
-function TrailerSection({ trailer, promos }) {
+function TrailerSection({ trailer, promos, isCompact }) {
   const [active, setActive] = useState(null)
 
   const videos = []
@@ -617,8 +645,8 @@ function TrailerSection({ trailer, promos }) {
     <div>
       <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
         {videos.map((v) => (
-          <div key={v.key} onClick={() => setActive(active === v.key ? null : v.key)} style={{ flexShrink: 0, width: '190px', cursor: 'pointer' }}>
-            <div style={{ position: 'relative', height: '107px', border: `1px solid ${active === v.key ? C.primary + '88' : C.borderPrimary}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+          <div key={v.key} onClick={() => setActive(active === v.key ? null : v.key)} style={{ flexShrink: 0, width: isCompact ? '150px' : '190px', cursor: 'pointer' }}>
+            <div style={{ position: 'relative', height: isCompact ? '84px' : '107px', border: `1px solid ${active === v.key ? C.primary + '88' : C.borderPrimary}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
               <img src={v.thumb} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,12,16,0.45)' }}>
                 <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: active === v.key ? C.primary : 'rgba(94,234,212,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', transition: 'background 0.2s' }}>▶</div>
@@ -648,6 +676,7 @@ export default function InfoPage({ malId, onBack }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isCompact = useIsCompact()
+  const trailerSectionRef = useRef(null)
 
   const [data,         setData]         = useState(null)
   const [characters,   setChars]        = useState([])
@@ -716,7 +745,25 @@ export default function InfoPage({ malId, onBack }) {
     run()
   }, [malId, fetchExisting])
 
-  if (loading) return <Spinner />
+  const toggleTrailers = () => {
+    setShowTrailers((s) => {
+      const next = !s
+      if (next) {
+        setTimeout(() => {
+          trailerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 60)
+      }
+      return next
+    })
+  }
+
+  if (loading) return (
+    <>
+      <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
+      <Spinner isCompact={isCompact} />
+    </>
+  )
+
   if (!data) return (
     <div style={{ color: C.textDim, fontFamily: '"Cinzel", serif', fontSize: '13px', padding: '48px 0' }}>
       Failed to load anime data.
@@ -728,14 +775,17 @@ export default function InfoPage({ malId, onBack }) {
   const fColor       = formatColor(format)
   const year         = getYear(data)
   const cover        = data.images?.jpg?.large_image_url || data.images?.jpg?.image_url || null
-  const backdrop     = data.trailer?.images?.maximum_image_url || null
-  const malScore     = data.score ? data.score.toFixed(2) : null
-  const runtime      = parseRuntime(data.duration)
-  const statusCfg    = existing ? (STATUS_CONFIG[existing.status] || {}) : null
-  const trailerCount = (data.trailer?.youtube_id ? 1 : 0) + promos.filter((p) => p.trailer?.youtube_id).length
-  const openings     = (data.theme?.openings || []).slice(0, 3)
-  const endings      = (data.theme?.endings  || []).slice(0, 3)
-  const keywords     = [...(data.genres || []), ...(data.themes || []), ...(data.demographics || [])].slice(0, 20)
+  const backdrop      = data.trailer?.images?.maximum_image_url || null
+  const malScore      = data.score ? data.score.toFixed(2) : null
+  const runtime        = parseRuntime(data.duration)
+  const statusCfg      = existing ? (STATUS_CONFIG[existing.status] || {}) : null
+  const trailerCount   = (data.trailer?.youtube_id ? 1 : 0) + promos.filter((p) => p.trailer?.youtube_id).length
+  const openings       = (data.theme?.openings || []).slice(0, 3)
+  const endings        = (data.theme?.endings  || []).slice(0, 3)
+  const keywords       = [...(data.genres || []), ...(data.themes || []), ...(data.demographics || [])].slice(0, 20)
+
+  const posterW = isCompact ? 190 : 230
+  const posterH = isCompact ? 276 : 335
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease' }}>
@@ -755,7 +805,7 @@ export default function InfoPage({ malId, onBack }) {
       </div>
 
       {/* Hero */}
-      <div style={{ position: 'relative', marginBottom: '60px' }}>
+      <div style={{ position: 'relative', marginBottom: isCompact ? '40px' : '60px' }}>
         {backdrop && (
           <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
         )}
@@ -777,7 +827,7 @@ export default function InfoPage({ malId, onBack }) {
             width: isCompact ? '100%' : 'auto',
             flexShrink: 0,
           }}>
-            <div style={{ width: '230px', height: '335px', background: C.surface, border: `1px solid ${fColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${fColor}22, 0 0 50px ${fColor}0a` }}>
+            <div style={{ width: `${posterW}px`, height: `${posterH}px`, background: C.surface, border: `1px solid ${fColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${fColor}22, 0 0 50px ${fColor}0a` }}>
               <Corners color={fColor} size={13} opacity={0.55} />
               {cover
                 ? <img src={cover} alt={data.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -785,9 +835,9 @@ export default function InfoPage({ malId, onBack }) {
               }
             </div>
 
-            <div style={{ width: '230px', display: 'flex', flexDirection: 'column', gap: '9px' }}>
+            <div style={{ width: `${posterW}px`, display: 'flex', flexDirection: 'column', gap: '9px' }}>
               <button
-                onClick={() => setShowTrailers((s) => !s)}
+                onClick={toggleTrailers}
                 style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: showTrailers ? C.bg : C.primary, background: showTrailers ? C.primary : C.primarySoft, border: `1px solid ${C.primary}66`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
                 onMouseEnter={(e) => { if (!showTrailers) e.currentTarget.style.background = 'rgba(94,234,212,0.18)' }}
                 onMouseLeave={(e) => { if (!showTrailers) e.currentTarget.style.background = C.primarySoft }}
@@ -829,9 +879,9 @@ export default function InfoPage({ malId, onBack }) {
 
             {/* Title */}
             <div>
-              <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(26px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${fColor}18` }}>
+              <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${fColor}18` }}>
                 {data.title_english || data.title}
-                {year && <span style={{ fontSize: 'clamp(15px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
+                {year && <span style={{ fontSize: 'clamp(14px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
               </h2>
               {data.title && data.title !== (data.title_english || data.title) && (
                 <div style={{ fontSize: '14px', color: C.textMuted, marginTop: '6px', fontStyle: 'italic', letterSpacing: '0.04em' }}>{data.title}</div>
@@ -842,12 +892,12 @@ export default function InfoPage({ malId, onBack }) {
             </div>
 
             {/* Scores */}
-            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {malScore && parseFloat(malScore) > 0 && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ MAL Score</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(163,230,53,0.5)', lineHeight: 1 }}>★ {malScore}</span>
+                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(163,230,53,0.5)', lineHeight: 1 }}>★ {malScore}</span>
                     <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
                   </div>
                   {data.scored_by > 0 && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px' }}>{data.scored_by.toLocaleString()} votes</div>}
@@ -856,7 +906,7 @@ export default function InfoPage({ malId, onBack }) {
               <div>
                 <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>★ Mine</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
+                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
                     {existing?.rating || '—'}
                   </span>
                   <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
@@ -872,7 +922,7 @@ export default function InfoPage({ malId, onBack }) {
             </div>
 
             {/* Episodes / runtime / progress */}
-            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
               {[
                 data.episodes > 0   && { label: 'Episodes',    value: data.episodes,    rune: 'ᚹ' },
                 runtime             && { label: 'Runtime',     value: runtime,           rune: 'ᛏ' },
@@ -909,9 +959,9 @@ export default function InfoPage({ malId, onBack }) {
 
       {/* Trailers (inline toggle) */}
       {showTrailers && (
-        <div style={{ marginBottom: '56px' }}>
+        <div ref={trailerSectionRef} style={{ marginBottom: '56px', scrollMarginTop: '16px' }}>
           <SectionDivider title="Trailers" rune="▶" right={`${trailerCount} available`} />
-          <TrailerSection trailer={data.trailer} promos={promos} />
+          <TrailerSection trailer={data.trailer} promos={promos} isCompact={isCompact} />
         </div>
       )}
 
@@ -919,7 +969,7 @@ export default function InfoPage({ malId, onBack }) {
       {existing?.review && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="My Review" rune="ᚾ" />
-          <div style={{ padding: '22px 26px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '22px 26px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
             <Corners color={C.primary} size={10} opacity={0.2} />
             <p style={{ fontSize: '14px', color: C.textMuted, lineHeight: 1.85, margin: 0, letterSpacing: '0.02em', fontStyle: 'italic' }}>
               "{existing.review}"
@@ -932,7 +982,7 @@ export default function InfoPage({ malId, onBack }) {
       {data.synopsis && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="Synopsis" rune="ᛊ" />
-          <div style={{ padding: '24px 28px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '24px 28px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
             <Corners color={C.primary} size={10} opacity={0.2} />
             <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>{data.synopsis}</p>
           </div>
@@ -945,7 +995,7 @@ export default function InfoPage({ malId, onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
 
           {/* MAL metadata grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
             {[
               { label: 'Type',       value: data.type,        rune: 'ᛏ' },
               { label: 'Source',     value: data.source,      rune: 'ᚢ' },
@@ -975,7 +1025,7 @@ export default function InfoPage({ malId, onBack }) {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase' }}>ᛗ My Entry</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
                   {myRows.map((row) => (
                     <div key={row.label} style={{ padding: '14px 16px', background: `${C.primary}08`, border: `1px solid ${C.primary}33` }}>
                       <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.primary + 'aa', fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>
@@ -1048,7 +1098,7 @@ export default function InfoPage({ malId, onBack }) {
       {pictures.length > 0 && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="Images" rune="ᛒ" right={`${pictures.length} total`} />
-          <ImageGrid images={pictures} />
+          <ImageGrid images={pictures} isCompact={isCompact} />
         </div>
       )}
 

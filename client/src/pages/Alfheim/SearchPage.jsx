@@ -54,6 +54,7 @@ function SkeletonCard() {
 // ── Filter pill ───────────────────────────────────────────────────────────────
 function FilterPill({ label, color, active, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
+  const c = color || C.primary
   return (
     <button
       onClick={onClick}
@@ -61,16 +62,17 @@ function FilterPill({ label, color, active, onClick, isCompact }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px',
-        letterSpacing: '0.2em',
+        fontSize: isCompact ? '9px' : '10px',
+        letterSpacing: '0.15em',
         textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? color : C.textMuted,
-        background: active ? color : hovered ? `${color}18` : 'transparent',
-        border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
-        padding: isCompact ? '11px 16px' : '6px 16px',
-        minHeight: isCompact ? '44px' : 'auto',
-        display: isCompact ? 'inline-flex' : undefined,
-        alignItems: isCompact ? 'center' : undefined,
+        color: active ? C.bg : hovered ? c : C.textMuted,
+        background: active ? c : hovered ? `${c}18` : 'transparent',
+        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
+        padding: isCompact ? '8px 10px' : '6px 16px',
+        minHeight: isCompact ? '32px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         whiteSpace: 'nowrap',
@@ -118,7 +120,7 @@ function ResultCard({ item, onSelect }) {
           <img
             src={cover}
             alt={item.title_english || item.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
           <div style={{
@@ -229,7 +231,7 @@ function EmptyResults({ query }) {
       <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px' }}>
         No results found
       </div>
-      <div style={{ fontSize: '12px', color: C.textDim }}>
+      <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.05em' }}>
         No anime found for <span style={{ color: C.primary }}>"{query}"</span> — try a different title
       </div>
     </div>
@@ -292,6 +294,8 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* Search bar */}
@@ -350,27 +354,45 @@ export default function SearchPage({ query: initialQuery, onSelectAnime }) {
         </button>
       </div>
 
-      {/* Filter pills — only shown after search with results */}
+      {/* Filter pills — single scrollable line on mobile, wraps on desktop */}
       {searched && !loading && results.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>
-            Filter
-          </span>
-          <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
-          {FILTERS.map((f) => (
-            <FilterPill
-              key={f.label}
-              label={f.label}
-              color={f.color}
-              active={activeFilter === f.label}
-              onClick={() => setFilter(f.label)}
-              isCompact={isCompact}
-            />
-          ))}
-          <span style={{ marginLeft: 'auto', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
-            <span style={{ color: C.primary }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
-          </span>
-        </div>
+        <>
+          <div
+            className={isCompact ? 'hide-scroll' : undefined}
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '10px',
+              alignItems: 'center',
+              flexWrap: isCompact ? 'nowrap' : 'wrap',
+              overflowX: isCompact ? 'auto' : 'visible',
+              paddingBottom: isCompact ? '2px' : 0,
+            }}
+          >
+            <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>
+              Filter
+            </span>
+            <div style={{ width: '1px', height: '16px', background: C.borderPrimary, flexShrink: 0 }} />
+            {FILTERS.map((f) => (
+              <FilterPill
+                key={f.label}
+                label={f.label}
+                color={f.color}
+                active={activeFilter === f.label}
+                onClick={() => setFilter(f.label)}
+                isCompact={isCompact}
+              />
+            ))}
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: isCompact ? 'flex-start' : 'flex-end',
+            marginBottom: '18px',
+            fontSize: '11px', color: C.textDim,
+            fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+          }}>
+            <span style={{ color: C.primary }}>{filtered.length}</span>&nbsp;result{filtered.length !== 1 ? 's' : ''}
+          </div>
+        </>
       )}
 
       {/* Divider */}

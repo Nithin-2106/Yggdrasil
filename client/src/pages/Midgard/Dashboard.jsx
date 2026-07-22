@@ -415,8 +415,7 @@ function TrendingCard({ item, onNavigate, isCompact }) {
 }
 
 // ── 1. STATS ROW ─────────────────────────────────────────────────────────────
-// ── 1. STATS ROW ─────────────────────────────────────────────────────────────
-function StatCard({ label, value, color, rune }) {
+function StatCard({ label, value, color, rune, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const isNumeric    = typeof value === 'number' ||
     (typeof value === 'string' && !isNaN(parseFloat(value)) && value !== '—')
@@ -427,13 +426,13 @@ function StatCard({ label, value, color, rune }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        flex:       '1 1 140px',
-        padding:    '28px 20px 22px',
+        flex:       isCompact ? '1 1 100px' : '1 1 140px',
+        padding:    isCompact ? '18px 12px 14px' : '28px 20px 22px',
         background: hovered
           ? `linear-gradient(135deg, ${C.surfaceHover}, ${C.surface})`
           : `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
         border:     `1px solid ${hovered ? color + '55' : C.borderGold}`,
-        transition: 'all 0.35s ease',
+        transition: 'border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
         boxShadow:  hovered
           ? `0 0 40px ${color}22, inset 0 0 30px rgba(0,0,0,0.3)`
           : 'none',
@@ -458,18 +457,18 @@ function StatCard({ label, value, color, rune }) {
 
       <div style={{
         fontFamily:    '"Cinzel", serif',
-        fontSize:      '14px',
+        fontSize:      isCompact ? '12px' : '14px',
         color:         hovered ? color : C.textDim,
-        marginBottom:  '10px',
+        marginBottom:  isCompact ? '6px' : '10px',
         transition:    'color 0.35s',
         letterSpacing: '0.1em',
       }}>{rune}</div>
 
-      <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
+      <div style={{ marginBottom: isCompact ? '6px' : '10px', display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
         {isNumeric ? (
           <Counter
             value={numericValue}
-            fontSize={36}
+            fontSize={isCompact ? 24 : 36}
             padding={4}
             gap={1}
             horizontalPadding={0}
@@ -481,7 +480,7 @@ function StatCard({ label, value, color, rune }) {
           />
         ) : (
           <span style={{
-            fontSize:   '36px',
+            fontSize:   isCompact ? '24px' : '36px',
             fontWeight: 700,
             color:      hovered ? color : C.text,
             fontFamily: '"Cinzel", serif',
@@ -492,8 +491,8 @@ function StatCard({ label, value, color, rune }) {
       </div>
 
       <div style={{
-        fontSize:      '10px',
-        letterSpacing: '0.25em',
+        fontSize:      isCompact ? '9px' : '10px',
+        letterSpacing: isCompact ? '0.18em' : '0.25em',
         color:         hovered ? color : C.textMuted,
         textTransform: 'uppercase',
         fontFamily:    '"Cinzel", serif',
@@ -503,21 +502,28 @@ function StatCard({ label, value, color, rune }) {
   )
 }
 
-function StatsRow({ dramas }) {
+function StatsRow({ dramas, isCompact }) {
   const rated   = dramas.filter(d => d.rating)
   const avgRating = rated.length
     ? (rated.reduce((s, d) => s + d.rating, 0) / rated.length).toFixed(1)
     : '—'
 
+  const stats = [
+    { label: 'Total',         value: dramas.length,                                          color: C.electric,   rune: 'ᛏ' },
+    { label: 'Watching',      value: dramas.filter(d => d.status === 'Watching').length,      color: C.electric,   rune: 'ᚹ' },
+    { label: 'Completed',     value: dramas.filter(d => d.status === 'Completed').length,     color: C.green,      rune: 'ᚲ' },
+    { label: 'Plan to Watch', value: dramas.filter(d => d.status === 'Plan to Watch').length, color: C.violet,     rune: 'ᛈ' },
+    { label: 'On Hold',       value: dramas.filter(d => d.status === 'On Hold').length,       color: C.indigo,     rune: 'ᚺ' },
+    { label: 'Dropped',       value: dramas.filter(d => d.status === 'Dropped').length,       color: C.red,        rune: 'ᛞ' },
+    { label: 'Avg Rating',    value: avgRating,                                               color: C.goldBright, rune: '★' },
+  ]
+
   return (
-    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-      <StatCard label="Total"         value={dramas.length}                                          color={C.electric}   rune="ᛏ" />
-      <StatCard label="Watching"      value={dramas.filter(d => d.status === 'Watching').length}      color={C.electric}   rune="ᚹ" />
-      <StatCard label="Completed"     value={dramas.filter(d => d.status === 'Completed').length}     color={C.green}      rune="ᚲ" />
-      <StatCard label="Plan to Watch" value={dramas.filter(d => d.status === 'Plan to Watch').length} color={C.violet}     rune="ᛈ" />
-      <StatCard label="On Hold"       value={dramas.filter(d => d.status === 'On Hold').length}       color={C.indigo}     rune="ᚺ" />
-      <StatCard label="Dropped"       value={dramas.filter(d => d.status === 'Dropped').length}       color={C.red}        rune="ᛞ" />
-      <StatCard label="Avg Rating"    value={avgRating}                                                color={C.goldBright} rune="★" />
+    <div style={{
+      display: 'flex', gap: isCompact ? '8px' : '12px', flexWrap: 'wrap',
+      marginBottom: isCompact ? '36px' : '52px',
+    }}>
+      {stats.map(s => <StatCard key={s.label} {...s} isCompact={isCompact} />)}
     </div>
   )
 }
@@ -1080,7 +1086,6 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
           fontWeight:      900,
           lineHeight:      1,
           color:           'transparent',
-          WebkitTextStroke:`${rankStroke} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
           WebkitTextStroke: `${rankStroke} ${
   hovered && !isEmpty
     ? rankColor
@@ -1767,7 +1772,7 @@ export default function Dashboard({ onNavigate, isCompact = false }) {
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      <StatsRow dramas={dramas} />
+      <StatsRow dramas={dramas} isCompact={isCompact} />
 
       <TrendingSection onNavigate={onNavigate} isCompact={isCompact} />
 

@@ -146,7 +146,7 @@ function AnimeCard({ item, onNavigate }) {
         transition: 'all 0.25s ease',
       }}>
         {cover
-          ? <img src={cover} alt={item.title_english || item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={cover} alt={item.title_english || item.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '32px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>✦</div>
         }
 
@@ -204,6 +204,7 @@ function SortTab({ mode, active, onClick, isCompact }) {
         padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
       <span style={{ color: active ? C.primary : C.gold + '66', fontSize: '13px' }}>{mode.rune}</span>
@@ -222,13 +223,16 @@ function FormatPill({ filter, active, onClick, isCompact }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
+        fontSize: isCompact ? '9px' : '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
-        padding: isCompact ? '11px 18px' : '6px 18px',minHeight: isCompact ? '44px' : 'auto',
-        display: isCompact ? 'inline-flex' : undefined,
-        alignItems: isCompact ? 'center' : undefined, cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: isCompact ? '7px 12px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+        minHeight: isCompact ? '30px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
       }}
     >
       {filter.label}
@@ -365,50 +369,87 @@ export default function BrowsePage({ onNavigate }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Sort tabs */}
-      <div style={{ display: 'flex', marginBottom: '24px', borderBottom: `1px solid ${C.borderPrimary}`, overflowX: 'auto' }}>
+      {/* ── Sort tabs ── */}
+      <div
+        className="hide-scroll"
+        style={{
+          display: 'flex', marginBottom: '24px',
+          borderBottom: `1px solid ${C.borderPrimary}`,
+          overflowX: 'auto',
+        }}
+      >
         {SORT_MODES.map((mode) => (
           <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} isCompact={isCompact} />
         ))}
       </div>
 
-      {/* Format filter row */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase' }}>Format</span>
-        <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
+      {/* ── Format filter row — single scrollable line on mobile ── */}
+      <div
+        className={isCompact ? 'hide-scroll' : undefined}
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: isCompact ? '12px' : '16px',
+          alignItems: 'center',
+          flexWrap: isCompact ? 'nowrap' : 'wrap',
+          overflowX: isCompact ? 'auto' : 'visible',
+          paddingBottom: isCompact ? '2px' : 0,
+        }}
+      >
+        <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Format</span>
+        <div style={{ width: '1px', height: '16px', background: C.borderPrimary, flexShrink: 0 }} />
         {FORMAT_FILTERS.map((f) => (
-          <FormatPill key={f.key} filter={f} active={formatFilter === f.key} onClick={() => setFormatFilter(f.key)} isCompact={isCompact}/>
+          <FormatPill key={f.key} filter={f} active={formatFilter === f.key} onClick={() => setFormatFilter(f.key)} isCompact={isCompact} />
         ))}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
-          {loading ? (
-            <span>Fetching realm…</span>
-          ) : (
-            <>
-              <span><span style={{ color: activeColor }}>{displayed.length}</span> shown</span>
-              <span style={{ color: C.borderPrimary }}>·</span>
-              <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span> loaded</span>
-              {expanding && (
-                <><span style={{ color: C.borderPrimary }}>·</span><span style={{ color: '#A3E63588' }}>expanding…</span></>
-              )}
-            </>
-          )}
-        </div>
       </div>
 
-      {/* Divider */}
-      <div style={{ height: '1px', marginBottom: '32px', background: `linear-gradient(to right, ${C.primary}66, ${C.aurora}33, transparent)` }} />
+      {/* ── Stats row — own line, so it never crowds the filter row on mobile ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '16px',
+        justifyContent: isCompact ? 'flex-start' : 'flex-end',
+        marginBottom: '20px',
+        fontSize: '11px', color: C.textDim,
+        fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+        flexWrap: 'wrap',
+      }}>
+        {loading ? (
+          <span style={{ color: C.textDim }}>Fetching realm…</span>
+        ) : (
+          <>
+            <span><span style={{ color: activeColor }}>{displayed.length}</span><span style={{ color: C.textDim }}> shown</span></span>
+            <span style={{ color: C.borderPrimary }}>·</span>
+            <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span><span style={{ color: C.textDim }}> loaded</span></span>
+            {expanding && (
+              <><span style={{ color: C.borderPrimary }}>·</span><span style={{ color: '#A3E63588' }}>expanding…</span></>
+            )}
+          </>
+        )}
+      </div>
 
-      {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '20px 16px', marginBottom: '32px' }}>
+      {/* ── Divider ── */}
+      <div style={{
+        height: '1px', marginBottom: '32px',
+        background: `linear-gradient(to right, ${C.primary}66, ${activeColor}44, transparent)`,
+      }} />
+
+      {/* ── Grid ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
+        gap: '20px 16px',
+        marginBottom: '32px',
+      }}>
         {loading
           ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)
           : displayed.map((item) => <AnimeCard key={item.mal_id} item={item} onNavigate={onNavigate} />)
         }
       </div>
 
-      {/* Empty state */}
+      {/* ── Empty state ── */}
       {!loading && poolReady && filtered.length === 0 && (
         <div style={{ padding: '64px 24px', textAlign: 'center', border: `1px dashed ${C.borderPrimary}`, position: 'relative' }}>
           {[
@@ -422,10 +463,10 @@ export default function BrowsePage({ onNavigate }) {
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
+      {/* ── Infinite scroll sentinel ── */}
       {!loading && hasMore && <ScrollSentinel onVisible={onSentinelVisible} />}
 
-      {/* End of results */}
+      {/* ── End of results ── */}
       {!loading && poolReady && !hasMore && displayed.length > 0 && (
         <div style={{ textAlign: 'center', padding: '32px 0 64px', fontSize: '11px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif' }}>
           ᚨ · End of the Realm · ᚨ
