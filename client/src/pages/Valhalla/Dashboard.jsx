@@ -4,8 +4,6 @@ import Counter from '../../components/Counter'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import {
-  fetchTrending,
-  fetchRecentlyReleased,
   fetchBySort,
   searchManga,
   detectMangaType,
@@ -18,6 +16,82 @@ import {
 
 const API   = '/api/media/manga'
 const TOP10 = '/api/mangatop10'
+
+// ── AniList direct-fetch helpers (Trending + Recently Released) ────────────────
+// These two sections bypass anilistSearch's fetchTrending/fetchRecentlyReleased
+// because those helpers only pull a single AniList page and don't request/filter
+// on startDate — which meant Trending got starved after the KR/CN filter, and
+// Recently Released came back completely empty once a startDate check was added.
+// This mirrors the proven pattern from BrowsePage.jsx: server-side filtering
+// where possible, and pooled multi-page fetching so client-side filters never
+// run the section dry.
+const ANILIST = 'https://graphql.anilist.co'
+
+const DASH_MEDIA_FIELDS = `
+  id
+  title { english romaji native }
+  coverImage { large extraLarge }
+  format
+  status
+  countryOfOrigin
+  averageScore
+  popularity
+  chapters
+  genres
+  startDate { year }
+`
+
+async function anilistFetch(query, variables = {}) {
+  try {
+    const res = await fetch(ANILIST, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const json = await res.json()
+    if (json.errors) throw new Error(json.errors[0].message)
+    return json.data
+  } catch (err) {
+    console.error('AniList fetch error:', err)
+    return null
+  }
+}
+
+// Pulls pages until `target` items pass `accept`, or we run out of pages / hit maxPages.
+async function fetchMangaPool({ sort, extraFilter = '', accept, target, maxPages = 6, perPage = 50 }) {
+  const query = `
+    query ($page: Int) {
+      Page(page: $page, perPage: ${perPage}) {
+        pageInfo { hasNextPage }
+        media(
+          type: MANGA
+          format_not_in: [NOVEL, MUSIC]
+          sort: [${sort}]
+          status_not: NOT_YET_RELEASED
+          isAdult: false
+          ${extraFilter}
+        ) { ${DASH_MEDIA_FIELDS} }
+      }
+    }
+  `
+  const seen = new Set()
+  const pool = []
+  for (let page = 1; page <= maxPages; page++) {
+    const data = await anilistFetch(query, { page })
+    if (!data) break
+    const items = data.Page?.media || []
+    for (const item of items) {
+      if (seen.has(item.id)) continue
+      if (!accept(item)) continue
+      seen.add(item.id)
+      pool.push(item)
+    }
+    const hasNext = data.Page?.pageInfo?.hasNextPage ?? false
+    if (!hasNext || pool.length >= target) break
+  }
+  return pool
+}
 
 const C = {
   bg:           '#0A0810',
@@ -409,19 +483,25 @@ function SkeletonCard({ isCompact }) {
 }
 
 // ── 3. TRENDING ───────────────────────────────────────────────────────────────
-// Pull a larger raw pool (80) since it gets filtered down to KR/CN titles —
-// caps at 45 so the rail stays in the 40-45 range requested.
+// Pulled directly from AniList (not the fetchTrending util) because the util
+// only fetches a single page — after filtering down to KR/CN countries that
+// left the rail with far fewer than the target 40-45 cards. This pools across
+// pages until 45 KR/CN items are collected (or AniList runs out of pages).
 function TrendingSection({ onNavigate, isCompact }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchTrending(80)
-      .then(data => setItems(
-        data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin)).slice(0, 45)
-      ))
+    let cancelled = false
+    fetchMangaPool({
+      sort: 'TRENDING_DESC',
+      accept: item => ['KR', 'CN'].includes(item.countryOfOrigin) && Boolean(getCover(item)),
+      target: 45,
+    })
+      .then(pool => { if (!cancelled) setItems(pool.slice(0, 45)) })
       .catch(() => {})
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [])
 
   if (loading) return (
@@ -1013,26 +1093,31 @@ function Top10Section({ onNavigate, isCompact }) {
 }
 
 // ── 6. RECENTLY RELEASED ──────────────────────────────────────────────────────
-// Manhwa-only, ~40-45 items: pull a larger raw pool (90) since it's filtered
-// down to a single type, then cap at 45. Also drops entries with no known
-// start date — those sort unpredictably on AniList's side and were pushing
-// old, effectively-unstarted series to the top of the rail.
+// Manhwa-only, ~40-45 items. Pulled directly from AniList with the same
+// server-side filter used on BrowsePage: countryOfOrigin "KR" + a
+// startDate_greater floor, sorted by START_DATE_DESC. The old approach relied
+// on fetchRecentlyReleased() and then filtered client-side on getYear(item) —
+// but that util's query never requested startDate, so every item failed the
+// filter and the section rendered nothing. Filtering by real start dates here
+// also keeps old, never-actually-started series from occupying the top spots.
 function RecentlyReleasedSection({ onNavigate, isCompact }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     const timer = setTimeout(() => {
-      fetchRecentlyReleased(90)
-        .then(data => setItems(
-          data
-            .filter(item => detectMangaType(item) === 'Manhwa' && getYear(item))
-            .slice(0, 45)
-        ))
+      fetchMangaPool({
+        sort: 'START_DATE_DESC',
+        extraFilter: 'countryOfOrigin: "KR"\n          startDate_greater: 10000101',
+        accept: item => Boolean(item.startDate?.year) && Boolean(getCover(item)),
+        target: 45,
+      })
+        .then(pool => { if (!cancelled) setItems(pool.slice(0, 45)) })
         .catch(() => {})
-        .finally(() => setLoading(false))
+        .finally(() => { if (!cancelled) setLoading(false) })
     }, 600)
-    return () => clearTimeout(timer)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [])
 
   if (loading) return (

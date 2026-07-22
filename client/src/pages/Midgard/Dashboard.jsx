@@ -415,6 +415,7 @@ function TrendingCard({ item, onNavigate, isCompact }) {
 }
 
 // ── 1. STATS ROW ─────────────────────────────────────────────────────────────
+// ── 1. STATS ROW ─────────────────────────────────────────────────────────────
 function StatCard({ label, value, color, rune }) {
   const [hovered, setHovered] = useState(false)
   const isNumeric    = typeof value === 'number' ||

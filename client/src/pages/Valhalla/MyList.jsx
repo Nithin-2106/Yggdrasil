@@ -50,7 +50,7 @@ const SORT_OPTIONS = [
   { key: 'year',          label: 'Year' },
   { key: 'dateCompleted', label: 'Date Completed' },
   { key: 'rating',        label: 'My Score' },
-  { key: 'timesRead',     label: 'Times Read' },
+  { key: 'rereadCount',     label: 'Times Read' },
 ]
 
 const COLUMNS = [
@@ -61,7 +61,7 @@ const COLUMNS = [
   { key: 'year',          label: 'Year',       sortable: true,  width: '90px',  rune: 'ᚢ' },
   { key: 'dateCompleted', label: 'Completed',  sortable: true,  width: '150px', rune: 'ᛞ' },
   { key: 'format',        label: 'Format',     sortable: true,  width: '100px', rune: 'ᚠ' },
-  { key: 'timesRead',     label: 'Reads',       sortable: true,  width: '100px', rune: '⟳' },
+  { key: 'rereadCount',   label: 'Rereads',    sortable: true,  width: '100px', rune: '⟳' },
   { key: 'rating',        label: 'My Score',   sortable: true,  width: '140px', rune: '★' },
 ]
 
@@ -128,7 +128,7 @@ function SortIndicator({ direction }) {
 function HeaderCell({ col, sortKey, sortDir, onSort }) {
   const [hovered, setHovered] = useState(false)
   const isActive = sortKey === col.key
-  const isCentered = col.key === 'rating' || col.key === 'timesRead'
+  const isCentered = col.key === 'rating' || col.key === 'rereadCount'
 
   return (
     <th
@@ -285,7 +285,7 @@ function MangaRow({ manga, index, onNavigate }) {
 
       {/* Times Read */}
       <td style={{ ...tdBase, padding: '14px 18px', width: '100px', textAlign: 'center' }}>
-        <ReadCountDisplay count={manga.timesRead} />
+        <ReadCountDisplay count={manga.rereadCount} />
       </td>
 
       {/* My Score */}
@@ -357,7 +357,7 @@ function MobileMangaCard({ manga, onNavigate }) {
   const sc = STATUS_COLOR[manga.status] || C.textMuted
   const tc = TYPE_COLOR[manga.type]    || C.primary
   const canNavigate = !!manga.anilistId
-  const reads = manga.timesRead || 0
+  const reads = manga.rereadCount || 0
 
   const meta = [manga.type, manga.format, manga.year].filter(Boolean).join(' · ')
 
@@ -586,8 +586,8 @@ export default function MyList({ onNavigate }) {
         aVal = a.type || ''; bVal = b.type || ''
       } else if (sortKey === 'rating') {
         aVal = a.rating ?? -1; bVal = b.rating ?? -1
-      } else if (sortKey === 'timesRead') {
-        aVal = a.timesRead ?? 0; bVal = b.timesRead ?? 0
+      } else if (sortKey === 'rereadCount') {
+        aVal = a.rereadCount ?? 0; bVal = b.rereadCount ?? 0
       } else if (sortKey === 'dateCompleted') {
         aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
         bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0
