@@ -38,6 +38,20 @@ const TYPE_COLOR = {
   Manhua: C.crimson,
 }
 
+const TYPE_FILTERS = [
+  { type: 'Manhwa', label: 'Manhwa' },
+  { type: 'Manga',  label: 'Manga' },
+  { type: 'Manhua', label: 'Manhua' },
+]
+const ALL_TYPE_VALUES = TYPE_FILTERS.map(t => t.type)
+
+const SORT_OPTIONS = [
+  { key: 'title',         label: 'Title' },
+  { key: 'year',          label: 'Year' },
+  { key: 'dateCompleted', label: 'Date Completed' },
+  { key: 'rating',        label: 'My Score' },
+]
+
 const COLUMNS = [
   { key: 'index',         label: '#',         sortable: false, width: '52px'  },
   { key: 'cover',         label: 'Cover',     sortable: false, width: '100px', rune: 'ᛈ' },
@@ -49,11 +63,20 @@ const COLUMNS = [
   { key: 'rating',        label: 'My Score',  sortable: true,  width: '140px', rune: '★' },
 ]
 
+const TOTAL_COLUMNS = COLUMNS.length
+
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function emptyMessage(status, searchQuery) {
+  if (searchQuery) return `No results for "${searchQuery}"`
+  if (status === 'All') return 'No entries yet in this realm'
+  return `Nothing under "${status}" yet`
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 function ScoreDisplay({ rating }) {
   if (!rating) return (
     <span style={{ color: C.textDim, fontSize: '14px', fontFamily: '"Cinzel", serif' }}>—</span>
@@ -76,6 +99,14 @@ function ScoreDisplay({ rating }) {
         color, textShadow: `0 0 10px ${color}66`,
       }}>{rating}</span>
     </div>
+  )
+}
+
+function SortIndicator({ direction }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.primary }}>
+      {direction === 'asc' ? '↑' : '↓'}
+    </span>
   )
 }
 
@@ -107,11 +138,7 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
     >
       <span style={{ color: C.gold + '66', marginRight: '6px', fontSize: '13px' }}>{col.rune}</span>
       {col.label}
-      {isActive && (
-        <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.primary }}>
-          {sortDir === 'asc' ? '↑' : '↓'}
-        </span>
-      )}
+      {isActive && <SortIndicator direction={sortDir} />}
       {!isActive && col.sortable && hovered && (
         <span style={{ marginLeft: '6px', fontSize: '12px', color: C.textDim, opacity: 0.5 }}>↕</span>
       )}
@@ -125,7 +152,7 @@ function MangaRow({ manga, index, onNavigate }) {
   const tc = TYPE_COLOR[manga.type]    || C.primary
   const canNavigate = !!manga.anilistId
 
-  const goToInfo = () => { if (manga.anilistId) onNavigate('Info', manga.anilistId) }
+  const goToInfo = () => { if (canNavigate) onNavigate('Info', manga.anilistId) }
 
   const tdBase = {
     borderBottom: `1px solid ${C.borderPrimary}33`,
@@ -251,14 +278,11 @@ function MangaRow({ manga, index, onNavigate }) {
 function EmptyState({ status, searchQuery }) {
   return (
     <tr>
-      <td colSpan={8}>
+      <td colSpan={TOTAL_COLUMNS}>
         <div style={{ padding: '64px 24px', textAlign: 'center' }}>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '32px', color: C.primary + '22', letterSpacing: '0.4em', marginBottom: '16px' }}>⚔</div>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : status === 'All' ? 'No entries yet in this realm' : `Nothing under "${status}" yet`
-            }
+            {emptyMessage(status, searchQuery)}
           </div>
         </div>
       </td>
@@ -285,8 +309,9 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
         borderLeft:   `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderRight:  `1px solid ${active || hovered ? activeColor + '55' : C.borderPrimary}`,
         borderBottom: `2px solid ${active ? activeColor : 'transparent'}`,
-        padding: isCompact ? '13px 20px' : '10px 20px',
-        minHeight: isCompact ? '44px' : 'auto',
+        padding: isCompact ? '11px 18px' : '10px 20px',
+        minHeight: isCompact ? '40px' : 'auto',
+        flexShrink: 0,
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
@@ -306,14 +331,177 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
   )
 }
 
+// ── Mobile floating card ─────────────────────────────────────────────────────
+function MobileMangaCard({ manga, onNavigate }) {
+  const sc = STATUS_COLOR[manga.status] || C.textMuted
+  const tc = TYPE_COLOR[manga.type]    || C.primary
+  const canNavigate = !!manga.anilistId
+
+  const meta = [manga.type, manga.format, manga.year].filter(Boolean).join(' · ')
+
+  return (
+    <div
+      onClick={() => canNavigate && onNavigate('Info', manga.anilistId)}
+      style={{
+        display: 'flex', gap: '12px',
+        padding: '12px',
+        background: C.surface,
+        border: `1px solid ${C.borderPrimary}`,
+        borderLeft: `3px solid ${sc}`,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        cursor: canNavigate ? 'pointer' : 'default',
+      }}
+    >
+      <div style={{
+        width: '76px', height: '108px', flexShrink: 0,
+        background: C.input,
+        border: `1px solid ${C.borderPrimary}`,
+        overflow: 'hidden',
+      }}>
+        {manga.coverImage
+          ? <img src={manga.coverImage} alt={manga.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <div style={{
+              width: '100%', height: '100%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '20px', color: C.textDim,
+            }}>⚔</div>
+        }
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{
+          fontSize: '14px', fontWeight: 600, color: C.text, lineHeight: 1.3,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>{manga.title}</span>
+
+        {meta && (
+          <span style={{ fontSize: '11px', color: tc, fontFamily: '"Cinzel", serif', letterSpacing: '0.05em' }}>
+            {meta}
+          </span>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: 'auto', flexWrap: 'wrap' }}>
+          {manga.rating ? (
+            <span style={{ fontSize: '12px', color: C.gold, fontFamily: '"Cinzel", serif', fontWeight: 700 }}>
+              ★ {manga.rating}
+            </span>
+          ) : (
+            <span style={{ fontSize: '11px', color: C.textDim }}>—</span>
+          )}
+          {manga.dateCompleted && (
+            <span style={{ fontSize: '10px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>
+              {formatDate(manga.dateCompleted)}
+            </span>
+          )}
+        </div>
+
+        <span style={{
+          fontSize: '9px', letterSpacing: '0.1em', color: sc,
+          padding: '2px 8px', border: `1px solid ${sc}55`, background: `${sc}12`,
+          fontFamily: '"Cinzel", serif', alignSelf: 'flex-start',
+        }}>{manga.status}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Mobile sort + type filter popup ──────────────────────────────────────────
+function FilterPopup({ sortKey, sortDir, onSort, selectedTypes, onToggleType, onClose }) {
+  return (
+    <div
+      onClick={e => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(10,8,16,0.88)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}
+    >
+      <div style={{
+        width: '100%', maxWidth: '480px',
+        background: C.surface, border: `1px solid ${C.borderPrimary}`,
+        borderBottom: 'none',
+        padding: '20px 20px calc(96px + env(safe-area-inset-bottom, 0px))',
+        boxShadow: '0 -20px 60px rgba(0,0,0,0.6)',
+        maxHeight: '80vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+          <span style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.25em', color: C.gold }}>
+            SORT &amp; FILTER
+          </span>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer' }}
+          >×</button>
+        </div>
+
+        <div style={{ fontSize: '10px', letterSpacing: '0.2em', color: C.textDim, fontFamily: '"Cinzel", serif', marginBottom: '10px' }}>
+          SORT BY
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '22px' }}>
+          {SORT_OPTIONS.map(opt => {
+            const active = sortKey === opt.key
+            return (
+              <button
+                key={opt.key}
+                onClick={() => onSort(opt.key)}
+                style={{
+                  fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.1em',
+                  color: active ? C.primary : C.textMuted,
+                  background: active ? C.primarySoft : 'transparent',
+                  border: `1px solid ${active ? C.primary + '66' : C.borderPrimary}`,
+                  padding: '9px 14px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                {opt.label}
+                {active && <span style={{ fontSize: '11px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>}
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ fontSize: '10px', letterSpacing: '0.2em', color: C.textDim, fontFamily: '"Cinzel", serif', marginBottom: '10px' }}>
+          TYPE
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {TYPE_FILTERS.map(({ type, label }) => {
+            const checked = selectedTypes.includes(type)
+            const tc = TYPE_COLOR[type]
+            return (
+              <button
+                key={type}
+                onClick={() => onToggleType(type)}
+                style={{
+                  fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.1em',
+                  color: checked ? tc : C.textDim,
+                  background: checked ? `${tc}15` : 'transparent',
+                  border: `1px solid ${checked ? tc + '66' : C.borderPrimary}`,
+                  padding: '9px 14px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                <span>{checked ? '☑' : '☐'}</span>
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main MyList ───────────────────────────────────────────────────────────────
 export default function MyList({ onNavigate }) {
-  const [manga, setManga]         = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [activeTab, setActiveTab] = useState('All')
-  const [searchQuery, setSearch]  = useState('')
-  const [focused, setFocused]     = useState(false)
-  const [sortKey, setSortKey]     = useState('createdAt')
-  const [sortDir, setSortDir]     = useState('desc')
+  const [manga, setManga]                   = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [activeTab, setActiveTab]           = useState('All')
+  const [searchQuery, setSearch]            = useState('')
+  const [focused, setFocused]               = useState(false)
+  const [sortKey, setSortKey]               = useState('createdAt')
+  const [sortDir, setSortDir]               = useState('desc')
+  const [selectedTypes, setSelectedTypes]   = useState(ALL_TYPE_VALUES)
+  const [filterOpen, setFilterOpen]         = useState(false)
   const isCompact = useIsCompact()
 
   useEffect(() => {
@@ -323,7 +511,6 @@ export default function MyList({ onNavigate }) {
       .finally(() => setLoading(false))
   }, [])
 
-
   const counts = useMemo(() => {
     const map = { All: manga.length }
     STATUS_TABS.slice(1).forEach(s => { map[s] = manga.filter(m => m.status === s).length })
@@ -331,16 +518,35 @@ export default function MyList({ onNavigate }) {
   }, [manga])
 
   const handleSort = (key) => {
-    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
-    else { setSortKey(key); setSortDir('asc') }
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  const toggleType = (type) => {
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    )
   }
 
   const filtered = useMemo(() => {
     let list = manga
-    if (activeTab !== 'All') list = list.filter(m => m.status === activeTab)
+
+    if (activeTab !== 'All') {
+      list = list.filter(m => m.status === activeTab)
+    }
+
+    if (selectedTypes.length < ALL_TYPE_VALUES.length) {
+      list = list.filter(m => selectedTypes.includes(m.type))
+    }
 
     const q = searchQuery.trim().toLowerCase()
-    if (q) list = list.filter(m => m.title?.toLowerCase().includes(q))
+    if (q) {
+      list = list.filter(m => m.title?.toLowerCase().includes(q))
+    }
 
     return [...list].sort((a, b) => {
       let aVal, bVal
@@ -364,77 +570,166 @@ export default function MyList({ onNavigate }) {
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
       return 0
     })
-  }, [manga, activeTab, searchQuery, sortKey, sortDir])
+  }, [manga, activeTab, searchQuery, sortKey, sortDir, selectedTypes])
 
   return (
     <div>
-      {/* Tabs + search row */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {STATUS_TABS.map(tab => (
-            <StatusTab key={tab} label={tab} count={counts[tab] || 0} active={activeTab === tab} onClick={() => setActiveTab(tab)} isCompact={isCompact}/>
-          ))}
-        </div>
+      <style>{`
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
-        {/* Search */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <span style={{
-            position: 'absolute', left: '12px',
-            color: focused ? C.primary : C.textDim,
-            fontSize: '15px', pointerEvents: 'none', transition: 'color 0.2s',
-          }}>⌕</span>
-          <input
-            placeholder="Filter by title..."
-            value={searchQuery}
-            onChange={e => setSearch(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            style={{
-              paddingLeft: '34px', paddingRight: '28px',
-              height: '40px', width: focused ? '230px' : '180px',
-              background: C.input,
-              border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
-              color: C.text, fontSize: '13px',
-              fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
-              outline: 'none', transition: 'all 0.3s ease',
-              boxShadow: focused ? `0 0 16px ${C.primarySoft}` : 'none',
-            }}
-          />
-          {searchQuery && (
+      {/* ── Controls ── */}
+      {isCompact ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="hide-scroll" style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {STATUS_TABS.map(tab => (
+              <StatusTab
+                key={tab} label={tab}
+                count={counts[tab] || 0}
+                active={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                isCompact
+              />
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <span style={{
+                position: 'absolute', left: '12px',
+                color: focused ? C.primary : C.textDim,
+                fontSize: '15px', pointerEvents: 'none',
+              }}>⌕</span>
+              <input
+                placeholder="Filter by title..."
+                value={searchQuery}
+                onChange={e => setSearch(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                style={{
+                  paddingLeft: '34px', paddingRight: '28px',
+                  height: '44px', width: '100%', boxSizing: 'border-box',
+                  background: C.input,
+                  border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
+                  color: C.text, fontSize: '13px',
+                  fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+                  outline: 'none', transition: 'all 0.3s ease',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearch('')}
+                  style={{
+                    position: 'absolute', right: '10px',
+                    background: 'none', border: 'none',
+                    color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0,
+                  }}
+                >×</button>
+              )}
+            </div>
+
             <button
-              onClick={() => setSearch('')}
+              onClick={() => setFilterOpen(true)}
+              aria-label="Sort and filter"
               style={{
-                position: 'absolute', right: '10px',
-                background: 'none', border: 'none',
-                color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0,
+                width: '44px', height: '44px', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: selectedTypes.length < ALL_TYPE_VALUES.length ? C.primarySoft : C.surface,
+                border: `1px solid ${selectedTypes.length < ALL_TYPE_VALUES.length ? C.primary + '66' : C.borderPrimary}`,
+                color: selectedTypes.length < ALL_TYPE_VALUES.length ? C.primary : C.gold,
+                fontSize: '16px', cursor: 'pointer',
               }}
-              onMouseEnter={e => e.currentTarget.style.color = C.text}
-              onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-            >×</button>
-          )}
+            >☰</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {STATUS_TABS.map(tab => (
+              <StatusTab
+                key={tab} label={tab}
+                count={counts[tab] || 0}
+                active={activeTab === tab}
+                onClick={() => setActiveTab(tab)}
+                isCompact={false}
+              />
+            ))}
+          </div>
 
-      {/* Count row */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <span style={{
+              position: 'absolute', left: '12px',
+              color: focused ? C.primary : C.textDim,
+              fontSize: '15px', pointerEvents: 'none', transition: 'color 0.2s',
+            }}>⌕</span>
+            <input
+              placeholder="Filter by title..."
+              value={searchQuery}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={{
+                paddingLeft: '34px', paddingRight: '28px',
+                height: '40px', width: focused ? '230px' : '180px',
+                background: C.input,
+                border: `1px solid ${focused ? C.primary + '88' : C.borderPrimary}`,
+                color: C.text, fontSize: '13px',
+                fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+                outline: 'none', transition: 'all 0.3s ease',
+                boxShadow: focused ? `0 0 16px ${C.primarySoft}` : 'none',
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute', right: '10px',
+                  background: 'none', border: 'none',
+                  color: C.textDim, cursor: 'pointer', fontSize: '15px', lineHeight: 1, padding: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = C.text}
+                onMouseLeave={e => e.currentTarget.style.color = C.textDim}
+              >×</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Count row ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '10px 0 0' }}>
         <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
           <span style={{ color: C.primary }}>{filtered.length}</span> entr{filtered.length !== 1 ? 'ies' : 'y'}
         </span>
       </div>
 
-      {/* Divider */}
       <div style={{
         height: '1px', margin: '12px 0 0',
         background: `linear-gradient(to right, ${C.primary}88, ${C.crimson}44, transparent)`,
       }} />
 
-      {/* Table */}
+      {/* ── List ── */}
       {loading ? (
         <div style={{
           padding: '64px', textAlign: 'center',
           fontFamily: '"Cinzel", serif', fontSize: '13px',
           letterSpacing: '0.3em', color: C.textDim,
         }}>Loading the realm...</div>
+      ) : isCompact ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', color: C.primary + '22', letterSpacing: '0.4em', marginBottom: '14px' }}>⚔</div>
+              <div style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.25em', color: C.textDim, textTransform: 'uppercase' }}>
+                {emptyMessage(activeTab, searchQuery)}
+              </div>
+            </div>
+          ) : (
+            filtered.map(m => (
+              <MobileMangaCard key={m._id} manga={m} onNavigate={onNavigate} />
+            ))
+          )}
+        </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', borderSpacing: 0 }}>
@@ -453,6 +748,17 @@ export default function MyList({ onNavigate }) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {filterOpen && (
+        <FilterPopup
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={handleSort}
+          selectedTypes={selectedTypes}
+          onToggleType={toggleType}
+          onClose={() => setFilterOpen(false)}
+        />
       )}
     </div>
   )

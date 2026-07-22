@@ -107,12 +107,16 @@ function SkeletonBlock({ w = '100%', h = '16px', style: extra = {} }) {
   )
 }
 
-function Spinner() {
+function Spinner({ isCompact }) {
   return (
     <div style={{ padding: '0 0 60px' }}>
       <SkeletonBlock w="120px" h="14px" style={{ marginBottom: '36px' }} />
-      <div style={{ display: 'flex', gap: '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
-        <SkeletonBlock w="230px" h="335px" style={{ flexShrink: 0, marginLeft: '4%' }} />
+      <div style={{ display: 'flex', gap: isCompact ? '24px' : '52px', flexWrap: 'wrap', marginBottom: '60px' }}>
+        <SkeletonBlock
+          w={isCompact ? '190px' : '230px'}
+          h={isCompact ? '276px' : '335px'}
+          style={{ flexShrink: 0, marginLeft: isCompact ? 0 : '4%' }}
+        />
         <div style={{ flex: 1, minWidth: '280px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <SkeletonBlock w="80px" h="26px" />
@@ -134,7 +138,7 @@ function Spinner() {
       <SkeletonBlock w="160px" h="14px" style={{ marginBottom: '16px' }} />
       <SkeletonBlock w="100%" h="90px" style={{ marginBottom: '56px' }} />
       <SkeletonBlock w="130px" h="14px" style={{ marginBottom: '16px' }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px', marginBottom: '56px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '56px' }}>
         {Array(6).fill(0).map((_, i) => <SkeletonBlock key={i} h="64px" />)}
       </div>
       <SkeletonBlock w="100px" h="14px" style={{ marginBottom: '16px' }} />
@@ -152,8 +156,9 @@ function Spinner() {
 }
 
 // ── Rating slider ─────────────────────────────────────────────────────────────
+// Flex-based full-width steps so it never overflows on narrow viewports.
 
-function RatingSlider({ value, onChange }) {
+function RatingSlider({ value, onChange, isCompact }) {
   const [hovered, setHovered] = useState(null)
   const steps = []
   for (let i = 1; i <= 10; i += 0.5) steps.push(i)
@@ -176,11 +181,12 @@ function RatingSlider({ value, onChange }) {
         }}>{display || '—'}</span>
         <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
       </div>
-      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: isCompact ? '2px' : '3px', width: '100%' }}>
         {steps.map(step => {
           const isActive = value && step <= value
           const isHov    = hovered !== null && step <= hovered
           const col      = ratingColor(step)
+          const isWhole  = step % 1 === 0
           return (
             <button
               key={step}
@@ -189,17 +195,20 @@ function RatingSlider({ value, onChange }) {
               onMouseLeave={() => setHovered(null)}
               title={step.toString()}
               style={{
-                width: step % 1 === 0 ? '26px' : '13px', height: '26px',
+                flex: isWhole ? '2 1 0' : '1 1 0',
+                minWidth: 0,
+                height: isCompact ? '28px' : '30px',
                 background: (isHov || isActive) ? col : C.surface,
                 border: `1px solid ${(isHov || isActive) ? col : C.borderPrimary}`,
                 cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
+                padding: 0,
               }}
             >
-              {step % 1 === 0 && (
+              {isWhole && (
                 <span style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '9px', fontFamily: '"Cinzel", serif',
+                  fontSize: isCompact ? '8px' : '10px', fontFamily: '"Cinzel", serif',
                   color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700,
                 }}>{step}</span>
               )}
@@ -225,7 +234,7 @@ function RatingSlider({ value, onChange }) {
 
 // ── Add / Edit modal ──────────────────────────────────────────────────────────
 
-function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, onDeleted }) {
+function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved, onDeleted }) {
   const type   = detectMangaType(mangaData)
   const format = detectMangaFormat(mangaData)
   const year   = getYear(mangaData)
@@ -365,8 +374,12 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
           <div style={{ padding: isCompact ? '18px' : '28px', display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
 
             {/* Left — poster */}
-            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ maxWidth: '160px' }}>
+            <div style={{
+              flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px',
+              width: isCompact ? '100%' : 'auto',
+              alignItems: isCompact ? 'center' : 'flex-start',
+            }}>
+              <div style={{ maxWidth: '160px', textAlign: isCompact ? 'center' : 'left' }}>
                 <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
                   {title}
                 </div>
@@ -386,7 +399,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>⚔</div>
                 }
               </div>
-              <div>
+              <div style={{ width: '160px' }}>
                 <label style={lbl}>ᛈ Cover URL</label>
                 <input
                   placeholder="Paste image URL..."
@@ -400,7 +413,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
             </div>
 
             {/* Right — fields */}
-            <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ flex: 1, minWidth: isCompact ? '0' : '260px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
               <div>
                 <label style={lbl}>ᛊ Status</label>
@@ -421,7 +434,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
 
               <div>
                 <label style={lbl}>ᚹ Chapters &amp; Reread</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                   <input type="number" min="0" placeholder="Current"
                     value={form.chapters?.current ?? ''}
                     onChange={e => setCh('current', e.target.value)}
@@ -448,7 +461,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={lbl}>ᛞ Date Started</label>
                   <input type="date"
@@ -473,7 +486,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
 
               <div>
                 <label style={lbl}>★ My Rating</label>
-                <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
+                <RatingSlider value={form.rating} onChange={v => set('rating', v)} isCompact={isCompact} />
               </div>
 
               <div>
@@ -489,7 +502,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
                       <button onClick={() => removePlat(i)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', fontSize: '14px', padding: '0 2px' }}>×</button>
                     </div>
                   ))}
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                     <input placeholder="Platform" value={platName} onChange={e => setPlatName(e.target.value)}
                       onFocus={() => setFocused('platName')} onBlur={() => setFocused('')}
                       style={{ ...inputStyle('platName'), flex: 1 }}
@@ -502,6 +515,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
                       fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.primary,
                       background: C.primarySoft, border: `1px solid ${C.primary}44`,
                       padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap',
+                      minHeight: isCompact ? '38px' : 'auto',
                     }}>+ Add</button>
                   </div>
                 </div>
@@ -538,18 +552,18 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
                 <button onClick={handleDelete} disabled={deleting} style={{
                   fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                   color: C.red, background: C.redSoft, border: `1px solid ${C.red}44`,
-                  padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
+                  padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
                 }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.2)'}
                   onMouseLeave={e => e.currentTarget.style.background = C.redSoft}
                 >{deleting ? 'Deleting...' : '✕ Delete'}</button>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '10px',flexDirection: isCompact ? 'column' : 'row',width: isCompact ? '100%' : 'auto', }}>
+            <div style={{ display: 'flex', gap: '10px', flexDirection: isCompact ? 'column' : 'row', width: isCompact ? '100%' : 'auto' }}>
               <button onClick={onClose} style={{
                 fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                 color: C.textMuted, background: 'transparent', border: `1px solid ${C.borderPrimary}`,
-                padding: '10px 20px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
+                padding: '10px 20px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: 'pointer', transition: 'all 0.2s',
               }}
                 onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
                 onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.borderPrimary }}
@@ -557,7 +571,7 @@ function AddToListModal({ mangaData, existingEntry,isCompact, onClose, onSaved, 
               <button onClick={handleSave} disabled={saving} style={{
                 fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em',
                 color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}55`,
-                padding: '10px 28px',minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s',
+                padding: '10px 28px', minHeight: isCompact ? '44px' : 'auto', width: isCompact ? '100%' : 'auto', cursor: saving ? 'wait' : 'pointer', transition: 'all 0.2s',
               }}
                 onMouseEnter={e => { if (!saving) e.currentTarget.style.background = 'rgba(167,139,250,0.2)' }}
                 onMouseLeave={e => { if (!saving) e.currentTarget.style.background = C.primarySoft }}
@@ -732,7 +746,7 @@ export default function InfoPage({ anilistId, onBack }) {
   if (loading) return (
     <>
       <style>{`@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }`}</style>
-      <Spinner />
+      <Spinner isCompact={isCompact} />
     </>
   )
 
@@ -752,6 +766,9 @@ export default function InfoPage({ anilistId, onBack }) {
   const nativeTitle = data.title?.native || null
   const aniScore    = formatScore(data.averageScore)
   const statusCfg   = existing ? (STATUS_CONFIG[existing.status] || {}) : null
+
+  const posterW = isCompact ? 190 : 230
+  const posterH = isCompact ? 276 : 335
 
   const staffEdges = (data.staff?.edges || []).filter(e =>
     ['Story', 'Art', 'Story & Art', 'Original Story', 'Character Design', 'Original Character Design'].includes(e.role)
@@ -793,7 +810,7 @@ export default function InfoPage({ anilistId, onBack }) {
       </div>
 
       {/* Hero */}
-      <div style={{ position: 'relative', marginBottom: '60px' }}>
+      <div style={{ position: 'relative', marginBottom: isCompact ? '40px' : '60px' }}>
         {data.bannerImage && (
           <div style={{
             position: 'absolute', inset: 0,
@@ -803,7 +820,7 @@ export default function InfoPage({ anilistId, onBack }) {
           }} />
         )}
 
-          <div style={{
+        <div style={{
           position: 'relative', zIndex: 1,
           display: 'flex',
           gap: isCompact ? '24px' : '52px',
@@ -813,7 +830,7 @@ export default function InfoPage({ anilistId, onBack }) {
           padding: data.bannerImage ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
         }}>
           {/* Poster + button */}
-            <div style={{
+          <div style={{
             display: 'flex', flexDirection: 'column', gap: '12px',
             marginLeft: isCompact ? 0 : '4%',
             alignItems: isCompact ? 'center' : 'flex-start',
@@ -821,7 +838,7 @@ export default function InfoPage({ anilistId, onBack }) {
             flexShrink: 0,
           }}>
             <div style={{
-              width: '230px', height: '335px', background: C.surface,
+              width: `${posterW}px`, height: `${posterH}px`, background: C.surface,
               border: `1px solid ${tColor}55`, overflow: 'hidden', position: 'relative',
               boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${tColor}22, 0 0 50px ${tColor}0a`,
             }}>
@@ -832,7 +849,7 @@ export default function InfoPage({ anilistId, onBack }) {
               }
             </div>
 
-            <div style={{ width: '230px' }}>
+            <div style={{ width: `${posterW}px` }}>
               <button
                 onClick={() => { if (!user) { navigate('/profile'); return } setShowModal(true) }}
                 style={{
@@ -853,7 +870,6 @@ export default function InfoPage({ anilistId, onBack }) {
             </div>
           </div>
 
-          {/* Info column */}
           {/* Info column */}
           <div style={{
             flex: 1,
@@ -892,13 +908,13 @@ export default function InfoPage({ anilistId, onBack }) {
             <div>
               <h2 style={{
                 fontFamily: '"Cinzel", serif',
-                fontSize: 'clamp(26px, 3.5vw, 44px)', fontWeight: 700,
+                fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700,
                 letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15,
                 textShadow: `0 0 50px ${tColor}18`,
               }}>
                 {title}
                 {year && (
-                  <span style={{ fontSize: 'clamp(15px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>
+                  <span style={{ fontSize: 'clamp(14px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>
                     ({year})
                   </span>
                 )}
@@ -912,12 +928,12 @@ export default function InfoPage({ anilistId, onBack }) {
             </div>
 
             {/* Ratings row */}
-            <div style={{ display: 'flex', gap: '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {aniScore && parseFloat(aniScore) > 0 && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ AniList</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(252,211,77,0.5)', lineHeight: 1 }}>★ {aniScore}</span>
+                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(252,211,77,0.5)', lineHeight: 1 }}>★ {aniScore}</span>
                     <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
                   </div>
                   {data.favourites > 0 && (
@@ -928,7 +944,7 @@ export default function InfoPage({ anilistId, onBack }) {
               <div>
                 <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>★ Mine</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
+                  <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: myRatingColor(existing?.rating), lineHeight: 1, transition: 'color 0.3s' }}>
                     {existing?.rating || '—'}
                   </span>
                   <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
@@ -938,13 +954,13 @@ export default function InfoPage({ anilistId, onBack }) {
               {data.popularity && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᚱ Popularity</div>
-                  <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', fontWeight: 700, color: C.primary, lineHeight: 1 }}>#{data.popularity}</div>
+                  <div style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '24px' : '28px', fontWeight: 700, color: C.primary, lineHeight: 1 }}>#{data.popularity}</div>
                 </div>
               )}
             </div>
 
             {/* Chapters / volumes / progress */}
-            <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
               {[
                 data.chapters > 0 && { label: 'Chapters', value: data.chapters, rune: 'ᚹ' },
                 data.volumes  > 0 && { label: 'Volumes',  value: data.volumes,  rune: 'ᚢ' },
@@ -993,7 +1009,7 @@ export default function InfoPage({ anilistId, onBack }) {
       {existing?.review && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="My Review" rune="ᚾ" />
-          <div style={{ padding: '22px 26px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '22px 26px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
             <Corners color={C.primary} size={10} opacity={0.2} />
             <p style={{ fontSize: '14px', color: C.textMuted, lineHeight: 1.85, margin: 0, letterSpacing: '0.02em', fontStyle: 'italic' }}>
               "{existing.review}"
@@ -1006,7 +1022,7 @@ export default function InfoPage({ anilistId, onBack }) {
       {data.description && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="Synopsis" rune="ᛊ" />
-          <div style={{ padding: '24px 28px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
+          <div style={{ padding: isCompact ? '18px 20px' : '24px 28px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
             <Corners color={C.primary} size={10} opacity={0.2} />
             <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>
               {data.description.replace(/<[^>]*>/g, '')}
@@ -1020,7 +1036,7 @@ export default function InfoPage({ anilistId, onBack }) {
         <SectionDivider title="Overview" rune="ᚱ" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
             {[
               { label: 'Status',     value: formatStatus(data.status),              rune: 'ᛊ' },
               { label: 'Format',     value: data.format?.replace(/_/g, ' '),        rune: 'ᛏ' },
@@ -1050,7 +1066,7 @@ export default function InfoPage({ anilistId, onBack }) {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase' }}>ᛗ My Entry</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
                   {myRows.map(row => (
                     <div key={row.label} style={{ padding: '14px 16px', background: `${C.primary}08`, border: `1px solid ${C.primary}33` }}>
                       <div style={{ fontSize: '9px', letterSpacing: '0.25em', color: C.primary + 'aa', fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '6px' }}>

@@ -31,14 +31,15 @@ const TYPE_COLOR = {
 }
 
 const FILTERS = [
-  { label: 'All',    color: '#A78BFA' },
-  { label: 'Manhwa', color: '#A78BFA' },
-  { label: 'Manga',  color: '#FCD34D' },
-  { label: 'Manhua', color: '#F43F5E' },
+  { label: 'All',    display: 'All',    color: C.primary },
+  { label: 'Manhwa', display: 'Manhwa', color: '#A78BFA' },
+  { label: 'Manga',  display: 'Manga',  color: '#FCD34D' },
+  { label: 'Manhua', display: 'Manhua', color: '#F43F5E' },
 ]
 
 function typeColor(type) { return TYPE_COLOR[type] || C.primary }
 
+// ── Skeleton card ─────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -55,8 +56,10 @@ function SkeletonCard() {
   )
 }
 
+// ── Filter pill ───────────────────────────────────────────────────────────────
 function FilterPill({ label, active, color, onClick, isCompact }) {
   const [hovered, setHovered] = useState(false)
+  const c = color || C.primary
   return (
     <button
       onClick={onClick}
@@ -64,20 +67,28 @@ function FilterPill({ label, active, color, onClick, isCompact }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? color : C.textMuted,
-        background: active ? color : hovered ? `${color}18` : 'transparent',
-        border: `1px solid ${active ? color : hovered ? `${color}66` : C.borderPrimary}`,
-        padding: isCompact ? '11px 16px' : '6px 16px',
-minHeight: isCompact ? '44px' : 'auto',
-display: isCompact ? 'inline-flex' : undefined,
-alignItems: isCompact ? 'center' : undefined, cursor: 'pointer',
-        transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+        fontSize: isCompact ? '9px' : '10px',
+        letterSpacing: '0.15em',
+        textTransform: 'uppercase',
+        color: active ? C.bg : hovered ? c : C.textMuted,
+        background: active ? c : hovered ? `${c}18` : 'transparent',
+        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
+        padding: isCompact ? '8px 10px' : '6px 16px',
+        minHeight: isCompact ? '32px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        whiteSpace: 'nowrap',
       }}
-    >{label}</button>
+    >
+      {label}
+    </button>
   )
 }
 
+// ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ item, onSelect }) {
   const [hovered, setHovered] = useState(false)
   const type   = detectMangaType(item)
@@ -94,13 +105,15 @@ function ResultCard({ item, onSelect }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         cursor: 'pointer',
-        display: 'flex', flexDirection: 'column',
+        display: 'flex',
+        flexDirection: 'column',
         transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
         transition: 'transform 0.25s ease',
       }}
     >
       <div style={{
-        position: 'relative', height: '240px',
+        position: 'relative',
+        height: '240px',
         background: C.surface,
         border: `1px solid ${hovered ? tColor + '99' : C.borderPrimary}`,
         overflow: 'hidden',
@@ -109,36 +122,46 @@ function ResultCard({ item, onSelect }) {
           : '0 4px 16px rgba(0,0,0,0.4)',
         transition: 'all 0.25s ease',
       }}>
-        {cover
-          ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{
-              width: '100%', height: '100%',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              color: C.textDim, gap: '8px',
-              background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
-            }}>
-              <div style={{ fontSize: '36px' }}>⚔</div>
-              <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>No Cover</div>
-            </div>
-        }
+        {cover ? (
+          <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <div style={{
+            width: '100%', height: '100%',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            color: C.textDim, gap: '8px',
+            background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
+          }}>
+            <div style={{ fontSize: '36px' }}>⚔</div>
+            <div style={{ fontSize: '10px', fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', color: C.textDim }}>No Cover</div>
+          </div>
+        )}
 
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
-          padding: '3px 8px', background: 'rgba(10,8,16,0.92)',
+          padding: '3px 8px',
+          background: 'rgba(10,8,16,0.92)',
           border: `1px solid ${tColor}66`,
           fontSize: '9px', letterSpacing: '0.15em',
-          color: tColor, fontFamily: '"Cinzel", serif',
-        }}>{type}</div>
+          color: tColor,
+          fontFamily: '"Cinzel", serif',
+        }}>
+          {type}
+        </div>
 
         {score && parseFloat(score) > 0 && (
           <div style={{
             position: 'absolute', top: '8px', right: '8px',
-            padding: '3px 8px', background: 'rgba(10,8,16,0.92)',
+            padding: '3px 8px',
+            background: 'rgba(10,8,16,0.92)',
             border: `1px solid ${C.gold}55`,
-            fontSize: '10px', color: C.gold,
-            fontFamily: '"Cinzel", serif', fontWeight: 700,
-          }}>★ {score}</div>
+            fontSize: '10px',
+            color: C.gold,
+            fontFamily: '"Cinzel", serif',
+            fontWeight: 700,
+          }}>
+            ★ {score}
+          </div>
         )}
 
         {hovered && (
@@ -149,20 +172,39 @@ function ResultCard({ item, onSelect }) {
             <div style={{ position: 'absolute', bottom: 6, right: 6, width: 10, height: 10, borderBottom: `1px solid ${tColor}`, borderRight: `1px solid ${tColor}` }} />
           </>
         )}
+
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `linear-gradient(to top, ${tColor}22, transparent 60%)`,
+          opacity: hovered ? 1 : 0,
+          transition: 'opacity 0.25s',
+          pointerEvents: 'none',
+        }} />
       </div>
 
       <div style={{ marginTop: '10px', padding: '0 2px' }}>
         <div style={{
-          fontSize: '13px', fontWeight: 600,
+          fontSize: '13px',
+          fontWeight: 600,
           color: hovered ? C.text : C.textMuted,
-          transition: 'color 0.25s', lineHeight: 1.35,
-          overflow: 'hidden', display: '-webkit-box',
-          WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        }}>{title}</div>
+          transition: 'color 0.25s',
+          lineHeight: 1.35,
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}>
+          {title}
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: '11px', color: C.textDim }}>{year}</span>}
           {item.chapters && (
-            <span style={{ fontSize: '9px', color: tColor + 'aa', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
+            <span style={{
+              fontSize: '9px',
+              color: tColor + 'aa',
+              fontFamily: '"Cinzel", serif',
+              letterSpacing: '0.1em',
+            }}>
               {item.chapters} ch
             </span>
           )}
@@ -172,30 +214,31 @@ function ResultCard({ item, onSelect }) {
   )
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyResults({ query }) {
+  const corners = [
+    { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+    { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+    { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
+    { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
+  ]
   return (
     <div style={{
-      gridColumn: '1 / -1', padding: '64px 24px',
+      gridColumn: '1 / -1',
+      padding: '64px 24px',
       textAlign: 'center',
       border: `1px dashed ${C.borderPrimary}`,
       position: 'relative',
     }}>
-      {[
-        { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-        { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-        { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-        { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-      ].map((s, i) => (
+      {corners.map((s, i) => (
         <div key={i} style={{ position: 'absolute', width: 12, height: 12, ...s }} />
       ))}
-      <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: '24px',
-        color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px',
-      }}>⚔</div>
-      <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: '13px',
-        letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px',
-      }}>No results found</div>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '24px', color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px' }}>
+        ⚔
+      </div>
+      <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted, marginBottom: '8px' }}>
+        No results found
+      </div>
       <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.05em' }}>
         No titles found for <span style={{ color: C.primary }}>"{query}"</span> — try a different title
       </div>
@@ -203,32 +246,17 @@ function EmptyResults({ query }) {
   )
 }
 
+// ── Main SearchPage ───────────────────────────────────────────────────────────
 export default function SearchPage({ query: initialQuery, onSelectManga }) {
-  const [query, setQuery]       = useState(initialQuery || '')
-  const [results, setResults]   = useState([])
-  const [filtered, setFiltered] = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [query, setQuery]               = useState(initialQuery || '')
+  const [results, setResults]           = useState([])
+  const [filtered, setFiltered]         = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [searched, setSearched]         = useState(false)
   const [activeFilter, setActiveFilter] = useState('All')
-  const [focused, setFocused]   = useState(false)
+  const [focused, setFocused]           = useState(false)
   const inputRef = useRef(null)
   const isCompact = useIsCompact()
-
-  useEffect(() => {
-    if (initialQuery) {
-      setQuery(initialQuery)
-      runSearch(initialQuery)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialQuery])
-
-  useEffect(() => {
-    if (activeFilter === 'All') {
-      setFiltered(results)
-    } else {
-      setFiltered(results.filter(item => detectMangaType(item) === activeFilter))
-    }
-  }, [results, activeFilter])
 
   const runSearch = async (q) => {
     if (!q.trim()) return
@@ -245,6 +273,28 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
     }
   }
 
+  // Auto-search when query arrives from navbar
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery)
+      runSearch(initialQuery)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery])
+
+  // Apply filter whenever results or activeFilter change
+  useEffect(() => {
+    if (activeFilter === 'All') {
+      setFiltered(results)
+    } else {
+      setFiltered(results.filter(item => detectMangaType(item) === activeFilter))
+    }
+  }, [results, activeFilter])
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') runSearch(query)
+  }
+
   return (
     <>
       <style>{`
@@ -252,31 +302,38 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Search bar */}
+      {/* Search bar row */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', alignItems: 'center' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <span style={{
             position: 'absolute', left: '14px', top: '50%',
             transform: 'translateY(-50%)',
             color: focused ? C.primary : C.textDim,
-            fontSize: '16px', pointerEvents: 'none', transition: 'color 0.25s',
+            fontSize: '16px', pointerEvents: 'none',
+            transition: 'color 0.25s',
           }}>⌕</span>
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && runSearch(query)}
+            onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="Search for a manga, manhwa or manhua title..."
             style={{
-              width: '100%', padding: '13px 14px 13px 44px',
+              width: '100%',
+              padding: '13px 14px 13px 44px',
               background: C.input,
               border: `1px solid ${focused ? C.primary + '99' : C.borderPrimary}`,
-              color: C.text, fontSize: '14px', fontFamily: 'inherit',
-              outline: 'none', boxSizing: 'border-box',
+              color: C.text,
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              outline: 'none',
+              boxSizing: 'border-box',
               boxShadow: focused ? '0 0 20px rgba(167,139,250,0.12)' : 'none',
               transition: 'all 0.25s ease',
             }}
@@ -288,44 +345,63 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
           style={{
             fontFamily: '"Cinzel", serif',
             fontSize: '11px', letterSpacing: '0.2em',
-            color: C.primary, background: C.primarySoft,
+            color: C.primary,
+            background: C.primarySoft,
             border: `1px solid ${C.primary}55`,
-            padding: '0 28px', height: '48px',
+            padding: '0 28px',
+            height: '48px',
             cursor: loading ? 'wait' : 'pointer',
-            transition: 'all 0.25s', whiteSpace: 'nowrap',
+            transition: 'all 0.25s',
+            whiteSpace: 'nowrap',
             opacity: loading ? 0.6 : 1,
           }}
           onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(167,139,250,0.2)' }}
           onMouseLeave={e => { if (!loading) e.currentTarget.style.background = C.primarySoft }}
-        >{loading ? 'Searching...' : 'Search'}</button>
+        >
+          {loading ? 'Searching...' : 'Search'}
+        </button>
       </div>
 
-      {/* Filter pills */}
+      {/* Filter pills — single scrollable line on mobile, wraps on desktop */}
       {searched && !loading && results.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
-            fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
-          }}>Filter</span>
-          <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
-          {FILTERS.map(f => (
-            <FilterPill
-              key={f.label} label={f.label} color={f.color}
-              active={activeFilter === f.label}
-              onClick={() => setActiveFilter(f.label)}
-              isCompact={isCompact}
-            />
-          ))}
-          <span style={{
-            marginLeft: 'auto', fontSize: '11px',
-            color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+        <>
+          <div
+            className={isCompact ? 'hide-scroll' : undefined}
+            style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '10px',
+              alignItems: 'center',
+              flexWrap: isCompact ? 'nowrap' : 'wrap',
+              overflowX: isCompact ? 'auto' : 'visible',
+              paddingBottom: isCompact ? '2px' : 0,
+            }}
+          >
+            <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Filter</span>
+            <div style={{ width: '1px', height: '16px', background: C.borderPrimary, flexShrink: 0 }} />
+            {FILTERS.map(f => (
+              <FilterPill
+                key={f.label}
+                label={f.display}
+                color={f.color}
+                active={activeFilter === f.label}
+                onClick={() => setActiveFilter(f.label)}
+                isCompact={isCompact}
+              />
+            ))}
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: isCompact ? 'flex-start' : 'flex-end',
+            marginBottom: '18px',
+            fontSize: '11px', color: C.textDim,
+            fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
           }}>
-            <span style={{ color: C.primary }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
-          </span>
-        </div>
+            <span style={{ color: C.primary }}>{filtered.length}</span>&nbsp;result{filtered.length !== 1 ? 's' : ''}
+          </div>
+        </>
       )}
 
-      {/* Divider */}
+      {/* Divider before results */}
       {searched && (
         <div style={{
           height: '1px', marginBottom: '32px',
@@ -340,7 +416,9 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
         gap: '20px 16px',
       }}>
         {loading && Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+
         {!loading && searched && filtered.length === 0 && <EmptyResults query={query} />}
+
         {!loading && filtered.map(item => (
           <ResultCard key={item.id} item={item} onSelect={onSelectManga} />
         ))}
@@ -353,14 +431,10 @@ export default function SearchPage({ query: initialQuery, onSelectManga }) {
           alignItems: 'center', justifyContent: 'center',
           minHeight: '35vh', gap: '16px',
         }}>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '40px',
-            color: C.primary + '22', letterSpacing: '0.3em',
-          }}>⚔</div>
-          <div style={{
-            fontFamily: '"Cinzel", serif', fontSize: '12px',
-            letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase',
-          }}>Search the hall of the chosen</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '40px', color: C.primary + '22', letterSpacing: '0.3em' }}>⚔</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
+            Search the hall of the chosen
+          </div>
         </div>
       )}
     </>

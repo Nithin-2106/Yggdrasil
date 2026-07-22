@@ -42,8 +42,8 @@ function VegvisirWatermark() {
         opacity: 0.04, pointerEvents: 'none', zIndex: 0,
       }}
     >
-      <circle cx="100" cy="100" r="95" fill="none" stroke="#A78BFA" strokeWidth="1"/>
-      <circle cx="100" cy="100" r="80" fill="none" stroke="#A78BFA" strokeWidth="0.5"/>
+      <circle cx="100" cy="100" r="95" fill="none" stroke={C.primary} strokeWidth="1"/>
+      <circle cx="100" cy="100" r="80" fill="none" stroke={C.primary} strokeWidth="0.5"/>
       {arms.map((angle, i) => {
         const rad  = (angle * Math.PI) / 180
         const x1   = 100 + 20 * Math.cos(rad), y1 = 100 + 20 * Math.sin(rad)
@@ -55,15 +55,15 @@ function VegvisirWatermark() {
         const t1x  = b1x + 14 * Math.cos(rad), t1y = b1y + 14 * Math.sin(rad)
         const t2x  = b2x + 14 * Math.cos(rad), t2y = b2y + 14 * Math.sin(rad)
         return (
-          <g key={i} stroke="#A78BFA" strokeWidth="1.5" fill="none">
+          <g key={i} stroke={C.primary} strokeWidth="1.5" fill="none">
             <line x1={x1} y1={y1} x2={x2} y2={y2}/>
             <line x1={b1x} y1={b1y} x2={t1x} y2={t1y}/>
             <line x1={b2x} y1={b2y} x2={t2x} y2={t2y}/>
           </g>
         )
       })}
-      <circle cx="100" cy="100" r="20" fill="none" stroke="#F43F5E" strokeWidth="1"/>
-      <circle cx="100" cy="100" r="6"  fill="#A78BFA" opacity="0.5"/>
+      <circle cx="100" cy="100" r="20" fill="none" stroke={C.crimson} strokeWidth="1"/>
+      <circle cx="100" cy="100" r="6"  fill={C.primary} opacity="0.5"/>
     </svg>
   )
 }
@@ -124,6 +124,7 @@ function SearchBar({ onSearch }) {
     </div>
   )
 }
+
 function SearchBarMobile({ onSearch }) {
   const [query,   setQuery]   = useState('')
   const [focused, setFocused] = useState(false)
@@ -495,7 +496,7 @@ export default function Valhalla() {
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, color:C.text }}>
+    <div style={{ minHeight:'100vh', background:C.bg, color:C.text, overflowX:'hidden' }}>
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" />
       <VegvisirWatermark />
       <AmbientGlows />
@@ -507,7 +508,7 @@ export default function Valhalla() {
         isCompact={isCompact}
       />
 
-      <main style={{ position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto', padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px', }}>
+      <main style={{ position:'relative', zIndex:1, maxWidth:'1800px', margin:'0 auto', padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px', }}>
         <PageTitle activePage={activePage} searchQuery={searchQuery} />
 
         <ErrorBoundary
@@ -515,7 +516,7 @@ export default function Valhalla() {
           realmName="Valhalla"
           onReturnHome={() => handleNavigate('Dashboard')}
         >
-          {activePage === 'Dashboard' && <Dashboard   onNavigate={handleNavigate} />}
+          {activePage === 'Dashboard' && <Dashboard   onNavigate={handleNavigate} isCompact={isCompact} />}
           {activePage === 'Browse'    && <BrowsePage  onNavigate={handleNavigate} />}
           {activePage === 'My List'   && <MyList      onNavigate={handleNavigate} />}
           {activePage === 'Search'    && (

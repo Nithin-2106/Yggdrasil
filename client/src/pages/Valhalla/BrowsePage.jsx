@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useIsCompact } from '../../hooks/useMediaQuery'
 
-const ANILIST  = 'https://graphql.anilist.co'
-const PER_PAGE = 25
+const ANILIST   = 'https://graphql.anilist.co'
+const PER_PAGE  = 25
 const PAGE_SIZE = 24
 
 const C = {
@@ -24,17 +24,17 @@ const C = {
 }
 
 const SORT_MODES = [
-  { key: 'trending', label: 'Trending',         rune: 'ᚦ', sort: 'TRENDING_DESC'   },
-  { key: 'toprated', label: 'Top Rated',         rune: '★', sort: 'SCORE_DESC'      },
-  { key: 'popular',  label: 'Most Popular',      rune: 'ᚠ', sort: 'POPULARITY_DESC' },
-  { key: 'recent',   label: 'Recently Released', rune: 'ᚾ', sort: 'START_DATE_DESC' },
+  { key: 'trending', label: 'Trending',          rune: 'ᚦ', sort: 'TRENDING_DESC'   },
+  { key: 'toprated', label: 'Top Rated',          rune: '★', sort: 'SCORE_DESC'      },
+  { key: 'popular',  label: 'Most Popular',       rune: 'ᚠ', sort: 'POPULARITY_DESC' },
+  { key: 'recent',   label: 'Recently Released',  rune: 'ᚾ', sort: 'START_DATE_DESC' },
 ]
 
 const TYPE_FILTERS = [
   { key: 'all',    label: 'All',    color: C.primary, country: null },
-  { key: 'manhwa', label: 'Manhwa', color: C.rose,    country: 'KR' },
-  { key: 'manga',  label: 'Manga',  color: C.primary, country: 'JP' },
-  { key: 'manhua', label: 'Manhua', color: C.gold,    country: 'CN' },
+  { key: 'manhwa', label: 'Manhwa', color: C.rose,     country: 'KR' },
+  { key: 'manga',  label: 'Manga',  color: C.primary,  country: 'JP' },
+  { key: 'manhua', label: 'Manhua', color: C.gold,     country: 'CN' },
 ]
 
 const MEDIA_FIELDS = `
@@ -216,6 +216,7 @@ function MangaCard({ item, onNavigate }) {
           position: 'absolute', inset: 0,
           background: `linear-gradient(to top, ${tColor}33, transparent 60%)`,
           opacity: hovered ? 1 : 0, transition: 'opacity 0.25s',
+          pointerEvents: 'none',
         }} />
 
         {hovered && <Corners color={tColor} />}
@@ -259,6 +260,7 @@ function SortTab({ mode, active, onClick, isCompact }) {
         padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
       <span style={{ color: active ? C.primary : C.goldBright + '66', fontSize: '13px' }}>
@@ -279,13 +281,18 @@ function TypePill({ filter, active, onClick, isCompact }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
+        fontSize: isCompact ? '9px' : '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
         color: active ? C.bg : hovered ? c : C.textMuted,
         background: active ? c : hovered ? `${c}18` : 'transparent',
         border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderPrimary}`,
-        padding: isCompact ? '11px 18px' : '6px 18px',minHeight: isCompact ? '44px' : 'auto',
-display: isCompact ? 'inline-flex' : undefined,
-alignItems: isCompact ? 'center' : undefined, cursor: 'pointer', transition: 'all 0.2s ease',
+        padding: isCompact ? '7px 12px' : '6px 18px',
+        minHeight: isCompact ? '30px' : 'auto',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
       }}
     >{filter.label}</button>
   )
@@ -313,11 +320,11 @@ export default function BrowsePage({ onNavigate }) {
   const [typeFilter, setTypeFilter] = useState('all')
   const isCompact = useIsCompact()
 
-  const pool        = useRef([])
-  const nextPage    = useRef(1)
-  const exhausted   = useRef(false)
-  const currentKey  = useRef('')
-  const fetching    = useRef(false)
+  const pool       = useRef([])
+  const nextPage   = useRef(1)
+  const exhausted  = useRef(false)
+  const currentKey = useRef('')
+  const fetching   = useRef(false)
 
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [loading,      setLoading]      = useState(true)
@@ -420,56 +427,83 @@ export default function BrowsePage({ onNavigate }) {
           0%   { background-position: -200% 0; }
           100% { background-position:  200% 0; }
         }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Sort tabs */}
-      <div style={{
-        display: 'flex', marginBottom: '24px',
-        borderBottom: `1px solid ${C.borderPrimary}`,
-        overflowX: 'auto',
-      }}>
+      {/* ── Sort tabs ── */}
+      <div
+        className="hide-scroll"
+        style={{
+          display: 'flex', marginBottom: '24px',
+          borderBottom: `1px solid ${C.borderPrimary}`,
+          overflowX: 'auto',
+        }}
+      >
         {SORT_MODES.map(mode => (
-          <SortTab key={mode.key} mode={mode} active={sortMode === mode.key} onClick={() => setSortMode(mode.key)} isCompact={isCompact}/>
+          <SortTab
+            key={mode.key} mode={mode}
+            active={sortMode === mode.key}
+            onClick={() => setSortMode(mode.key)}
+            isCompact={isCompact}
+          />
         ))}
       </div>
 
-      {/* Type filter row */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* ── Realm (type) filter row — single scrollable line on mobile ── */}
+      <div
+        className={isCompact ? 'hide-scroll' : undefined}
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: isCompact ? '12px' : '16px',
+          alignItems: 'center',
+          flexWrap: isCompact ? 'nowrap' : 'wrap',
+          overflowX: isCompact ? 'auto' : 'visible',
+          paddingBottom: isCompact ? '2px' : 0,
+        }}
+      >
         <span style={{
           fontSize: '10px', letterSpacing: '0.25em', color: C.textDim,
           fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase',
+          flexShrink: 0,
         }}>Realm</span>
-        <div style={{ width: '1px', height: '16px', background: C.borderPrimary }} />
+        <div style={{ width: '1px', height: '16px', background: C.borderPrimary, flexShrink: 0 }} />
         {TYPE_FILTERS.map(f => (
-          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} isCompact={isCompact}/>
+          <TypePill key={f.key} filter={f} active={typeFilter === f.key} onClick={() => setTypeFilter(f.key)} isCompact={isCompact} />
         ))}
-
-        <div style={{
-          marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px',
-          fontSize: '11px', color: C.textDim, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-        }}>
-          {loading ? (
-            <span>Consulting the runes…</span>
-          ) : (
-            <>
-              <span><span style={{ color: activeColor }}>{displayed.length}</span> shown</span>
-              <span style={{ color: C.borderPrimary }}>·</span>
-              <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span> loaded</span>
-              {expanding && (
-                <><span style={{ color: C.borderPrimary }}>·</span><span style={{ color: C.goldBright + '88' }}>expanding…</span></>
-              )}
-            </>
-          )}
-        </div>
       </div>
 
-      {/* Divider */}
+      {/* ── Stats row — own line, so it never crowds the filter row on mobile ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '16px',
+        justifyContent: isCompact ? 'flex-start' : 'flex-end',
+        marginBottom: '20px',
+        fontSize: '11px', color: C.textDim,
+        fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+        flexWrap: 'wrap',
+      }}>
+        {loading ? (
+          <span style={{ color: C.textDim }}>Consulting the runes…</span>
+        ) : (
+          <>
+            <span><span style={{ color: activeColor }}>{displayed.length}</span><span style={{ color: C.textDim }}> shown</span></span>
+            <span style={{ color: C.borderPrimary }}>·</span>
+            <span><span style={{ color: C.textMuted }}>{poolSize.toLocaleString()}</span><span style={{ color: C.textDim }}> loaded</span></span>
+            {expanding && (
+              <><span style={{ color: C.borderPrimary }}>·</span><span style={{ color: C.goldBright + '88' }}>expanding…</span></>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Divider ── */}
       <div style={{
         height: '1px', marginBottom: '32px',
         background: `linear-gradient(to right, ${C.crimson}66, ${C.primary}44, transparent)`,
       }} />
 
-      {/* Grid */}
+      {/* ── Grid ── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
@@ -481,63 +515,24 @@ export default function BrowsePage({ onNavigate }) {
         }
       </div>
 
-      {/* Empty state */}
-{!loading && poolReady && displayed.length === 0 && (
-  <div
-    style={{
-      padding: '64px 24px',
-      textAlign: 'center',
-      border: `1px dashed ${C.borderPrimary}`,
-      position: 'relative',
-    }}
-  >
-    {[
-      { top: 10, left: 10, borderTop: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-      { top: 10, right: 10, borderTop: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-      { bottom: 10, left: 10, borderBottom: `1px solid ${C.primary}44`, borderLeft: `1px solid ${C.primary}44` },
-      { bottom: 10, right: 10, borderBottom: `1px solid ${C.primary}44`, borderRight: `1px solid ${C.primary}44` },
-    ].map((s, i) => (
-      <div
-        key={i}
-        style={{
-          position: 'absolute',
-          width: 12,
-          height: 12,
-          ...s,
-        }}
-      />
-    ))}
+      {/* ── Empty state ── */}
+      {!loading && poolSize === 0 && (
+        <div style={{
+          padding: '64px 24px', textAlign: 'center',
+          border: `1px dashed ${C.borderPrimary}`,
+        }}>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '24px', color: C.primary + '33', letterSpacing: '0.4em', marginBottom: '16px' }}>᛭</div>
+          <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.25em', color: C.textMuted }}>
+            No titles found for this combination
+          </div>
+        </div>
+      )}
 
-    <div
-      style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '24px',
-        color: C.primary + '33',
-        letterSpacing: '0.4em',
-        marginBottom: '16px',
-      }}
-    >
-      ᛭
-    </div>
-
-    <div
-      style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '13px',
-        letterSpacing: '0.25em',
-        color: C.textMuted,
-      }}
-    >
-      No titles found for this combination
-    </div>
-  </div>
-)}
-
-      {/* Infinite scroll sentinel */}
+      {/* ── Infinite scroll sentinel ── */}
       {!loading && hasMore && <ScrollSentinel onVisible={onSentinelVisible} />}
 
-      {/* End of results */}
-      {!loading && poolReady && !hasMore && displayed.length > 0 && (
+      {/* ── End of results ── */}
+      {!loading && poolReady && !hasMore && poolSize > 0 && (
         <div style={{
           textAlign: 'center', padding: '32px 0 64px',
           fontSize: '11px', letterSpacing: '0.3em',
