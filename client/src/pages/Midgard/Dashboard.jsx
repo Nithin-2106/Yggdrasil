@@ -1012,7 +1012,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
 
   const posterW = isCompact ? CARD_W.compact : CARD_W.full
   const posterH = isCompact ? CARD_H.compact : CARD_H.full
-  const rankFontSize = isCompact ? '120px' : '240px'
+  const rankFontSize = isCompact ? '110px' : '220px'
   const rankStroke    = isCompact ? '3.5px' : '5px'
   const actionsGap    = isCompact ? '34px' : '38px'
 
@@ -1080,9 +1080,17 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
           lineHeight:      1,
           color:           'transparent',
           WebkitTextStroke:`${rankStroke} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
-          filter: hovered && !isEmpty
-  ? `drop-shadow(0 0 8px ${rankColor}) drop-shadow(0 0 16px ${rankColor})`
+          WebkitTextStroke: `${rankStroke} ${
+  hovered && !isEmpty
+    ? rankColor
+    : isEmpty
+      ? rankColor + '22'
+      : rankColor + '66'
+}`,
+filter: hovered && !isEmpty
+  ? `drop-shadow(0 0 6px ${rankColor})`
   : 'none',
+textShadow: 'none',
           userSelect:      'none',
           transition:      'all 0.3s ease',
           letterSpacing:   '-0.05em',
