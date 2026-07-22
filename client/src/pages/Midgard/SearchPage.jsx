@@ -374,40 +374,42 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
 
       {/* Filter pills — single scrollable line on mobile, wraps on desktop */}
       {searched && !loading && results.length > 0 && (
-        <div
-          className={isCompact ? 'hide-scroll' : undefined}
-          style={{
-            display: 'flex',
-            gap: '8px',
-            marginBottom: '28px',
-            alignItems: 'center',
-            flexWrap: isCompact ? 'nowrap' : 'wrap',
-            overflowX: isCompact ? 'auto' : 'visible',
-            paddingBottom: isCompact ? '2px' : 0,
-          }}
-        >
-          <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Filter</span>
-          <div style={{ width: '1px', height: '16px', background: C.borderGold, flexShrink: 0 }} />
-          {filters.map(f => (
-            <FilterPill
-              key={f.label}
-              label={f.display}
-              color={f.color}
-              active={activeFilter === f.label}
-              onClick={() => setActiveFilter(f.label)}
-              isCompact={isCompact}
-            />
-          ))}
-          <span style={{
-            marginLeft: isCompact ? '8px' : 'auto',
-            flexShrink: 0,
-            fontSize: '11px', color: C.textDim,
-            fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-          }}>
-            <span style={{ color: C.electric }}>{filtered.length}</span> result{filtered.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-      )}
+  <>
+    <div
+      className={isCompact ? 'hide-scroll' : undefined}
+      style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '10px',
+        alignItems: 'center',
+        flexWrap: isCompact ? 'nowrap' : 'wrap',
+        overflowX: isCompact ? 'auto' : 'visible',
+        paddingBottom: isCompact ? '2px' : 0,
+      }}
+    >
+      <span style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', marginRight: '4px', textTransform: 'uppercase', flexShrink: 0 }}>Filter</span>
+      <div style={{ width: '1px', height: '16px', background: C.borderGold, flexShrink: 0 }} />
+      {filters.map(f => (
+        <FilterPill
+          key={f.label}
+          label={f.display}
+          color={f.color}
+          active={activeFilter === f.label}
+          onClick={() => setActiveFilter(f.label)}
+          isCompact={isCompact}
+        />
+      ))}
+    </div>
+    <div style={{
+      display: 'flex', justifyContent: isCompact ? 'flex-start' : 'flex-end',
+      marginBottom: '18px',
+      fontSize: '11px', color: C.textDim,
+      fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+    }}>
+      <span style={{ color: C.electric }}>{filtered.length}</span>&nbsp;result{filtered.length !== 1 ? 's' : ''}
+    </div>
+  </>
+)}
 
       {/* Divider before results */}
       {searched && (

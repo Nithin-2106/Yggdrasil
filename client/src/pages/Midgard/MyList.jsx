@@ -449,7 +449,7 @@ function FilterPopup({ sortKey, sortDir, onSort, selectedCountries, onToggleCoun
         width: '100%', maxWidth: '480px',
         background: C.surface, border: `1px solid ${C.borderGold}`,
         borderBottom: 'none',
-        padding: '20px 20px calc(32px + env(safe-area-inset-bottom, 0px))',
+        padding: '20px 20px calc(96px + env(safe-area-inset-bottom, 0px))',
         boxShadow: '0 -20px 60px rgba(0,0,0,0.6)',
         maxHeight: '80vh', overflowY: 'auto',
       }}>

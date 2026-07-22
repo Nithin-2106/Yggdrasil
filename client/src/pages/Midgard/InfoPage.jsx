@@ -168,11 +168,12 @@ function RatingSlider({ value, onChange, isCompact }) {
         </span>
         <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
       </div>
-      <div style={{ display: 'flex', gap: isCompact ? '2px' : '3px', flexWrap: 'nowrap' }}>
+      <div style={{ display: 'flex', gap: isCompact ? '2px' : '3px', width: '100%' }}>
   {steps.map(step => {
     const isActive = value && step <= value
     const isHov    = hovered !== null && step <= hovered
     const col      = ratingColor(step)
+    const isWhole  = step % 1 === 0
     return (
       <button
         key={step}
@@ -181,16 +182,17 @@ function RatingSlider({ value, onChange, isCompact }) {
         onMouseLeave={() => setHovered(null)}
         title={step.toString()}
         style={{
-          width: step % 1 === 0 ? (isCompact ? '15px' : '26px') : (isCompact ? '7px' : '13px'),
-          height: isCompact ? '24px' : '26px',
+          flex: isWhole ? '2 1 0' : '1 1 0',
+          minWidth: 0,
+          height: isCompact ? '28px' : '30px',
           background: (isHov || isActive) ? col : C.surface,
           border: `1px solid ${(isHov || isActive) ? col : C.borderGold}`,
           cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
-          padding: 0, flexShrink: 0,
+          padding: 0,
         }}
       >
-        {step % 1 === 0 && (
-          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isCompact ? '7px' : '9px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
+        {isWhole && (
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isCompact ? '8px' : '10px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
             {step}
           </span>
         )}
