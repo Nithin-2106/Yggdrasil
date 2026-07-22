@@ -52,18 +52,22 @@ const SORT_OPTIONS = [
   { key: 'year',          label: 'Year' },
   { key: 'dateCompleted', label: 'Date Completed' },
   { key: 'rating',        label: 'My Score' },
+  { key: 'rewatchCount',  label: 'Times Watched' },
 ]
 
 const COLUMNS = [
-  { key: 'index',         label: '#',         sortable: false, width: '52px' },
-  { key: 'cover',         label: 'Poster',    sortable: false, width: '100px', rune: 'ᛈ' },
-  { key: 'title',         label: 'Title',     sortable: true,  width: 'auto',  rune: 'ᛏ' },
-  { key: 'country',       label: 'Country',   sortable: true,  width: '150px', rune: 'ᚱ' },
-  { key: 'year',          label: 'Year',      sortable: true,  width: '90px',  rune: 'ᚢ' },
-  { key: 'dateCompleted', label: 'Completed', sortable: true,  width: '150px', rune: 'ᛞ' },
-  { key: 'format',        label: 'Format',    sortable: true,  width: '100px', rune: 'ᚠ' },
-  { key: 'rating',        label: 'My Score',  sortable: true,  width: '140px', rune: '★' },
+  { key: 'index',         label: '#',            sortable: false, width: '52px' },
+  { key: 'cover',         label: 'Poster',       sortable: false, width: '100px', rune: 'ᛈ' },
+  { key: 'title',         label: 'Title',        sortable: true,  width: 'auto',  rune: 'ᛏ' },
+  { key: 'country',       label: 'Country',      sortable: true,  width: '150px', rune: 'ᚱ' },
+  { key: 'year',          label: 'Year',         sortable: true,  width: '90px',  rune: 'ᚢ' },
+  { key: 'dateCompleted', label: 'Completed',    sortable: true,  width: '150px', rune: 'ᛞ' },
+  { key: 'format',        label: 'Format',       sortable: true,  width: '100px', rune: 'ᚠ' },
+  { key: 'rewatchCount',  label: 'Times Watched', sortable: true,  width: '120px', rune: 'ᚲ' },
+  { key: 'rating',        label: 'My Score',     sortable: true,  width: '140px', rune: '★' },
 ]
+
+const TOTAL_COLUMNS = COLUMNS.length
 
 function getCountry(drama) {
   return TYPE_COUNTRY[drama.type] || '—'
@@ -106,6 +110,20 @@ function ScoreDisplay({ rating }) {
   )
 }
 
+function RewatchDisplay({ count }) {
+  if (!count) return (
+    <span style={{ color: C.textDim, fontSize: '14px', fontFamily: '"Cinzel", serif' }}>—</span>
+  )
+  return (
+    <span style={{
+      fontFamily: '"Cinzel", serif', fontSize: '14px', fontWeight: 700,
+      color: C.goldBright, display: 'inline-flex', alignItems: 'center', gap: '4px',
+    }}>
+      <span style={{ fontSize: '12px', opacity: 0.75 }}>↻</span>{count}×
+    </span>
+  )
+}
+
 function SortIndicator({ direction }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.electric }}>
@@ -117,6 +135,7 @@ function SortIndicator({ direction }) {
 function HeaderCell({ col, sortKey, sortDir, onSort }) {
   const [hovered, setHovered] = useState(false)
   const isActive = sortKey === col.key
+  const isCentered = col.key === 'rating' || col.key === 'rewatchCount'
 
   return (
     <th
@@ -126,7 +145,7 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
       style={{
         width: col.width,
         padding: '16px 18px',
-        textAlign: col.key === 'rating' ? 'center' : 'left',
+        textAlign: isCentered ? 'center' : 'left',
         fontFamily: '"Cinzel", serif',
         fontSize: '11px', letterSpacing: '0.25em', fontWeight: 700,
         textTransform: 'uppercase',
@@ -268,6 +287,10 @@ function DramaRow({ drama, index, onNavigate }) {
         </span>
       </td>
 
+      <td style={{ ...tdBase, padding: '14px 18px', width: '120px', textAlign: 'center' }}>
+        <RewatchDisplay count={drama.rewatchCount} />
+      </td>
+
       <td style={{ ...tdBase, borderRight: 'none', padding: '14px 18px', width: '140px', textAlign: 'center' }}>
         <ScoreDisplay rating={drama.rating} />
       </td>
@@ -278,7 +301,7 @@ function DramaRow({ drama, index, onNavigate }) {
 function EmptyState({ status, searchQuery }) {
   return (
     <tr>
-      <td colSpan={8}>
+      <td colSpan={TOTAL_COLUMNS}>
         <div style={{ padding: '64px 24px', textAlign: 'center' }}>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '32px', color: C.gold + '22', letterSpacing: '0.4em', marginBottom: '16px' }}>ᛗ</div>
           <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', letterSpacing: '0.3em', color: C.textDim, textTransform: 'uppercase' }}>
@@ -381,13 +404,18 @@ function MobileDramaCard({ drama, onNavigate }) {
           </span>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: 'auto', flexWrap: 'wrap' }}>
           {drama.rating ? (
             <span style={{ fontSize: '12px', color: C.goldBright, fontFamily: '"Cinzel", serif', fontWeight: 700 }}>
               ★ {drama.rating}
             </span>
           ) : (
             <span style={{ fontSize: '11px', color: C.textDim }}>—</span>
+          )}
+          {drama.rewatchCount > 0 && (
+            <span style={{ fontSize: '11px', color: C.goldBright, fontFamily: '"Cinzel", serif', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ fontSize: '10px', opacity: 0.75 }}>↻</span>{drama.rewatchCount}×
+            </span>
           )}
           {drama.dateCompleted && (
             <span style={{ fontSize: '10px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>
@@ -412,7 +440,7 @@ function FilterPopup({ sortKey, sortDir, onSort, selectedCountries, onToggleCoun
     <div
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{
-        position: 'fixed', inset: 0, zIndex: 700,
+        position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(11,7,16,0.88)', backdropFilter: 'blur(6px)',
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
       }}
@@ -421,8 +449,9 @@ function FilterPopup({ sortKey, sortDir, onSort, selectedCountries, onToggleCoun
         width: '100%', maxWidth: '480px',
         background: C.surface, border: `1px solid ${C.borderGold}`,
         borderBottom: 'none',
-        padding: '20px 20px 32px',
+        padding: '20px 20px calc(32px + env(safe-area-inset-bottom, 0px))',
         boxShadow: '0 -20px 60px rgba(0,0,0,0.6)',
+        maxHeight: '80vh', overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
           <span style={{ fontFamily: '"Cinzel", serif', fontSize: '12px', letterSpacing: '0.25em', color: C.goldBright }}>
@@ -493,15 +522,15 @@ function FilterPopup({ sortKey, sortDir, onSort, selectedCountries, onToggleCoun
 
 // ── Main MyList ───────────────────────────────────────────────────────────────
 export default function MyList({ onNavigate }) {
-  const [dramas, setDramas]                   = useState([])
-  const [loading, setLoading]                 = useState(true)
-  const [activeTab, setActiveTab]             = useState('All')
-  const [searchQuery, setSearch]              = useState('')
-  const [focused, setFocused]                 = useState(false)
-  const [sortKey, setSortKey]                 = useState('createdAt')
-  const [sortDir, setSortDir]                 = useState('desc')
+  const [dramas, setDramas]                       = useState([])
+  const [loading, setLoading]                     = useState(true)
+  const [activeTab, setActiveTab]                 = useState('All')
+  const [searchQuery, setSearch]                  = useState('')
+  const [focused, setFocused]                     = useState(false)
+  const [sortKey, setSortKey]                     = useState('createdAt')
+  const [sortDir, setSortDir]                     = useState('desc')
   const [selectedCountries, setSelectedCountries] = useState(ALL_COUNTRY_TYPES)
-  const [filterOpen, setFilterOpen]           = useState(false)
+  const [filterOpen, setFilterOpen]               = useState(false)
   const isCompact = useIsCompact()
 
   useEffect(() => {
@@ -554,6 +583,8 @@ export default function MyList({ onNavigate }) {
         aVal = getCountry(a); bVal = getCountry(b)
       } else if (sortKey === 'rating') {
         aVal = a.rating ?? -1; bVal = b.rating ?? -1
+      } else if (sortKey === 'rewatchCount') {
+        aVal = a.rewatchCount ?? 0; bVal = b.rewatchCount ?? 0
       } else if (sortKey === 'dateCompleted') {
         aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
         bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0

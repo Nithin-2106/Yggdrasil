@@ -309,18 +309,18 @@ function TypePill({ filter, active, onClick, isCompact }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? c : C.textMuted,
-        background: active ? c : hovered ? `${c}18` : 'transparent',
-        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: isCompact ? '10px 16px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
-        minHeight: isCompact ? '40px' : 'auto',
-        flexShrink: 0,
-        display: 'inline-flex',
-        alignItems: 'center',
-        whiteSpace: 'nowrap',
-      }}
+  fontFamily: '"Cinzel", serif',
+  fontSize: isCompact ? '9px' : '10px', letterSpacing: '0.2em', textTransform: 'uppercase',
+  color: active ? C.bg : hovered ? c : C.textMuted,
+  background: active ? c : hovered ? `${c}18` : 'transparent',
+  border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
+  padding: isCompact ? '7px 12px' : '6px 18px', cursor: 'pointer', transition: 'all 0.2s ease',
+  minHeight: isCompact ? '30px' : 'auto',
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  whiteSpace: 'nowrap',
+}}
     >
       {filter.label}
     </button>

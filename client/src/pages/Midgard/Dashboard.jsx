@@ -89,6 +89,9 @@ function typeColor(type) {
   return C.electric
 }
 
+// Maps a Top 10 region tab to the drama "type" it's allowed to contain.
+const REGION_TYPE = { Korean: 'Kdrama', Chinese: 'Cdrama', Japanese: 'Jdrama' }
+
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 function Corners({ color = C.goldBright, size = 12, opacity = 0.4 }) {
   const s = { position: 'absolute', width: size, height: size, opacity }
@@ -194,6 +197,7 @@ function HorizontalScroll({
     ref.current?.scrollBy({ left: dir * scrollAmount, behavior: 'smooth' })
   }
 
+  // Arrows are desktop-only; on mobile the strip is swipeable directly.
   const showArrows = !isCompact
 
   const arrowStyle = {
@@ -279,6 +283,11 @@ function HorizontalScroll({
 }
 
 // ── Trending / generic drama card ─────────────────────────────────────────────
+// This is the canonical poster card size for the whole dashboard — Top10Card
+// mirrors these exact dimensions so every horizontal rail feels consistent.
+const CARD_W = { compact: 96,  full: 160 }
+const CARD_H = { compact: 134, full: 220 }
+
 function TrendingCard({ item, onNavigate, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const type   = getDramaType(item)
@@ -286,8 +295,8 @@ function TrendingCard({ item, onNavigate, isCompact }) {
   const year   = item.first_air_date ? item.first_air_date.split('-')[0] : null
   const rating = item.vote_average   ? item.vote_average.toFixed(1)       : null
 
-  const w = isCompact ? 96 : 160
-  const h = isCompact ? 134 : 220
+  const w = isCompact ? CARD_W.compact : CARD_W.full
+  const h = isCompact ? CARD_H.compact : CARD_H.full
 
   return (
     <div
@@ -546,8 +555,8 @@ function TrendingSection({ onNavigate, isCompact }) {
         {Array.from({ length: isCompact ? 4 : 6 }).map((_, i) => (
           <div key={i} style={{
             flexShrink:     0,
-            width:          isCompact ? '96px' : '160px',
-            height:         isCompact ? '134px' : '220px',
+            width:          `${isCompact ? CARD_W.compact : CARD_W.full}px`,
+            height:         `${isCompact ? CARD_H.compact : CARD_H.full}px`,
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
             backgroundSize: '200% 100%',
             animation:      'shimmer 1.4s infinite',
@@ -703,30 +712,47 @@ function CurrentlyWatchingSection({ dramas, onNavigate, isCompact }) {
 }
 
 // ── 4. TOP 10 ─────────────────────────────────────────────────────────────────
-function Top10SearchModal({ position, region, onClose, onSaved }) {
+function Top10SearchModal({ position, region, existingIds, onClose, onSaved, isCompact }) {
   const [query,   setQuery]   = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [saving,  setSaving]  = useState(false)
   const [focused, setFocused] = useState(false)
+  const inputRef = useRef(null)
 
-  const search = async () => {
-    if (!query.trim()) return
+  const targetType = REGION_TYPE[region]
+
+  const runSearch = useCallback(async (q) => {
+    if (!q.trim()) { setResults([]); setLoading(false); return }
     setLoading(true)
     try {
-      const res = await searchDramas(query)
-      // Same isValidDrama guard used by every discover fetch, so anime
-      // (or non-drama TV) can't slip into a Top 10 slot via search.
-      setResults(res.filter(isValidDrama).slice(0, 12))
+      const res = await searchDramas(q)
+      // Region-locked: Korean Top 10 can only ever surface Kdrama results,
+      // same for Chinese/Japanese. isValidDrama is still the shared guard
+      // that keeps anime and non-drama TV out entirely.
+      setResults(
+        res.filter(isValidDrama)
+           .filter(item => getDramaType(item) === targetType)
+           .slice(0, 12)
+      )
     } catch {
       setResults([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [targetType])
+
+  // Debounced search-as-you-type, so results appear without needing to hit
+  // the button every time. Manual Search button / Enter still work instantly.
+  useEffect(() => {
+    const t = setTimeout(() => runSearch(query), 350)
+    return () => clearTimeout(t)
+  }, [query, runSearch])
+
+  useEffect(() => { inputRef.current?.focus() }, [])
 
   const select = async (item) => {
-    if (saving) return
+    if (saving || existingIds.includes(item.id)) return
     setSaving(true)
     try {
       const { data } = await axios.put(`${TOP10_API}/${region}/${position}`, {
@@ -757,7 +783,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
         display:        'flex',
         alignItems:     'center',
         justifyContent: 'center',
-        padding:        '24px',
+        padding:        isCompact ? '12px' : '24px',
       }}
     >
       <div style={{
@@ -765,7 +791,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
         border:     `1px solid ${C.borderGold}`,
         width:      '100%',
         maxWidth:   '600px',
-        maxHeight:  '80vh',
+        maxHeight:  '85vh',
         overflowY:  'auto',
         position:   'relative',
         boxShadow:  '0 0 80px rgba(0,0,0,0.8)',
@@ -773,7 +799,7 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
         <Corners color={C.goldBright} size={12} opacity={0.4} />
 
         <div style={{
-          padding:        '18px 24px 14px',
+          padding:        isCompact ? '16px 18px 12px' : '18px 24px 14px',
           borderBottom:   `1px solid ${C.borderGold}`,
           display:        'flex',
           alignItems:     'center',
@@ -783,21 +809,29 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
           background:     C.surface,
           zIndex:         10,
         }}>
-          <span style={{
-            fontFamily:    '"Cinzel", serif',
-            fontSize:      '12px',
-            letterSpacing: '0.3em',
-            color:         C.goldBright,
-          }}>SELECT FOR SLOT #{position}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <span style={{
+              fontFamily:    '"Cinzel", serif',
+              fontSize:      isCompact ? '11px' : '12px',
+              letterSpacing: '0.3em',
+              color:         C.goldBright,
+            }}>SELECT FOR SLOT #{position}</span>
+            <span style={{
+              fontFamily:    '"Cinzel", serif',
+              fontSize:      '9px',
+              letterSpacing: '0.15em',
+              color:         typeColor(targetType),
+            }}>{typeLabel(targetType)} ONLY</span>
+          </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer' }}
+            style={{ background: 'none', border: 'none', color: C.textDim, fontSize: '20px', cursor: 'pointer', padding: '4px' }}
             onMouseEnter={e => e.currentTarget.style.color = C.text}
             onMouseLeave={e => e.currentTarget.style.color = C.textDim}
           >×</button>
         </div>
 
-        <div style={{ padding: '20px 24px 16px', display: 'flex', gap: '10px' }}>
+        <div style={{ padding: isCompact ? '16px 18px 14px' : '20px 24px 16px', display: 'flex', gap: '10px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <span style={{
               position:  'absolute',
@@ -808,15 +842,16 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
               fontSize:  '14px',
             }}>⌕</span>
             <input
+              ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && search()}
+              onKeyDown={e => e.key === 'Enter' && runSearch(query)}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder="Search drama title..."
+              placeholder={`Search ${typeLabel(targetType).toLowerCase()} dramas...`}
               style={{
                 width:       '100%',
-                padding:     '10px 12px 10px 36px',
+                padding:     '10px 34px 10px 36px',
                 background:  C.input,
                 border:      `1px solid ${focused ? C.electric + '88' : C.borderGold}`,
                 color:       C.text,
@@ -827,9 +862,27 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
                 transition:  'border-color 0.2s',
               }}
             />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+                style={{
+                  position:  'absolute',
+                  right:     '10px',
+                  top:       '50%',
+                  transform: 'translateY(-50%)',
+                  background:'none',
+                  border:    'none',
+                  color:     C.textDim,
+                  fontSize:  '15px',
+                  cursor:    'pointer',
+                  padding:   '2px 4px',
+                }}
+              >×</button>
+            )}
           </div>
           <button
-            onClick={search}
+            onClick={() => runSearch(query)}
             disabled={loading || saving}
             style={{
               fontFamily:    '"Cinzel", serif',
@@ -841,23 +894,37 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
               padding:       '0 20px',
               cursor:        loading || saving ? 'wait' : 'pointer',
               opacity:       loading || saving ? 0.6 : 1,
+              whiteSpace:    'nowrap',
             }}
           >{loading ? 'Searching…' : saving ? 'Saving…' : 'Search'}</button>
         </div>
 
+        {!loading && query.trim() && results.length === 0 && (
+          <div style={{
+            padding:       '0 24px 28px',
+            textAlign:     'center',
+            color:         C.textDim,
+            fontSize:      '12px',
+            letterSpacing: '0.05em',
+          }}>
+            No {typeLabel(targetType).toLowerCase()} dramas found for "{query}"
+          </div>
+        )}
+
         <div style={{
-          padding:             '0 24px 24px',
+          padding:             `0 ${isCompact ? '18px' : '24px'} 24px`,
           display:             'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+          gridTemplateColumns: `repeat(auto-fill, minmax(${isCompact ? 92 : 110}px, 1fr))`,
           gap:                 '12px',
         }}>
           {results.map(item => {
-            const tc = typeColor(getDramaType(item))
+            const tc  = typeColor(getDramaType(item))
+            const dup = existingIds.includes(item.id)
             return (
               <div
                 key={item.id}
-                onClick={() => !saving && select(item)}
-                style={{ cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}
+                onClick={() => select(item)}
+                style={{ cursor: dup || saving ? 'not-allowed' : 'pointer', opacity: saving && !dup ? 0.6 : 1 }}
               >
                 <div
                   style={{
@@ -867,8 +934,9 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
                     overflow:   'hidden',
                     position:   'relative',
                     transition: 'border-color 0.2s',
+                    filter:     dup ? 'grayscale(0.6) brightness(0.5)' : 'none',
                   }}
-                  onMouseEnter={e => { if (!saving) e.currentTarget.style.borderColor = tc }}
+                  onMouseEnter={e => { if (!saving && !dup) e.currentTarget.style.borderColor = tc }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderGold }}
                 >
                   {item.poster_path ? (
@@ -884,11 +952,31 @@ function Top10SearchModal({ position, region, onClose, onSaved }) {
                       color: C.textDim,
                     }}>📺</div>
                   )}
+                  {dup && (
+                    <div style={{
+                      position:       'absolute',
+                      inset:          0,
+                      display:        'flex',
+                      alignItems:     'center',
+                      justifyContent: 'center',
+                      background:     'rgba(11,7,16,0.55)',
+                    }}>
+                      <span style={{
+                        fontFamily:    '"Cinzel", serif',
+                        fontSize:      '9px',
+                        letterSpacing: '0.12em',
+                        color:         C.goldBright,
+                        border:        `1px solid ${C.gold}66`,
+                        padding:       '3px 7px',
+                        background:    'rgba(11,7,16,0.8)',
+                      }}>IN TOP 10</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{
                   marginTop:       '6px',
                   fontSize:        '11px',
-                  color:           C.textMuted,
+                  color:           dup ? C.textDim : C.textMuted,
                   lineHeight:      1.3,
                   overflow:        'hidden',
                   display:         '-webkit-box',
@@ -910,7 +998,6 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
   const [hovered,     setHovered]     = useState(false)
   const [showActions, setShowActions] = useState(false)
   const isEmpty = !entry.tmdbId
-  const tColor  = entry.type ? typeColor(entry.type) : C.textDim
 
   const rankColor =
     index === 0 ? '#FFD700' :
@@ -919,8 +1006,12 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
     index <= 5  ? C.electric :
     C.violet
 
-  const posterW = isCompact ? 108 : 140
-  const posterH = isCompact ? 155 : 200
+  // Same footprint as every other poster card on the dashboard (TrendingCard,
+  // WatchingCard) so the Top 10 rail doesn't look like a mismatched shelf.
+  const posterW = isCompact ? CARD_W.compact : CARD_W.full
+  const posterH = isCompact ? CARD_H.compact : CARD_H.full
+  const rankFontSize = isCompact ? '80px' : '150px'
+  const rankStroke    = isCompact ? '2.5px' : '4px'
 
   return (
     <div
@@ -941,11 +1032,11 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
       }}>
         <div style={{
           fontFamily:      '"Cinzel Decorative", "Cinzel", serif',
-          fontSize:        isCompact ? '92px' : '150px',
+          fontSize:        rankFontSize,
           fontWeight:      900,
           lineHeight:      1,
           color:           'transparent',
-          WebkitTextStroke:`${isCompact ? '2.5px' : '4px'} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
+          WebkitTextStroke:`${rankStroke} ${isEmpty ? rankColor + '22' : rankColor + (hovered ? 'cc' : '66')}`,
           textShadow:      hovered && !isEmpty
             ? `0 0 60px ${rankColor}44, 0 0 120px ${rankColor}22`
             : 'none',
@@ -955,7 +1046,8 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
         }}>{index + 1}</div>
       </div>
 
-      {/* Poster */}
+      {/* Poster — no country tag, poster alone is enough now that Top 10 is
+          already region-scoped by the tab the user picked. */}
       <div
         onClick={() => {
           if (isEmpty)           onEdit()
@@ -970,7 +1062,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
           background:   isEmpty ? C.surface : C.bg,
           border:       `1px solid ${
             hovered
-              ? isEmpty ? C.gold + '66' : tColor + '99'
+              ? isEmpty ? C.gold + '66' : C.goldBright + '66'
               : C.borderGold
           }`,
           overflow:     'hidden',
@@ -979,7 +1071,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
           transformOrigin: 'bottom center',
           transition:   'all 0.3s ease',
           boxShadow:    hovered && !isEmpty
-            ? `0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px ${tColor}44`
+            ? '0 20px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(240,180,41,0.3)'
             : hovered && isEmpty
               ? '0 8px 24px rgba(0,0,0,0.5)'
               : '0 4px 16px rgba(0,0,0,0.5)',
@@ -1021,30 +1113,17 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
                 color: C.textDim, fontSize: '28px',
               }}>📺</div>
             )}
-            <div style={{
-              position:      'absolute',
-              top:           '6px',
-              left:          '6px',
-              padding:       '2px 7px',
-              background:    'rgba(11,7,16,0.5)',
-              backdropFilter:'blur(3px)',
-              border:        `1px solid ${tColor}55`,
-              fontSize:      '9px',
-              color:         tColor,
-              fontFamily:    '"Cinzel", serif',
-              letterSpacing: '0.1em',
-            }}>{typeLabel(entry.type, isCompact)}</div>
 
             <div style={{
               position:   'absolute',
               inset:      0,
-              background: `linear-gradient(to top, ${tColor}44, transparent 60%)`,
+              background: `linear-gradient(to top, ${C.gold}33, transparent 60%)`,
               opacity:    hovered ? 1 : 0,
               transition: 'opacity 0.3s',
             }} />
           </>
         )}
-        {hovered && <Corners color={isEmpty ? C.gold : tColor} size={9} opacity={0.6} />}
+        {hovered && <Corners color={C.gold} size={9} opacity={0.6} />}
       </div>
 
       {/* Action buttons */}
@@ -1107,9 +1186,9 @@ function normaliseEntries(rawEntries) {
 // Skeleton mirrors the real number+poster geometry (with shimmer) so switching
 // regions or loading fresh no longer feels like a broken/static state.
 function Top10Skeleton({ isCompact }) {
-  const posterW = isCompact ? 108 : 140
-  const posterH = isCompact ? 155 : 200
-  const rankW   = isCompact ? 56 : 70
+  const posterW = isCompact ? CARD_W.compact : CARD_W.full
+  const posterH = isCompact ? CARD_H.compact : CARD_H.full
+  const rankW   = isCompact ? 48 : 64
 
   return (
     <div style={{ display: 'flex', gap: '4px', paddingTop: '16px', overflow: 'hidden' }}>
@@ -1177,6 +1256,11 @@ function Top10Section({ onNavigate, isCompact }) {
 
   const regionTabColor = { Korean: C.electric, Chinese: C.violet, Japanese: C.indigo }
 
+  // tmdbIds already occupying a different slot in this region — used to
+  // block duplicate dramas in the search modal.
+  const existingIdsForSlot = (pos) =>
+    entries.filter(e => e.position !== pos && e.tmdbId).map(e => e.tmdbId)
+
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader
@@ -1238,6 +1322,8 @@ function Top10Section({ onNavigate, isCompact }) {
         <Top10SearchModal
           position={modalSlot}
           region={region}
+          existingIds={existingIdsForSlot(modalSlot)}
+          isCompact={isCompact}
           onClose={() => setModalSlot(null)}
           onSaved={updatedEntries => {
             setEntries(normaliseEntries(updatedEntries))
@@ -1288,8 +1374,8 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
         {Array.from({ length: isCompact ? 4 : 5 }).map((_, i) => (
           <div key={i} style={{
             flexShrink:     0,
-            width:          isCompact ? '96px' : '160px',
-            height:         isCompact ? '134px' : '220px',
+            width:          `${isCompact ? CARD_W.compact : CARD_W.full}px`,
+            height:         `${isCompact ? CARD_H.compact : CARD_H.full}px`,
             background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
             backgroundSize: '200% 100%',
             animation:      'shimmer 1.4s infinite',
@@ -1412,8 +1498,8 @@ function ExploreSection({ onNavigate, isCompact }) {
   const shimmerBox = (i) => (
     <div key={i} style={{
       flexShrink:     0,
-      width:          isCompact ? '96px' : '160px',
-      height:         isCompact ? '134px' : '220px',
+      width:          `${isCompact ? CARD_W.compact : CARD_W.full}px`,
+      height:         `${isCompact ? CARD_H.compact : CARD_H.full}px`,
       background:     `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
       backgroundSize: '200% 100%',
       animation:      'shimmer 1.4s infinite',
@@ -1452,6 +1538,7 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
     'Plan to Watch': C.violet,
     'On Hold':       C.indigo,
   }[drama.status] || C.textMuted
+  const typeC = typeColor(drama.type)
 
   return (
     <div
@@ -1528,7 +1615,9 @@ function RecentlyAddedCard({ drama, onNavigate, isCompact }) {
           gap:           '10px',
           letterSpacing: '0.05em',
         }}>
-          <span style={{ color: C.gold + 'aa', fontFamily: '"Cinzel", serif' }}>
+          {/* Now colored per drama type (Korean/Chinese/Japanese) instead of
+              always rendering gold regardless of type. */}
+          <span style={{ color: typeC + 'cc', fontFamily: '"Cinzel", serif' }}>
             {typeLabel(drama.type, isCompact)}
           </span>
           {drama.year && <span>{drama.year}</span>}

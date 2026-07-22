@@ -62,22 +62,22 @@ function FilterPill({ label, active, color, onClick, isCompact }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        fontFamily: '"Cinzel", serif',
-        fontSize: '10px',
-        letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color: active ? C.bg : hovered ? c : C.textMuted,
-        background: active ? c : hovered ? `${c}18` : 'transparent',
-        border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
-        padding: isCompact ? '10px 14px' : '6px 16px',
-        minHeight: isCompact ? '40px' : 'auto',
-        flexShrink: 0,
-        display: 'inline-flex',
-        alignItems: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        whiteSpace: 'nowrap',
-      }}
+  fontFamily: '"Cinzel", serif',
+  fontSize: isCompact ? '9px' : '10px',
+  letterSpacing: '0.15em',
+  textTransform: 'uppercase',
+  color: active ? C.bg : hovered ? c : C.textMuted,
+  background: active ? c : hovered ? `${c}18` : 'transparent',
+  border: `1px solid ${active ? c : hovered ? `${c}66` : C.borderGold}`,
+  padding: isCompact ? '8px 10px' : '6px 16px',
+  minHeight: isCompact ? '32px' : 'auto',
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+  whiteSpace: 'nowrap',
+}}
     >
       {label}
     </button>
@@ -262,11 +262,11 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
   const isCompact = useIsCompact()
 
   const filters = [
-    { label: 'All',    color: C.electric },
-    { label: 'Kdrama', color: C.electric },
-    { label: 'Cdrama', color: C.violet },
-    { label: 'Jdrama', color: C.indigo },
-  ]
+  { label: 'All',    display: 'All',      color: C.electric },
+  { label: 'Kdrama', display: 'Korean',   color: C.electric },
+  { label: 'Cdrama', display: 'Chinese',  color: C.violet },
+  { label: 'Jdrama', display: 'Japanese', color: C.indigo },
+]
 
   const runSearch = async (q) => {
     if (!q.trim()) return
@@ -391,7 +391,7 @@ export default function SearchPage({ query: initialQuery, onSelectDrama }) {
           {filters.map(f => (
             <FilterPill
               key={f.label}
-              label={f.label}
+              label={f.display}
               color={f.color}
               active={activeFilter === f.label}
               onClick={() => setActiveFilter(f.label)}

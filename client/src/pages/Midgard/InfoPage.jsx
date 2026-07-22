@@ -146,7 +146,7 @@ function SectionDivider({ title, rune, right }) {
 }
 
 // ── Rating slider ─────────────────────────────────────────────────────────────
-function RatingSlider({ value, onChange }) {
+function RatingSlider({ value, onChange, isCompact }) {
   const [hovered, setHovered] = useState(null)
   const steps = []
   for (let i = 1; i <= 10; i += 0.5) steps.push(i)
@@ -168,34 +168,36 @@ function RatingSlider({ value, onChange }) {
         </span>
         <span style={{ fontSize: '13px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>/10</span>
       </div>
-      <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
-        {steps.map(step => {
-          const isActive = value && step <= value
-          const isHov    = hovered !== null && step <= hovered
-          const col      = ratingColor(step)
-          return (
-            <button
-              key={step}
-              onClick={() => onChange(value === step ? null : step)}
-              onMouseEnter={() => setHovered(step)}
-              onMouseLeave={() => setHovered(null)}
-              title={step.toString()}
-              style={{
-                width: step % 1 === 0 ? '26px' : '13px', height: '26px',
-                background: (isHov || isActive) ? col : C.surface,
-                border: `1px solid ${(isHov || isActive) ? col : C.borderGold}`,
-                cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
-              }}
-            >
-              {step % 1 === 0 && (
-                <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
-                  {step}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      <div style={{ display: 'flex', gap: isCompact ? '2px' : '3px', flexWrap: 'nowrap' }}>
+  {steps.map(step => {
+    const isActive = value && step <= value
+    const isHov    = hovered !== null && step <= hovered
+    const col      = ratingColor(step)
+    return (
+      <button
+        key={step}
+        onClick={() => onChange(value === step ? null : step)}
+        onMouseEnter={() => setHovered(step)}
+        onMouseLeave={() => setHovered(null)}
+        title={step.toString()}
+        style={{
+          width: step % 1 === 0 ? (isCompact ? '15px' : '26px') : (isCompact ? '7px' : '13px'),
+          height: isCompact ? '24px' : '26px',
+          background: (isHov || isActive) ? col : C.surface,
+          border: `1px solid ${(isHov || isActive) ? col : C.borderGold}`,
+          cursor: 'pointer', transition: 'all 0.1s', position: 'relative',
+          padding: 0, flexShrink: 0,
+        }}
+      >
+        {step % 1 === 0 && (
+          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isCompact ? '7px' : '9px', fontFamily: '"Cinzel", serif', color: (isHov || isActive) ? C.bg : C.textDim, fontWeight: 700 }}>
+            {step}
+          </span>
+        )}
+      </button>
+    )
+  })}
+</div>
       {value && (
         <button
           onClick={() => onChange(null)}
@@ -488,7 +490,7 @@ function AddToListModal({ tmdbData, existingEntry, isCompact, onClose, onSaved, 
 
               <div>
                 <label style={lbl}>★ My Rating</label>
-                <RatingSlider value={form.rating} onChange={v => set('rating', v)} />
+                <RatingSlider value={form.rating} onChange={v => set('rating', v)} isCompact={isCompact}/>
               </div>
 
               <div>
