@@ -208,7 +208,7 @@ function HorizontalScroll({
 }
 
 // ── 1. STATS ROW ──────────────────────────────────────────────────────────────
-function StatCard({ label, value, color, rune }) {
+function StatCard({ label, value, color, rune, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const isNumeric = typeof value === 'number' ||
     (typeof value === 'string' && !isNaN(parseFloat(value)) && value !== '—')
@@ -219,7 +219,8 @@ function StatCard({ label, value, color, rune }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        flex: '1 1 140px', padding: '28px 20px 22px',
+        flex: isCompact ? '1 1 100px' : '1 1 140px',
+        padding: isCompact ? '18px 12px 14px' : '28px 20px 22px',
         background: hovered
           ? `linear-gradient(135deg, ${C.surfaceHover}, ${C.surface})`
           : `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
@@ -238,35 +239,35 @@ function StatCard({ label, value, color, rune }) {
         opacity: hovered ? 1 : 0.25, transition: 'opacity 0.35s',
       }} />
       <div style={{
-        fontFamily: '"Cinzel", serif', fontSize: '14px',
+        fontFamily: '"Cinzel", serif', fontSize: isCompact ? '12px' : '14px',
         color: hovered ? color : C.textDim,
-        marginBottom: '10px', transition: 'color 0.35s', letterSpacing: '0.1em',
+        marginBottom: isCompact ? '6px' : '10px', transition: 'color 0.35s', letterSpacing: '0.1em',
       }}>{rune}</div>
-      <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
+      <div style={{ marginBottom: isCompact ? '6px' : '10px', display: 'flex', justifyContent: 'center', alignItems: 'baseline' }}>
         {isNumeric ? (
           <Counter
-            value={numericValue} fontSize={36} padding={4} gap={1}
+            value={numericValue} fontSize={isCompact ? 24 : 36} padding={4} gap={1}
             horizontalPadding={0} borderRadius={0} gradientHeight={0}
             textColor={hovered ? color : C.text} fontWeight={700}
             counterStyle={{ fontFamily: '"Cinzel", serif', transition: 'color 0.35s' }}
           />
         ) : (
           <span style={{
-            fontSize: '36px', fontWeight: 700,
+            fontSize: isCompact ? '24px' : '36px', fontWeight: 700,
             color: hovered ? color : C.text,
             fontFamily: '"Cinzel", serif', lineHeight: 1, transition: 'color 0.35s',
           }}>{value}</span>
         )}
       </div>
       <div style={{
-        fontSize: '10px', letterSpacing: '0.25em', color: C.textMuted,
+        fontSize: isCompact ? '9px' : '10px', letterSpacing: isCompact ? '0.18em' : '0.25em', color: C.textMuted,
         textTransform: 'uppercase', fontFamily: '"Cinzel", serif',
       }}>{label}</div>
     </div>
   )
 }
 
-function StatsRow({ manga }) {
+function StatsRow({ manga, isCompact }) {
   const rated = manga.filter(m => m.rating)
   const avgRating = rated.length
     ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
@@ -283,13 +284,22 @@ function StatsRow({ manga }) {
   ]
 
   return (
-    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '52px' }}>
-      {stats.map(s => <StatCard key={s.label} {...s} />)}
+    <div style={{
+      display: 'flex', gap: isCompact ? '8px' : '12px', flexWrap: 'wrap',
+      marginBottom: isCompact ? '36px' : '52px',
+    }}>
+      {stats.map(s => <StatCard key={s.label} {...s} isCompact={isCompact} />)}
     </div>
   )
 }
 
 // ── 2. SHARED MANGA CARD ──────────────────────────────────────────────────────
+// Note on mobile badge layout: on compact cards the type tag (top-left) and
+// score tag used to both sit on the top row and would visually collide for
+// longer type names ("Manhwa" + "★ 8.5" don't fit side-by-side at 96px wide).
+// On compact screens the score now anchors to the bottom-right instead, so
+// the two badges never share a row and can't overlap regardless of title/
+// score text length.
 function MangaCard({ item, onNavigate, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const type   = detectMangaType(item)
@@ -298,6 +308,7 @@ function MangaCard({ item, onNavigate, isCompact }) {
   const year   = getYear(item)
   const score  = formatScore(item.averageScore)
   const title  = getTitle(item)
+  const hasScore = score && parseFloat(score) > 0
 
   const w = isCompact ? CARD_W.compact : CARD_W.full
   const h = isCompact ? CARD_H.compact : CARD_H.full
@@ -339,9 +350,12 @@ function MangaCard({ item, onNavigate, isCompact }) {
           background: 'rgba(10,8,16,0.85)', border: `1px solid ${tColor}66`,
           fontSize: isCompact ? '8px' : '9px', letterSpacing: '0.15em', color: tColor, fontFamily: '"Cinzel", serif',
         }}>{type}</div>
-        {score && parseFloat(score) > 0 && (
+        {hasScore && (
           <div style={{
-            position: 'absolute', top: '8px', right: '8px',
+            position: 'absolute',
+            top:    isCompact ? 'auto' : '8px',
+            bottom: isCompact ? '8px'  : 'auto',
+            right: '8px',
             padding: isCompact ? '2px 6px' : '3px 8px',
             background: 'rgba(10,8,16,0.85)', border: `1px solid ${C.gold}55`,
             fontSize: isCompact ? '9px' : '10px', color: C.gold, fontFamily: '"Cinzel", serif', fontWeight: 700,
@@ -395,13 +409,17 @@ function SkeletonCard({ isCompact }) {
 }
 
 // ── 3. TRENDING ───────────────────────────────────────────────────────────────
+// Pull a larger raw pool (80) since it gets filtered down to KR/CN titles —
+// caps at 45 so the rail stays in the 40-45 range requested.
 function TrendingSection({ onNavigate, isCompact }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchTrending(25)
-      .then(data => setItems(data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin))))
+    fetchTrending(80)
+      .then(data => setItems(
+        data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin)).slice(0, 45)
+      ))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -840,11 +858,6 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
               : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px' }}>⚔</div>
             }
             <div style={{
-              position: 'absolute', top: '6px', left: '6px', padding: '2px 7px',
-              background: 'rgba(10,8,16,0.85)', border: `1px solid ${TYPE_COLOR[entry.type] || C.primary}55`,
-              fontSize: '9px', color: TYPE_COLOR[entry.type] || C.primary, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
-            }}>{entry.type}</div>
-            <div style={{
               position: 'absolute', inset: 0,
               background: `linear-gradient(to top, ${C.primary}44, transparent 60%)`,
               opacity: hovered ? 1 : 0, transition: 'opacity 0.3s',
@@ -1000,14 +1013,22 @@ function Top10Section({ onNavigate, isCompact }) {
 }
 
 // ── 6. RECENTLY RELEASED ──────────────────────────────────────────────────────
+// Manhwa-only, ~40-45 items: pull a larger raw pool (90) since it's filtered
+// down to a single type, then cap at 45. Also drops entries with no known
+// start date — those sort unpredictably on AniList's side and were pushing
+// old, effectively-unstarted series to the top of the rail.
 function RecentlyReleasedSection({ onNavigate, isCompact }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchRecentlyReleased(50)
-        .then(data => setItems(data.filter(item => ['KR', 'CN'].includes(item.countryOfOrigin))))
+      fetchRecentlyReleased(90)
+        .then(data => setItems(
+          data
+            .filter(item => detectMangaType(item) === 'Manhwa' && getYear(item))
+            .slice(0, 45)
+        ))
         .catch(() => {})
         .finally(() => setLoading(false))
     }, 600)
@@ -1036,6 +1057,8 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
 }
 
 // ── 7. EXPLORE ────────────────────────────────────────────────────────────────
+// Shows 10 random picks per refresh (was 6). Pool page size bumped 40 → 60 per
+// sort so there's enough variety to keep refreshes feeling fresh with 10 slots.
 function ExploreSection({ onNavigate, isCompact }) {
   const [pool,     setPool]     = useState([])
   const [shown,    setShown]    = useState([])
@@ -1043,10 +1066,10 @@ function ExploreSection({ onNavigate, isCompact }) {
   const [spinning, setSpinning] = useState(false)
   const shownIds = useRef(new Set())
 
-  function pick6(arr, excludeIds) {
+  function pick10(arr, excludeIds) {
     const available = arr.filter(i => !excludeIds.has(i.id))
-    const source    = available.length >= 6 ? available : arr
-    return [...source].sort(() => Math.random() - 0.5).slice(0, 6)
+    const source    = available.length >= 10 ? available : arr
+    return [...source].sort(() => Math.random() - 0.5).slice(0, 10)
   }
 
   useEffect(() => {
@@ -1055,7 +1078,7 @@ function ExploreSection({ onNavigate, isCompact }) {
       const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'FAVOURITES_DESC']
       const fetches = sorts.map(sort => {
         const randomPage = Math.floor(Math.random() * 5) + 1
-        return fetchBySort(sort, randomPage, 40).catch(() => [])
+        return fetchBySort(sort, randomPage, 60).catch(() => [])
       })
       const results = await Promise.all(fetches)
       if (cancelled) return
@@ -1067,7 +1090,7 @@ function ExploreSection({ onNavigate, isCompact }) {
         return true
       })
       setPool(valid)
-      const initial = pick6(valid, new Set())
+      const initial = pick10(valid, new Set())
       shownIds.current = new Set(initial.map(i => i.id))
       setShown(initial)
       setLoading(false)
@@ -1078,7 +1101,7 @@ function ExploreSection({ onNavigate, isCompact }) {
   const refresh = () => {
     if (!pool.length) return
     setSpinning(true)
-    const next = pick6(pool, shownIds.current)
+    const next = pick10(pool, shownIds.current)
     shownIds.current = new Set(next.map(i => i.id))
     setShown(next)
     setTimeout(() => setSpinning(false), 400)
@@ -1112,7 +1135,7 @@ function ExploreSection({ onNavigate, isCompact }) {
       <div style={{ opacity: spinning ? 0.4 : 1, transition: 'opacity 0.2s' }}>
         <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
           {loading
-            ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} isCompact={isCompact} />)
+            ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} isCompact={isCompact} />)
             : shown.map(item => <MangaCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)
           }
         </HorizontalScroll>
@@ -1230,7 +1253,7 @@ export default function Dashboard({ onNavigate, isCompact = false }) {
       `}</style>
 
       {/* Stats always render (shows zeros while loading) */}
-      <StatsRow manga={manga} />
+      <StatsRow manga={manga} isCompact={isCompact} />
 
       <TrendingSection onNavigate={onNavigate} isCompact={isCompact} />
 

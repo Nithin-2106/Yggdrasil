@@ -50,17 +50,19 @@ const SORT_OPTIONS = [
   { key: 'year',          label: 'Year' },
   { key: 'dateCompleted', label: 'Date Completed' },
   { key: 'rating',        label: 'My Score' },
+  { key: 'timesRead',     label: 'Times Read' },
 ]
 
 const COLUMNS = [
-  { key: 'index',         label: '#',         sortable: false, width: '52px'  },
-  { key: 'cover',         label: 'Cover',     sortable: false, width: '100px', rune: 'ᛈ' },
-  { key: 'title',         label: 'Title',     sortable: true,  width: 'auto',  rune: 'ᛏ' },
-  { key: 'type',          label: 'Type',      sortable: true,  width: '130px', rune: 'ᚱ' },
-  { key: 'year',          label: 'Year',      sortable: true,  width: '90px',  rune: 'ᚢ' },
-  { key: 'dateCompleted', label: 'Completed', sortable: true,  width: '150px', rune: 'ᛞ' },
-  { key: 'format',        label: 'Format',    sortable: true,  width: '100px', rune: 'ᚠ' },
-  { key: 'rating',        label: 'My Score',  sortable: true,  width: '140px', rune: '★' },
+  { key: 'index',         label: '#',          sortable: false, width: '52px'  },
+  { key: 'cover',         label: 'Cover',      sortable: false, width: '100px', rune: 'ᛈ' },
+  { key: 'title',         label: 'Title',      sortable: true,  width: 'auto',  rune: 'ᛏ' },
+  { key: 'type',          label: 'Type',       sortable: true,  width: '130px', rune: 'ᚱ' },
+  { key: 'year',          label: 'Year',       sortable: true,  width: '90px',  rune: 'ᚢ' },
+  { key: 'dateCompleted', label: 'Completed',  sortable: true,  width: '150px', rune: 'ᛞ' },
+  { key: 'format',        label: 'Format',     sortable: true,  width: '100px', rune: 'ᚠ' },
+  { key: 'timesRead',     label: 'Reads',       sortable: true,  width: '100px', rune: '⟳' },
+  { key: 'rating',        label: 'My Score',   sortable: true,  width: '140px', rune: '★' },
 ]
 
 const TOTAL_COLUMNS = COLUMNS.length
@@ -102,6 +104,19 @@ function ScoreDisplay({ rating }) {
   )
 }
 
+function ReadCountDisplay({ count }) {
+  const n = count || 0
+  return (
+    <span style={{
+      fontFamily: '"Cinzel", serif', fontSize: '14px', fontWeight: 700,
+      color: n > 0 ? C.primary : C.textDim,
+    }}>
+      {n > 0 && <span style={{ fontSize: '12px', marginRight: '3px', opacity: 0.7 }}>⟳</span>}
+      {n}
+    </span>
+  )
+}
+
 function SortIndicator({ direction }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '6px', fontSize: '13px', color: C.primary }}>
@@ -113,6 +128,7 @@ function SortIndicator({ direction }) {
 function HeaderCell({ col, sortKey, sortDir, onSort }) {
   const [hovered, setHovered] = useState(false)
   const isActive = sortKey === col.key
+  const isCentered = col.key === 'rating' || col.key === 'timesRead'
 
   return (
     <th
@@ -122,7 +138,7 @@ function HeaderCell({ col, sortKey, sortDir, onSort }) {
       style={{
         width: col.width,
         padding: '16px 18px',
-        textAlign: col.key === 'rating' ? 'center' : 'left',
+        textAlign: isCentered ? 'center' : 'left',
         fontFamily: '"Cinzel", serif',
         fontSize: '11px', letterSpacing: '0.25em', fontWeight: 700, textTransform: 'uppercase',
         color: isActive ? C.primary : hovered && col.sortable ? C.text : C.textMuted,
@@ -267,6 +283,11 @@ function MangaRow({ manga, index, onNavigate }) {
         }}>{manga.format || '—'}</span>
       </td>
 
+      {/* Times Read */}
+      <td style={{ ...tdBase, padding: '14px 18px', width: '100px', textAlign: 'center' }}>
+        <ReadCountDisplay count={manga.timesRead} />
+      </td>
+
       {/* My Score */}
       <td style={{ ...tdBase, borderRight: 'none', padding: '14px 18px', width: '140px', textAlign: 'center' }}>
         <ScoreDisplay rating={manga.rating} />
@@ -336,6 +357,7 @@ function MobileMangaCard({ manga, onNavigate }) {
   const sc = STATUS_COLOR[manga.status] || C.textMuted
   const tc = TYPE_COLOR[manga.type]    || C.primary
   const canNavigate = !!manga.anilistId
+  const reads = manga.timesRead || 0
 
   const meta = [manga.type, manga.format, manga.year].filter(Boolean).join(' · ')
 
@@ -375,7 +397,10 @@ function MobileMangaCard({ manga, onNavigate }) {
         }}>{manga.title}</span>
 
         {meta && (
-          <span style={{ fontSize: '11px', color: tc, fontFamily: '"Cinzel", serif', letterSpacing: '0.05em' }}>
+          <span style={{
+            fontSize: '11px', color: tc, fontFamily: '"Cinzel", serif', letterSpacing: '0.05em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
             {meta}
           </span>
         )}
@@ -388,6 +413,13 @@ function MobileMangaCard({ manga, onNavigate }) {
           ) : (
             <span style={{ fontSize: '11px', color: C.textDim }}>—</span>
           )}
+
+          {reads > 0 && (
+            <span style={{ fontSize: '11px', color: C.primary, fontFamily: '"Cinzel", serif', fontWeight: 700 }}>
+              ⟳ {reads}
+            </span>
+          )}
+
           {manga.dateCompleted && (
             <span style={{ fontSize: '10px', color: C.textDim, fontFamily: '"Cinzel", serif' }}>
               {formatDate(manga.dateCompleted)}
@@ -554,6 +586,8 @@ export default function MyList({ onNavigate }) {
         aVal = a.type || ''; bVal = b.type || ''
       } else if (sortKey === 'rating') {
         aVal = a.rating ?? -1; bVal = b.rating ?? -1
+      } else if (sortKey === 'timesRead') {
+        aVal = a.timesRead ?? 0; bVal = b.timesRead ?? 0
       } else if (sortKey === 'dateCompleted') {
         aVal = a.dateCompleted ? new Date(a.dateCompleted).getTime() : 0
         bVal = b.dateCompleted ? new Date(b.dateCompleted).getTime() : 0

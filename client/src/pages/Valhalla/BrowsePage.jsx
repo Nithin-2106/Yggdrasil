@@ -74,6 +74,10 @@ function buildQuery(sortKey, typeKey, page) {
   const sort    = mode?.sort || 'TRENDING_DESC'
   const country = filter?.country || null
   const countryFilter = country ? `countryOfOrigin: "${country}"` : ''
+  // Recently Released relies on startDate for both sorting and meaning — titles with
+  // no recorded start date must be excluded server-side, otherwise they sort to the
+  // top of the list ahead of anything that actually has a date.
+  const dateFilter = sortKey === 'recent' ? 'startDate_greater: 10000101' : ''
 
   return {
     query: `
@@ -87,6 +91,7 @@ function buildQuery(sortKey, typeKey, page) {
             status_not: NOT_YET_RELEASED
             isAdult: false
             ${countryFilter}
+            ${dateFilter}
           ) { ${MEDIA_FIELDS} }
         }
       }
@@ -122,6 +127,13 @@ function formatScore(score) {
   return (score / 10).toFixed(1)
 }
 
+// A title only belongs in "Recently Released" if it actually has a start date —
+// this is the client-side backstop for the server-side dateFilter above.
+function isValidForSort(item, sortKey) {
+  if (sortKey !== 'recent') return true
+  return Boolean(item.startDate?.year)
+}
+
 // ── UI atoms ──────────────────────────────────────────────────────────────────
 
 function Corners({ color = C.primary, size = 10, opacity = 0.6 }) {
@@ -141,7 +153,7 @@ function SkeletonCard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{
-        height: '220px',
+        aspectRatio: '2 / 3',
         background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.4s infinite',
@@ -175,7 +187,7 @@ function MangaCard({ item, onNavigate }) {
       }}
     >
       <div style={{
-        position: 'relative', height: '220px',
+        position: 'relative', aspectRatio: '2 / 3',
         background: C.surface,
         border: `1px solid ${hovered ? tColor + '99' : C.borderPrimary}`,
         overflow: 'hidden',
@@ -185,7 +197,12 @@ function MangaCard({ item, onNavigate }) {
         transition: 'all 0.25s ease',
       }}>
         {cover
-          ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img
+              src={cover}
+              alt={title}
+              loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
           : <div style={{
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -252,12 +269,12 @@ function SortTab({ mode, active, onClick, isCompact }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         fontFamily: '"Cinzel", serif',
-        fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
+        fontSize: isCompact ? '10px' : '11px', letterSpacing: '0.2em', textTransform: 'uppercase',
         color: active ? C.primary : hovered ? C.text : C.textMuted,
         background: active ? C.primarySoft : hovered ? C.surfaceHover : 'transparent',
         border: 'none',
         borderBottom: `2px solid ${active ? C.primary : 'transparent'}`,
-        padding: isCompact ? '13px 20px' : '10px 20px', cursor: 'pointer',
+        padding: isCompact ? '13px 16px' : '10px 20px', cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
         flexShrink: 0,
@@ -364,8 +381,10 @@ export default function BrowsePage({ onNavigate }) {
       const seen = new Set()
       pool.current = results.filter(i => {
         if (seen.has(i.id)) return false
+        if (getCover(i) === '') return false
+        if (!isValidForSort(i, sortMode)) return false
         seen.add(i.id)
-        return getCover(i) !== ''
+        return true
       })
 
       setPoolSize(pool.current.length)
@@ -393,7 +412,9 @@ export default function BrowsePage({ onNavigate }) {
       const items   = data.Page?.media || []
       const hasNext = data.Page?.pageInfo?.hasNextPage ?? false
       const existingIds = new Set(pool.current.map(i => i.id))
-      const fresh = items.filter(i => !existingIds.has(i.id) && getCover(i) !== '')
+      const fresh = items.filter(i =>
+        !existingIds.has(i.id) && getCover(i) !== '' && isValidForSort(i, sortMode)
+      )
       if (fresh.length > 0) {
         pool.current = [...pool.current, ...fresh]
         nextPage.current += 1
@@ -435,7 +456,7 @@ export default function BrowsePage({ onNavigate }) {
       <div
         className="hide-scroll"
         style={{
-          display: 'flex', marginBottom: '24px',
+          display: 'flex', marginBottom: isCompact ? '18px' : '24px',
           borderBottom: `1px solid ${C.borderPrimary}`,
           overflowX: 'auto',
         }}
@@ -499,15 +520,16 @@ export default function BrowsePage({ onNavigate }) {
 
       {/* ── Divider ── */}
       <div style={{
-        height: '1px', marginBottom: '32px',
+        height: '1px', marginBottom: isCompact ? '24px' : '32px',
         background: `linear-gradient(to right, ${C.crimson}66, ${C.primary}44, transparent)`,
       }} />
 
       {/* ── Grid ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
-        gap: '20px 16px', marginBottom: '32px',
+        gridTemplateColumns: `repeat(auto-fill, minmax(${isCompact ? '108px' : '155px'}, 1fr))`,
+        gap: isCompact ? '14px 10px' : '20px 16px',
+        marginBottom: '32px',
       }}>
         {loading
           ? Array.from({ length: PAGE_SIZE }).map((_, i) => <SkeletonCard key={i} />)

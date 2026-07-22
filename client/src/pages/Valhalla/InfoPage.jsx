@@ -232,6 +232,47 @@ function RatingSlider({ value, onChange, isCompact }) {
   )
 }
 
+// ── Stepper (used for "No. of Times Read") ────────────────────────────────────
+
+function Stepper({ value, onChange, isCompact, min = 0 }) {
+  const btnStyle = {
+    width: isCompact ? '38px' : '30px',
+    height: isCompact ? '38px' : '30px',
+    flexShrink: 0,
+    background: C.input,
+    border: `1px solid ${C.borderPrimary}`,
+    color: C.text,
+    fontFamily: '"Cinzel", serif',
+    fontSize: '15px',
+    lineHeight: 1,
+    cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all 0.15s',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, (value || 0) - 1))}
+        style={btnStyle}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = C.primary + '99'; e.currentTarget.style.color = C.primary }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.color = C.text }}
+      >−</button>
+      <span style={{
+        minWidth: '28px', textAlign: 'center',
+        fontFamily: '"Cinzel", serif', fontSize: '15px', fontWeight: 700, color: C.text,
+      }}>{value || 0}</span>
+      <button
+        type="button"
+        onClick={() => onChange((value || 0) + 1)}
+        style={btnStyle}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = C.primary + '99'; e.currentTarget.style.color = C.primary }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.color = C.text }}
+      >+</button>
+    </div>
+  )
+}
+
 // ── Add / Edit modal ──────────────────────────────────────────────────────────
 
 function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved, onDeleted }) {
@@ -272,6 +313,17 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
   const setCh = (k, v) => setForm(f => ({ ...f, chapters: { ...f.chapters, [k]: v === '' ? null : Number(v) } }))
   const coverSrc = coverOverride || form.coverImage
 
+  const handleStatusChange = (newStatus) => {
+    setForm(f => {
+      const next = { ...f, status: newStatus }
+      if (newStatus === 'Completed') {
+        if (f.chapters?.total) next.chapters = { ...f.chapters, current: f.chapters.total }
+        if (!f.rereadCount) next.rereadCount = 1
+      }
+      return next
+    })
+  }
+
   const addPlat    = () => {
     if (!platName.trim()) return
     set('platforms', [...(form.platforms || []), { name: platName.trim(), url: platUrl.trim() }])
@@ -307,6 +359,7 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
 
   const inputStyle = (field) => ({
     width: '100%', padding: '9px 12px',
+    minHeight: isCompact ? '42px' : 'auto',
     background: C.input,
     border: `1px solid ${focusedField === field ? C.primary + '99' : C.borderPrimary}`,
     color: C.text, fontSize: '13px', fontFamily: 'inherit',
@@ -419,7 +472,7 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
                 <label style={lbl}>ᛊ Status</label>
                 <select
                   value={form.status}
-                  onChange={e => set('status', e.target.value)}
+                  onChange={e => handleStatusChange(e.target.value)}
                   onFocus={() => setFocused('status')}
                   onBlur={() => setFocused('')}
                   style={{ ...inputStyle('status'), cursor: 'pointer' }}
@@ -433,14 +486,14 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
               </div>
 
               <div>
-                <label style={lbl}>ᚹ Chapters &amp; Reread</label>
+                <label style={lbl}>ᚹ Chapters</label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: isCompact ? 'wrap' : 'nowrap' }}>
                   <input type="number" min="0" placeholder="Current"
                     value={form.chapters?.current ?? ''}
                     onChange={e => setCh('current', e.target.value)}
                     onFocus={() => setFocused('chCurrent')}
                     onBlur={() => setFocused('')}
-                    style={{ ...inputStyle('chCurrent'), width: '72px', flexShrink: 0 }}
+                    style={{ ...inputStyle('chCurrent'), width: '90px', flexShrink: 0 }}
                   />
                   <span style={{ color: C.textDim, fontSize: '14px', flexShrink: 0 }}>/</span>
                   <input type="number" min="0" placeholder="Total"
@@ -448,17 +501,18 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
                     onChange={e => setCh('total', e.target.value)}
                     onFocus={() => setFocused('chTotal')}
                     onBlur={() => setFocused('')}
-                    style={{ ...inputStyle('chTotal'), width: '72px', flexShrink: 0 }}
-                  />
-                  <span style={{ color: C.textDim, fontSize: '11px', letterSpacing: '0.15em', fontFamily: '"Cinzel", serif', flexShrink: 0, marginLeft: '6px' }}>ᚲ</span>
-                  <input type="number" min="0" placeholder="Reread"
-                    value={form.rereadCount || ''}
-                    onChange={e => set('rereadCount', e.target.value === '' ? 0 : Number(e.target.value))}
-                    onFocus={() => setFocused('reread')}
-                    onBlur={() => setFocused('')}
-                    style={{ ...inputStyle('reread'), width: '80px', flexShrink: 0 }}
+                    style={{ ...inputStyle('chTotal'), width: '90px', flexShrink: 0 }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={lbl}>ᚲ No. of Times Read</label>
+                <Stepper
+                  value={form.rereadCount}
+                  onChange={v => set('rereadCount', v)}
+                  isCompact={isCompact}
+                />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : '1fr 1fr', gap: '12px' }}>
@@ -515,7 +569,7 @@ function AddToListModal({ mangaData, existingEntry, isCompact, onClose, onSaved,
                       fontFamily: '"Cinzel", serif', fontSize: '11px', color: C.primary,
                       background: C.primarySoft, border: `1px solid ${C.primary}44`,
                       padding: '0 12px', cursor: 'pointer', whiteSpace: 'nowrap',
-                      minHeight: isCompact ? '38px' : 'auto',
+                      minHeight: isCompact ? '42px' : 'auto',
                     }}>+ Add</button>
                   </div>
                 </div>
@@ -698,7 +752,7 @@ function RelationCard({ edge }) {
 
 // ── Main InfoPage ─────────────────────────────────────────────────────────────
 
-export default function InfoPage({ anilistId, onBack }) {
+export default function InfoPage({ anilistId }) {
   const navigate = useNavigate()
   const { user }  = useAuth()
   const [data, setData]             = useState(null)
@@ -797,18 +851,6 @@ export default function InfoPage({ anilistId, onBack }) {
         @keyframes shimmer { 0%   { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       `}</style>
 
-      {/* Back */}
-      <div style={{ marginBottom: '36px' }}>
-        <button onClick={onBack} style={{
-          fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.25em',
-          color: C.textDim, background: 'transparent', border: 'none',
-          cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '8px', transition: 'color 0.2s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.color = C.primary}
-          onMouseLeave={e => e.currentTarget.style.color = C.textDim}
-        >← Back to Search</button>
-      </div>
-
       {/* Hero */}
       <div style={{ position: 'relative', marginBottom: isCompact ? '40px' : '60px' }}>
         {data.bannerImage && (
@@ -827,7 +869,7 @@ export default function InfoPage({ anilistId, onBack }) {
           alignItems: isCompact ? 'center' : 'flex-start',
           flexDirection: isCompact ? 'column' : 'row',
           flexWrap: 'wrap',
-          padding: data.bannerImage ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
+          padding: data.bannerImage ? (isCompact ? '20px 0 32px' : '36px 0 52px') : (isCompact ? '20px 0 0' : '0'),
         }}>
           {/* Poster + button */}
           <div style={{
@@ -858,7 +900,7 @@ export default function InfoPage({ anilistId, onBack }) {
                   color: existing ? (statusCfg?.color || C.green) : C.gold,
                   background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(252,211,77,0.12)',
                   border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`,
-                  padding: '12px', cursor: 'pointer', transition: 'all 0.25s',
+                  padding: '12px', minHeight: isCompact ? '44px' : 'auto', cursor: 'pointer', transition: 'all 0.25s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   gap: '8px', textTransform: 'uppercase',
                 }}
@@ -879,7 +921,7 @@ export default function InfoPage({ anilistId, onBack }) {
           }}>
 
             {/* Badges */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: isCompact ? 'center' : 'flex-start' }}>
               <span style={{
                 fontSize: '10px', letterSpacing: '0.18em', color: tColor,
                 padding: '5px 13px', border: `1px solid ${tColor}55`,
@@ -905,7 +947,7 @@ export default function InfoPage({ anilistId, onBack }) {
             </div>
 
             {/* Title */}
-            <div>
+            <div style={{ textAlign: isCompact ? 'center' : 'left' }}>
               <h2 style={{
                 fontFamily: '"Cinzel", serif',
                 fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700,
@@ -928,7 +970,7 @@ export default function InfoPage({ anilistId, onBack }) {
             </div>
 
             {/* Ratings row */}
-            <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: isCompact ? 'center' : 'flex-start' }}>
               {aniScore && parseFloat(aniScore) > 0 && (
                 <div>
                   <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ AniList</div>
@@ -960,7 +1002,7 @@ export default function InfoPage({ anilistId, onBack }) {
             </div>
 
             {/* Chapters / volumes / progress */}
-            <div style={{ display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: isCompact ? '18px' : '28px', flexWrap: 'wrap', justifyContent: isCompact ? 'center' : 'flex-start' }}>
               {[
                 data.chapters > 0 && { label: 'Chapters', value: data.chapters, rune: 'ᚹ' },
                 data.volumes  > 0 && { label: 'Volumes',  value: data.volumes,  rune: 'ᚢ' },
@@ -983,7 +1025,7 @@ export default function InfoPage({ anilistId, onBack }) {
 
             {/* Genres */}
             {data.genres?.length > 0 && (
-              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', justifyContent: isCompact ? 'center' : 'flex-start' }}>
                 {data.genres.map((g, i) => (
                   <span key={i} style={{
                     fontSize: '10px', letterSpacing: '0.12em', color: C.textMuted,
@@ -996,7 +1038,7 @@ export default function InfoPage({ anilistId, onBack }) {
 
             {/* Staff inline */}
             {staffEdges.length > 0 && (
-              <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: isCompact ? 'center' : 'flex-start' }}>
                 <span style={{ color: C.primary + '77', fontFamily: '"Cinzel", serif', fontSize: '14px' }}>ᚾ</span>
                 <span style={{ color: C.textMuted }}>{staffEdges.map(e => `${e.node.name.full} (${e.role})`).join(' · ')}</span>
               </div>
@@ -1059,7 +1101,7 @@ export default function InfoPage({ anilistId, onBack }) {
             const myRows = [
               existing.dateStarted   && { label: 'My Start Date', value: formatDate(existing.dateStarted),   rune: 'ᛞ' },
               existing.dateCompleted && { label: 'My End Date',   value: formatDate(existing.dateCompleted), rune: 'ᛞ' },
-              existing.rereadCount > 0 && { label: 'Reread',     value: `${existing.rereadCount}×`,         rune: 'ᚲ' },
+              existing.rereadCount > 0 && { label: 'Times Read', value: `${existing.rereadCount}×`,         rune: 'ᚲ' },
               existing.platforms?.length > 0 && { label: 'Reading On', value: existing.platforms.map(p => p.name).join(', '), rune: 'ᛚ' },
             ].filter(Boolean)
             if (!myRows.length) return null
@@ -1141,6 +1183,7 @@ export default function InfoPage({ anilistId, onBack }) {
               marginTop: '22px', fontFamily: '"Cinzel", serif', fontSize: '11px',
               letterSpacing: '0.2em', color: C.primary, background: C.primarySoft,
               border: `1px solid ${C.primary}44`, padding: '10px 24px',
+              minHeight: isCompact ? '44px' : 'auto',
               cursor: 'pointer', transition: 'all 0.2s',
             }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,0.2)'}
