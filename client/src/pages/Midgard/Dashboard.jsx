@@ -999,6 +999,10 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
   const [showActions, setShowActions] = useState(false)
   const isEmpty = !entry.tmdbId
 
+  const wrapperRef     = useRef(null)
+  const longPressTimer = useRef(null)
+  const longPressFired = useRef(false)
+
   const rankColor =
     index === 0 ? '#FFD700' :
     index === 1 ? '#E8C04A' :
@@ -1006,22 +1010,61 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
     index <= 5  ? C.electric :
     C.violet
 
-  // Same footprint as every other poster card on the dashboard (TrendingCard,
-  // WatchingCard) so the Top 10 rail doesn't look like a mismatched shelf.
   const posterW = isCompact ? CARD_W.compact : CARD_W.full
   const posterH = isCompact ? CARD_H.compact : CARD_H.full
-  const rankFontSize = isCompact ? '80px' : '150px'
-  const rankStroke    = isCompact ? '2.5px' : '4px'
+  const rankFontSize = isCompact ? '150px' : '280px'
+  const rankStroke    = isCompact ? '3.5px' : '5px'
+  const actionsGap    = isCompact ? '34px' : '38px'
+
+  // Long press (mobile) — reveals the action buttons without triggering navigation.
+  const startLongPress = () => {
+    if (isEmpty) return
+    longPressFired.current = false
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true
+      setShowActions(true)
+    }, 450)
+  }
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+  const handlePosterClick = () => {
+    if (longPressFired.current) { longPressFired.current = false; return }
+    if (isEmpty) onEdit()
+    else if (entry.tmdbId) onNavigate('Info', entry.tmdbId)
+  }
+
+  // Tap outside closes the buttons once they're shown via long-press.
+  useEffect(() => {
+    if (!showActions) return
+    const handleOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowActions(false)
+      }
+    }
+    document.addEventListener('touchstart', handleOutside)
+    return () => document.removeEventListener('touchstart', handleOutside)
+  }, [showActions])
 
   return (
     <div
-      style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'flex-end' }}
+      ref={wrapperRef}
+      style={{
+        position:      'relative',
+        flexShrink:    0,
+        display:       'flex',
+        alignItems:    'flex-end',
+        paddingBottom: actionsGap, // buffer so the cursor never leaves the hoverable box before reaching the buttons
+      }}
       onMouseEnter={() => { setHovered(true); setShowActions(true) }}
       onMouseLeave={() => { setHovered(false); setShowActions(false) }}
+      onTouchStart={startLongPress}
+      onTouchEnd={cancelLongPress}
+      onTouchMove={cancelLongPress}
     >
-      {/* Rank number — locked to exactly the poster's height via a fixed-height,
-          overflow-hidden wrapper, so it can never render taller than the slot
-          (that overshoot used to make the row look misaligned / scrollable). */}
       <div style={{
         height:        `${posterH}px`,
         display:       'flex',
@@ -1046,13 +1089,8 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
         }}>{index + 1}</div>
       </div>
 
-      {/* Poster — no country tag, poster alone is enough now that Top 10 is
-          already region-scoped by the tab the user picked. */}
       <div
-        onClick={() => {
-          if (isEmpty)           onEdit()
-          else if (entry.tmdbId) onNavigate('Info', entry.tmdbId)
-        }}
+        onClick={handlePosterClick}
         style={{
           width:        `${posterW}px`,
           height:       `${posterH}px`,
@@ -1126,11 +1164,13 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
         {hovered && <Corners color={C.gold} size={9} opacity={0.6} />}
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons — now sit inside the padded hoverable area (bottom: 0
+          of the padding buffer), so the mouse never exits the wrapper on the
+          way down to them. On mobile they're revealed by long-press. */}
       {showActions && !isEmpty && (
         <div style={{
           position:  'absolute',
-          bottom:    '-34px',
+          bottom:    '0px',
           left:      '50%',
           transform: 'translateX(-50%)',
           display:   'flex',
@@ -1139,7 +1179,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
           whiteSpace:'nowrap',
         }}>
           <button
-            onClick={e => { e.stopPropagation(); onEdit() }}
+            onClick={e => { e.stopPropagation(); onEdit(); setShowActions(false) }}
             style={{
               fontFamily:    '"Cinzel", serif',
               fontSize:      '9px',
@@ -1147,12 +1187,12 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
               color:         C.electric,
               background:    'rgba(11,7,16,0.95)',
               border:        `1px solid ${C.electric}44`,
-              padding:       '4px 10px',
+              padding:       '6px 12px',
               cursor:        'pointer',
             }}
           >Edit</button>
           <button
-            onClick={e => { e.stopPropagation(); onClear() }}
+            onClick={e => { e.stopPropagation(); onClear(); setShowActions(false) }}
             style={{
               fontFamily:    '"Cinzel", serif',
               fontSize:      '9px',
@@ -1160,7 +1200,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
               color:         C.red,
               background:    'rgba(11,7,16,0.95)',
               border:        `1px solid ${C.red}44`,
-              padding:       '4px 10px',
+              padding:       '6px 12px',
               cursor:        'pointer',
             }}
           >Clear</button>
