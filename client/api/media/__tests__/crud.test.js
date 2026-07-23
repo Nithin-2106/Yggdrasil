@@ -67,7 +67,7 @@ const authHeader = (token) => ({ authorization: `Bearer ${token}` })
 
 const sampleAnime = {
   title: 'Test Anime',
-  malId: 12345,
+  anilistId: 12345,
   status: 'Watching',
   format: 'Series',
 }
@@ -75,7 +75,7 @@ const sampleAnime = {
 describe('createListHandler — GET /api/media/anime', () => {
   it('only returns the requesting user\'s entries', async () => {
     await Anime.create({ ...sampleAnime, title: 'A1', userId: userA })
-    await Anime.create({ ...sampleAnime, title: 'B1', userId: userB, malId: 999 })
+    await Anime.create({ ...sampleAnime, title: 'B1', userId: userB, anilistId: 999 })
 
     const { req, res } = mockReqRes({
       method: 'GET',

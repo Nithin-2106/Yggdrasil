@@ -9,7 +9,7 @@ const baseSlotFields = {
 
 export const animeSlotSchema = z.object({
   ...baseSlotFields,
-  malId: z.number().int().nullable().optional(),
+  anilistId: z.number().int().nullable().optional(),
   format: z.string().trim().optional().default(''),
 })
 

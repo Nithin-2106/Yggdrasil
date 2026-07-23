@@ -2,7 +2,7 @@ import mongoose, { Document, Model, Types } from 'mongoose'
 
 export interface IAnimeTop10Entry {
   position: number
-  malId: number | null
+  anilistId: number | null
   title: string
   coverImage: string
   year: number | null
@@ -16,7 +16,7 @@ export interface IAnimeTop10 extends Document {
 
 const animeTop10EntrySchema = new mongoose.Schema<IAnimeTop10Entry>({
   position:   { type: Number, required: true },
-  malId:      { type: Number, default: null },
+  anilistId:      { type: Number, default: null },
   title:      { type: String, default: '' },
   coverImage: { type: String, default: '' },
   year:       { type: Number, default: null },

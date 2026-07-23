@@ -21,7 +21,7 @@ function resolveType(realm: string): MediaType {
 }
 
 const IDENTIFIER_FIELD: Record<MediaType, string> = {
-  anime: 'malId',
+  anime: 'anilistId',
   manga: 'anilistId',
   drama: 'tmdbId',
 }
@@ -81,7 +81,7 @@ export const TOOL_SCHEMAS = [
           type: 'object',
           description:
             'Entry fields. Must include title and the realm id from a prior search_media call ' +
-            '(malId / anilistId / tmdbId). status defaults to a "plan to" state if omitted. ' +
+            '(anilistId / anilistId / tmdbId). status defaults to a "plan to" state if omitted. ' +
             'Other optional fields: rating, episodes/chapters {current,total}, year, genres, review, ' +
             'dateStarted, dateCompleted, coverImage, format/type.',
         },
@@ -161,29 +161,43 @@ export const TOOL_SCHEMAS = [
 // ─────────────────────────────────────────────────────────────────────────
 // External search helpers (server-side — no proxy needed except TMDB's key)
 // ─────────────────────────────────────────────────────────────────────────
-async function searchJikan(query: string) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 1500 * attempt))
-    try {
-      const res = await axios.get('https://api.jikan.moe/v4/anime', {
-        params: { q: query, limit: 10, sfw: false },
-        timeout: 10000,
-      })
-      return (res.data?.data || []).map((item: any) => ({
-        malId:      item.mal_id,
-        title:      item.title_english || item.title,
-        coverImage: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
-        year:       item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : null),
-        format:     item.type === 'Movie' ? 'Movie' : item.type === 'OVA' ? 'OVA'
-                    : (item.type === 'Special' || item.type === 'ONA') ? 'Special' : 'Series',
-        episodes:   item.episodes ?? null,
-      }))
-    } catch (err: any) {
-      const status = err?.response?.status
-      if (attempt === 2 || (status && status !== 429 && status !== 504)) throw err
+async function searchAniListAnime(query: string) {
+  const gql = `
+    query ($search: String) {
+      Page(page: 1, perPage: 10) {
+        media(
+          search: $search
+          type: ANIME
+          format_not_in: [MUSIC]
+          sort: [SEARCH_MATCH, POPULARITY_DESC]
+          isAdult: false
+        ) {
+          id
+          title { english romaji }
+          coverImage { extraLarge large }
+          format
+          episodes
+          startDate { year }
+        }
+      }
     }
-  }
-  return []
+  `
+  const res = await axios.post(
+    'https://graphql.anilist.co',
+    { query: gql, variables: { search: query } },
+    { timeout: 10000 }
+  )
+  const media = res.data?.data?.Page?.media || []
+  return media.map((item: any) => ({
+    anilistId:  item.id,
+    title:      item.title?.english || item.title?.romaji || '',
+    coverImage: item.coverImage?.extraLarge || item.coverImage?.large || '',
+    year:       item.startDate?.year || null,
+    format:     item.format === 'MOVIE' ? 'Movie'
+                : item.format === 'OVA' ? 'OVA'
+                : (item.format === 'SPECIAL' || item.format === 'ONA') ? 'Special' : 'Series',
+    episodes:   item.episodes ?? null,
+  }))
 }
 
 async function searchAniList(query: string) {
@@ -276,7 +290,7 @@ async function toolSearchMedia(input: any) {
   const query = String(input.query || '').trim()
   if (!query) throw new Error('query is required')
 
-  if (type === 'anime') return { results: await searchJikan(query) }
+  if (type === 'anime') return { results: await searchAniListAnime(query) }
   if (type === 'manga') return { results: await searchAniList(query) }
   return { results: await searchTMDB(query) }
 }
@@ -356,7 +370,7 @@ async function toolGetTop10(input: any, user: IUser) {
 
   if (type === 'anime') {
     let doc = await AnimeTop10.findOne({ userId: user._id })
-    if (!doc) doc = await AnimeTop10.create({ userId: user._id, entries: emptyTop10Slots('malId', { format: '' }) })
+    if (!doc) doc = await AnimeTop10.create({ userId: user._id, entries: emptyTop10Slots('anilistId', { format: '' }) })
     return { entries: doc.entries }
   }
   if (type === 'manga') {
@@ -380,9 +394,9 @@ async function toolSetTop10Slot(input: any, user: IUser) {
 
   if (type === 'anime') {
     let doc = await AnimeTop10.findOne({ userId: user._id })
-    if (!doc) doc = await AnimeTop10.create({ userId: user._id, entries: emptyTop10Slots('malId', { format: '' }) })
+    if (!doc) doc = await AnimeTop10.create({ userId: user._id, entries: emptyTop10Slots('anilistId', { format: '' }) })
     const idx = doc.entries.findIndex((e: any) => e.position === pos)
-    doc.entries[idx] = { position: pos, malId: data.malId ?? null, title: data.title || '', coverImage: data.coverImage || '', year: data.year ?? null, format: data.format || '' }
+    doc.entries[idx] = { position: pos, anilistId: data.anilistId ?? null, title: data.title || '', coverImage: data.coverImage || '', year: data.year ?? null, format: data.format || '' }
     doc.markModified('entries'); await doc.save()
     return { entries: doc.entries }
   }

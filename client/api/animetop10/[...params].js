@@ -7,7 +7,7 @@ import { withSentry } from '../_lib/sentry.js'
 
 const emptySlots = () =>
   Array.from({ length: 10 }, (_, i) => ({
-    position: i + 1, malId: null, title: '', coverImage: '', year: null, format: ''
+    position: i + 1, anilistId: null, title: '', coverImage: '', year: null, format: ''
   }))
 
 async function handler(req, res) {
@@ -68,7 +68,7 @@ const position = isList ? null : (first ? parseInt(first) : null);
     if (!doc) return res.status(404).json({ message: 'List not found' })
     const idx = doc.entries.findIndex(e => e.position === validPosition)
     if (idx !== -1) {
-      doc.entries[idx] = { position: validPosition, malId: null, title: '', coverImage: '', year: null, format: '' }
+      doc.entries[idx] = { position: validPosition, anilistId: null, title: '', coverImage: '', year: null, format: '' }
       doc.markModified('entries')
       await doc.save()
     }

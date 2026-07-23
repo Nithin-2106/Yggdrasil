@@ -26,7 +26,7 @@ const baseFields = {
 
 export const animeCreateSchema = z.object({
   ...baseFields,
-  malId: z.number().int().nullable().optional(),
+  anilistId: z.number().int().nullable().optional(),
   status: z.enum(['Watching', 'Completed', 'Dropped', 'Plan to Watch', 'On Hold']),
   format: z.enum(['Series', 'Movie', 'Special', 'OVA']),
   episodes: progressSchema.optional().default({}),

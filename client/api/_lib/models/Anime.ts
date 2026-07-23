@@ -10,7 +10,7 @@ export type AnimeFormat = 'Series' | 'Movie' | 'Special' | 'OVA'
 
 export interface IAnime extends Document {
   title: string
-  malId: number | null
+  anilistId: number | null
   coverImage: string
   status: AnimeStatus
   format: AnimeFormat
@@ -34,7 +34,7 @@ const platformSchema = new mongoose.Schema<IPlatform>({
 
 const animeSchema = new mongoose.Schema<IAnime>({
   title:        { type: String, required: true },
-  malId:        { type: Number, default: null },
+  anilistId:        { type: Number, default: null },
   coverImage:   { type: String, default: '' },
   status:       { type: String, enum: ['Watching', 'Completed', 'Dropped', 'Plan to Watch', 'On Hold'], required: true },
   format:       { type: String, enum: ['Series', 'Movie', 'Special', 'OVA'], required: true },

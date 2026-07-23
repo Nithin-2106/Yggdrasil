@@ -62,7 +62,7 @@ beforeEach(async () => {
 const authHeader = (token) => ({ authorization: `Bearer ${token}` })
 
 const sampleSlotBody = {
-  malId: 5114,
+  anilistId: 5114,
   title: 'Fullmetal Alchemist: Brotherhood',
   coverImage: 'https://example.com/fmab.jpg',
   year: 2009,
@@ -81,7 +81,7 @@ describe('GET /api/animetop10/list', () => {
 
     expect(res.statusCode).toBe(200)
     expect(res._json.entries).toHaveLength(10)
-    expect(res._json.entries.every((e) => e.malId === null)).toBe(true)
+    expect(res._json.entries.every((e) => e.anilistId === null)).toBe(true)
   })
 
   it('returns 401 without a token', async () => {
@@ -108,7 +108,7 @@ describe('GET /api/animetop10/list', () => {
     })
     await handler(reqB, resB)
 
-    expect(resB._json.entries[0].malId).toBeNull()
+    expect(resB._json.entries[0].anilistId).toBeNull()
   })
 })
 
@@ -134,7 +134,7 @@ describe('PUT /api/animetop10/:position', () => {
 
     expect(res.statusCode).toBe(200)
     const slot3 = res._json.entries.find((e) => e.position === 3)
-    expect(slot3.malId).toBe(5114)
+    expect(slot3.anilistId).toBe(5114)
     expect(slot3.title).toBe(sampleSlotBody.title)
   })
 
@@ -145,7 +145,7 @@ describe('PUT /api/animetop10/:position', () => {
     await handler(req, res)
 
     const other = res._json.entries.find((e) => e.position === 4)
-    expect(other.malId).toBeNull()
+    expect(other.anilistId).toBeNull()
   })
 
   it('returns 401 without a token', async () => {
@@ -168,7 +168,7 @@ describe('PUT /api/animetop10/:position', () => {
       method: 'PUT',
       query: { params: ['1'] },
       headers: authHeader(tokenB),
-      body: { ...sampleSlotBody, malId: 999, title: 'Different Anime' },
+      body: { ...sampleSlotBody, anilistId: 999, title: 'Different Anime' },
     })
     await handler(reqB, resB)
 
@@ -178,7 +178,7 @@ describe('PUT /api/animetop10/:position', () => {
     })
     await handler(checkReq, checkRes)
 
-    expect(checkRes._json.entries[0].malId).toBe(5114)
+    expect(checkRes._json.entries[0].anilistId).toBe(5114)
   })
 })
 
@@ -196,7 +196,7 @@ describe('DELETE /api/animetop10/:position', () => {
 
     expect(res.statusCode).toBe(200)
     const slot5 = res._json.entries.find((e) => e.position === 5)
-    expect(slot5.malId).toBeNull()
+    expect(slot5.anilistId).toBeNull()
     expect(slot5.title).toBe('')
   })
 
