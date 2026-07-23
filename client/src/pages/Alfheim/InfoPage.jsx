@@ -1,12 +1,20 @@
-// client/src/pages/Alfheim/InfoPage.jsx
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useIsCompact } from '../../hooks/useMediaQuery'
+import {
+  fetchAnimeDetail,
+  detectAnimeFormat,
+  getTitle,
+  getYear,
+  getCover,
+  formatScore,
+  formatStatus,
+  formatSource,
+} from '../../utils/anilistAnimeSearch'
 
-const JIKAN = 'https://api.jikan.moe/v4'
-const API   = '/api/media/anime'
+const API = '/api/media/anime'
 
 const C = {
   bg:           '#050C10',
@@ -20,52 +28,25 @@ const C = {
   green:        '#34D399',
   greenSoft:    'rgba(52,211,153,0.12)',
   gold:         '#A3E635',
-  goldSoft:     'rgba(163,230,53,0.15)',
   red:          '#F87171',
   redSoft:      'rgba(248,113,113,0.12)',
+  silver:       '#94A3B8',
   text:         '#E0F7F4',
   textMuted:    '#7ABFB8',
   textDim:      '#2E5A56',
   borderPrimary:'rgba(94,234,212,0.2)',
-  borderAurora: 'rgba(192,132,252,0.18)',
 }
 
+const FORMAT_COLOR = { Movie: '#A3E635', OVA: '#C084FC', Special: '#34D399', Series: '#5EEAD4' }
 const STATUS_CONFIG = {
-  'Watching':      { color: C.primary, icon: '▶', rune: 'ᚹ' },
-  'Completed':     { color: C.green,   icon: '✓', rune: 'ᚲ' },
-  'Dropped':       { color: C.red,     icon: '✕', rune: 'ᛞ' },
-  'Plan to Watch': { color: C.aurora,  icon: '◷', rune: 'ᛈ' },
-  'On Hold':       { color: C.gold,    icon: '⏸', rune: 'ᛟ' },
+  'Watching':      { color: '#5EEAD4', icon: '▶', rune: 'ᚹ' },
+  'Completed':     { color: '#34D399', icon: '✓', rune: 'ᚲ' },
+  'Dropped':       { color: '#F87171', icon: '✕', rune: 'ᛞ' },
+  'Plan to Watch': { color: '#C084FC', icon: '◷', rune: 'ᛈ' },
+  'On Hold':       { color: '#A3E635', icon: '⏸', rune: 'ᛟ' },
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function detectFormat(data) {
-  const t = (data?.type || '').toLowerCase()
-  if (t === 'movie')                  return 'Movie'
-  if (t === 'ova')                    return 'OVA'
-  if (t === 'special' || t === 'ona') return 'Special'
-  return 'Series'
-}
-
-function formatColor(format) {
-  if (format === 'Movie')   return C.gold
-  if (format === 'OVA')     return C.aurora
-  if (format === 'Special') return C.green
-  return C.primary
-}
-
-function getYear(data) {
-  if (data?.year) return data.year
-  if (data?.aired?.from) return new Date(data.aired.from).getFullYear()
-  return null
-}
-
-function parseRuntime(str) {
-  if (!str) return null
-  const perEp = str.match(/^(\d+)\s*min/)
-  if (perEp) return `${perEp[1]}m/ep`
-  return str
-}
+function formatColor(format) { return FORMAT_COLOR[format] || C.primary }
 
 function myRatingColor(r) {
   if (!r) return C.textDim
@@ -75,9 +56,26 @@ function myRatingColor(r) {
   return C.red
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+function formatDate(iso) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function anilistDateToString(dateObj) {
+  if (!dateObj?.year) return null
+  const { year, month, day } = dateObj
+  if (!month) return String(year)
+  return new Date(year, month - 1, day || 1)
+    .toLocaleDateString('en-GB', { day: day ? '2-digit' : undefined, month: 'short', year: 'numeric' })
+}
+
+function formatRuntime(duration, format) {
+  if (!duration) return null
+  return format === 'Movie' ? `${duration}m` : `${duration}m/ep`
+}
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
+
 function Corners({ color = C.primary, size = 12, opacity = 0.5 }) {
   const b = `1px solid ${color}`
   const s = { position: 'absolute', width: size, height: size, opacity, pointerEvents: 'none' }
@@ -104,7 +102,6 @@ function SectionDivider({ title, rune, right }) {
   )
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonBlock({ w = '100%', h = '16px', style = {} }) {
   return (
     <div style={{
@@ -214,9 +211,11 @@ function RatingSlider({ value, onChange, isCompact }) {
 }
 
 // ── Rewatch stepper ────────────────────────────────────────────────────────────
-function StepperControl({ value, onChange }) {
+function Stepper({ value, onChange, isCompact, min = 0 }) {
   const btnStyle = {
-    width: '34px', height: '34px', flexShrink: 0,
+    width: isCompact ? '38px' : '34px',
+    height: isCompact ? '38px' : '34px',
+    flexShrink: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     background: C.input, border: `1px solid ${C.borderPrimary}`,
     color: C.primary, fontSize: '17px', fontFamily: '"Cinzel", serif',
@@ -226,7 +225,7 @@ function StepperControl({ value, onChange }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <button
         type="button"
-        onClick={() => onChange(Math.max(0, (value || 0) - 1))}
+        onClick={() => onChange(Math.max(min, (value || 0) - 1))}
         style={btnStyle}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.primary; e.currentTarget.style.background = C.primarySoft }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.borderPrimary; e.currentTarget.style.background = C.input }}
@@ -247,20 +246,21 @@ function StepperControl({ value, onChange }) {
 
 // ── Add/Edit modal ────────────────────────────────────────────────────────────
 function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted, isCompact }) {
-  const format = detectFormat(animeData)
+  const format = detectAnimeFormat(animeData)
   const year   = getYear(animeData)
-  const cover  = animeData.images?.jpg?.large_image_url || animeData.images?.jpg?.image_url || ''
+  const cover  = getCover(animeData)
+  const title  = getTitle(animeData)
 
   const buildDefault = () => ({
-    malId:        animeData.mal_id,
-    title:        animeData.title_english || animeData.title || '',
+    anilistId:    animeData.id,
+    title,
     coverImage:   cover,
     status:       'Plan to Watch',
     format,
     rating:       null,
     episodes:     { current: 0, total: animeData.episodes || null },
     year,
-    genres:       (animeData.genres || []).map((g) => g.name),
+    genres:       animeData.genres || [],
     review:       '',
     rewatchCount: 0,
     dateStarted:  null,
@@ -393,7 +393,7 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted,
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px', width: isCompact ? '100%' : 'auto', alignItems: isCompact ? 'center' : 'flex-start' }}>
               <div style={{ maxWidth: '160px', textAlign: isCompact ? 'center' : 'left' }}>
                 <div style={{ fontFamily: '"Cinzel", serif', fontSize: '13px', fontWeight: 700, color: C.text, letterSpacing: '0.05em', lineHeight: 1.4 }}>
-                  {animeData.title_english || animeData.title}
+                  {title}
                 </div>
                 {year && <div style={{ fontSize: '11px', color: C.primary, fontFamily: '"Cinzel", serif', marginTop: '4px', letterSpacing: '0.1em' }}>{year}</div>}
               </div>
@@ -442,7 +442,7 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted,
 
               <div>
                 <label style={lbl}>ᚲ No. of Times Rewatched</label>
-                <StepperControl value={form.rewatchCount} onChange={(v) => set('rewatchCount', v)} />
+                <Stepper value={form.rewatchCount} onChange={(v) => set('rewatchCount', v)} isCompact={isCompact} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isCompact ? '1fr' : '1fr 1fr', gap: '12px' }}>
@@ -534,11 +534,11 @@ function AddToListModal({ animeData, existingEntry, onClose, onSaved, onDeleted,
   )
 }
 
-// ── Character card ────────────────────────────────────────────────────────────
-function CharacterCard({ entry }) {
+// ── Character card (with JP voice actor from AniList) ─────────────────────────
+function CharacterCard({ edge }) {
   const [hov, setHov] = useState(false)
-  const char = entry.character
-  const va   = (entry.voice_actors || []).find((v) => v.language === 'Japanese')?.person || null
+  const char = edge.node
+  const va   = (edge.voiceActors || [])[0] || null
 
   return (
     <div
@@ -547,121 +547,106 @@ function CharacterCard({ entry }) {
       style={{ width: '100px', flexShrink: 0, transform: hov ? 'translateY(-4px)' : 'none', transition: 'transform 0.2s' }}
     >
       <div style={{ width: '100px', height: '134px', background: C.surface, border: `1px solid ${hov ? C.primary + '66' : C.borderPrimary}`, overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s' }}>
-        {char?.images?.jpg?.image_url
-          ? <img src={char.images.jpg.image_url} alt={char.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {char?.image?.large
+          ? <img src={char.image.large} alt={char.name?.full} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>✦</div>
         }
+        {edge.role === 'MAIN' && (
+          <div style={{ position: 'absolute', bottom: '6px', left: '6px', padding: '2px 6px', background: 'rgba(5,12,16,0.9)', border: `1px solid ${C.primary}66`, fontSize: '8px', color: C.primary, fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>MAIN</div>
+        )}
         {hov && <Corners color={C.primary} size={8} opacity={0.5} />}
       </div>
       <div style={{ marginTop: '7px', fontSize: '11px', fontWeight: 600, color: hov ? C.text : C.textMuted, transition: 'color 0.2s', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-        {char?.name}
+        {char?.name?.full}
       </div>
       {va && (
         <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontStyle: 'italic' }}>
-          {va.name}
+          {va.name?.full}
         </div>
       )}
     </div>
   )
 }
 
-// ── Image grid with lightbox ──────────────────────────────────────────────────
-function ImageGrid({ images, isCompact }) {
-  const [lightbox, setLightbox] = useState(null)
-  const [showAll, setShowAll]   = useState(false)
-  const [hov, setHov]           = useState(null)
-  const list    = images || []
-  const visible = showAll ? list : list.slice(0, 6)
-  const minCol  = isCompact ? 90 : 110
+// ── Staff card ────────────────────────────────────────────────────────────────
+function StaffCard({ edge }) {
+  const [hov, setHov] = useState(false)
+  const person = edge.node
+  return (
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ width: '100px', flexShrink: 0, transform: hov ? 'translateY(-4px)' : 'none', transition: 'transform 0.2s' }}
+    >
+      <div style={{ width: '100px', height: '134px', background: C.surface, border: `1px solid ${hov ? C.gold + '66' : C.borderPrimary}`, overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s' }}>
+        {person?.image?.large
+          ? <img src={person.image.large} alt={person.name?.full} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '28px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>✦</div>
+        }
+        {hov && <Corners color={C.gold} size={8} opacity={0.5} />}
+      </div>
+      <div style={{ marginTop: '7px', fontSize: '11px', fontWeight: 600, color: hov ? C.text : C.textMuted, transition: 'color 0.2s', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        {person?.name?.full}
+      </div>
+      <div style={{ fontSize: '10px', color: C.primary, marginTop: '3px', letterSpacing: '0.05em', fontFamily: '"Cinzel", serif' }}>{edge.role}</div>
+    </div>
+  )
+}
+
+// ── Relation card ─────────────────────────────────────────────────────────────
+function RelationCard({ edge }) {
+  const [hov, setHov] = useState(false)
+  const rel      = edge.node
+  const relType  = edge.relationType
+  const cover    = rel.coverImage?.large
+  const relColor = {
+    PREQUEL: C.primary, SEQUEL: C.aurora, ADAPTATION: C.gold,
+    SIDE_STORY: C.silver, SPIN_OFF: C.silver, ALTERNATIVE: C.silver, SOURCE: C.green,
+  }[relType] || C.textDim
 
   return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${minCol}px, 1fr))`, gap: '8px' }}>
-        {visible.map((img, i) => {
-          const src = img.jpg?.large_image_url || img.jpg?.image_url || img.webp?.large_image_url || ''
-          return (
-            <div
-              key={i}
-              onClick={() => setLightbox(src)}
-              onMouseEnter={() => setHov(i)}
-              onMouseLeave={() => setHov(null)}
-              style={{
-                aspectRatio: '2/3', overflow: 'hidden', cursor: 'pointer',
-                border: `1px solid ${hov === i ? C.primary + '55' : C.borderPrimary}`,
-                transition: 'all 0.2s',
-                transform: hov === i ? 'scale(1.02)' : 'scale(1)',
-              }}
-            >
-              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            </div>
-          )
-        })}
-      </div>
-      {list.length > 6 && (
-        <button
-          onClick={() => setShowAll((s) => !s)}
-          style={{ marginTop: '14px', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: 'transparent', border: `1px solid ${C.primary}44`, padding: '8px 20px', cursor: 'pointer', transition: 'all 0.2s' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = C.primarySoft }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-        >{showAll ? '▲ Show Less' : `▼ Show All ${list.length}`}</button>
-      )}
-      {lightbox && (
-        <div
-          onClick={() => setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(4,8,16,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', padding: isCompact ? '16px' : 0 }}
-        >
-          <img src={lightbox} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', border: `1px solid ${C.borderPrimary}` }} />
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ width: '110px', flexShrink: 0, transform: hov ? 'translateY(-4px)' : 'none', transition: 'transform 0.2s' }}
+    >
+      <div style={{ width: '110px', height: '150px', background: C.surface, border: `1px solid ${hov ? relColor + '88' : C.borderPrimary}`, overflow: 'hidden', position: 'relative', transition: 'border-color 0.2s' }}>
+        {cover
+          ? <img src={cover} alt={rel.title?.english || rel.title?.romaji} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '24px', background: `linear-gradient(135deg, ${C.surface}, ${C.bg})` }}>✦</div>
+        }
+        <div style={{ position: 'absolute', top: '6px', left: '6px', padding: '2px 6px', background: 'rgba(5,12,16,0.92)', border: `1px solid ${relColor}66`, fontSize: '8px', color: relColor, fontFamily: '"Cinzel", serif', letterSpacing: '0.08em' }}>
+          {relType?.replace(/_/g, ' ')}
         </div>
-      )}
+        {hov && <Corners color={relColor} size={7} opacity={0.5} />}
+      </div>
+      <div style={{ marginTop: '7px', fontSize: '11px', fontWeight: 600, color: hov ? C.text : C.textMuted, transition: 'color 0.2s', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+        {rel.title?.english || rel.title?.romaji}
+      </div>
+      <div style={{ fontSize: '9px', color: C.textDim, marginTop: '3px', letterSpacing: '0.05em' }}>
+        {rel.format?.replace(/_/g, ' ')} · {rel.type}
+      </div>
     </div>
   )
 }
 
 // ── Trailer section ───────────────────────────────────────────────────────────
-function TrailerSection({ trailer, promos, isCompact }) {
-  const [active, setActive] = useState(null)
-
-  const videos = []
-  if (trailer?.youtube_id) {
-    videos.push({
-      key: trailer.youtube_id,
-      name: 'Official Trailer',
-      thumb: trailer.images?.maximum_image_url || `https://img.youtube.com/vi/${trailer.youtube_id}/mqdefault.jpg`,
-    })
+function TrailerSection({ trailer, isCompact }) {
+  const [active, setActive] = useState(false)
+  if (!trailer?.id || trailer.site !== 'youtube') {
+    return <div style={{ color: C.textDim, fontSize: '13px' }}>No trailer available</div>
   }
-  ;(promos || []).forEach((p) => {
-    if (p.trailer?.youtube_id && p.trailer.youtube_id !== trailer?.youtube_id) {
-      videos.push({
-        key: p.trailer.youtube_id,
-        name: p.title || 'Promo',
-        thumb: p.trailer.images?.maximum_image_url || `https://img.youtube.com/vi/${p.trailer.youtube_id}/mqdefault.jpg`,
-      })
-    }
-  })
-
-  if (!videos.length) return <div style={{ color: C.textDim, fontSize: '13px' }}>No trailers available</div>
+  const thumb = trailer.thumbnail || `https://img.youtube.com/vi/${trailer.id}/mqdefault.jpg`
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-        {videos.map((v) => (
-          <div key={v.key} onClick={() => setActive(active === v.key ? null : v.key)} style={{ flexShrink: 0, width: isCompact ? '150px' : '190px', cursor: 'pointer' }}>
-            <div style={{ position: 'relative', height: isCompact ? '84px' : '107px', border: `1px solid ${active === v.key ? C.primary + '88' : C.borderPrimary}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-              <img src={v.thumb} alt={v.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,12,16,0.45)' }}>
-                <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: active === v.key ? C.primary : 'rgba(94,234,212,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', transition: 'background 0.2s' }}>▶</div>
-              </div>
-            </div>
-            <div style={{ marginTop: '6px', fontSize: '11px', color: active === v.key ? C.primary : C.textMuted, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-              {v.name}
-            </div>
+      {!active ? (
+        <div onClick={() => setActive(true)} style={{ position: 'relative', width: isCompact ? '100%' : '340px', height: isCompact ? '180px' : '191px', cursor: 'pointer', border: `1px solid ${C.borderPrimary}`, overflow: 'hidden' }}>
+          <img src={thumb} alt="trailer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(5,12,16,0.45)' }}>
+            <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px' }}>▶</div>
           </div>
-        ))}
-      </div>
-      {active && (
-        <div style={{ marginTop: '14px', position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+        </div>
+      ) : (
+        <div style={{ position: 'relative', paddingBottom: isCompact ? '56.25%' : '191px', height: 0, maxWidth: isCompact ? '100%' : '340px' }}>
           <iframe
-            src={`https://www.youtube.com/embed/${active}?autoplay=1`}
+            src={`https://www.youtube.com/embed/${trailer.id}?autoplay=1`}
             style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: `1px solid ${C.borderPrimary}` }}
             allow="autoplay; encrypted-media" allowFullScreen title="trailer"
           />
@@ -672,27 +657,21 @@ function TrailerSection({ trailer, promos, isCompact }) {
 }
 
 // ── Main InfoPage ─────────────────────────────────────────────────────────────
-export default function InfoPage({ malId, onBack }) {
+export default function InfoPage({ anilistId, onBack }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const isCompact = useIsCompact()
-  const trailerSectionRef = useRef(null)
 
-  const [data,         setData]         = useState(null)
-  const [characters,   setChars]        = useState([])
-  const [pictures,     setPictures]     = useState([])
-  const [promos,       setPromos]       = useState([])
-  const [existing,     setExisting]     = useState(null)
-  const [loading,      setLoading]      = useState(true)
-  const [showModal,    setShowModal]    = useState(false)
-  const [showAllCast,  setShowAllCast]  = useState(false)
-  const [showTrailers, setShowTrailers] = useState(false)
+  const [data,        setData]        = useState(null)
+  const [existing,    setExisting]    = useState(null)
+  const [loading,     setLoading]     = useState(true)
+  const [showModal,   setShowModal]   = useState(false)
+  const [showAllCast, setShowAllCast] = useState(false)
 
-  // Fetch the user's saved entry for this anime
-  const fetchExisting = useCallback(async (animeData) => {
+  const fetchExisting = useCallback(async (animeId) => {
     try {
       const r = await axios.get(API)
-      const found = r.data.find((e) => e.malId === animeData.mal_id)
+      const found = r.data.find((e) => e.anilistId === animeId)
       setExisting(found || null)
     } catch {
       // silently fail — user may not be logged in
@@ -700,62 +679,27 @@ export default function InfoPage({ malId, onBack }) {
   }, [])
 
   useEffect(() => {
-    if (!malId) return
+    if (!anilistId) return
     window.scrollTo({ top: 0, behavior: 'instant' })
     setLoading(true)
     setShowModal(false)
     setShowAllCast(false)
-    setShowTrailers(false)
     setData(null)
-    setChars([])
-    setPictures([])
-    setPromos([])
     setExisting(null)
 
     const run = async () => {
       try {
-        const mainRes  = await fetch(`${JIKAN}/anime/${malId}/full`)
-        const mainJson = await mainRes.json()
-        const d = mainJson.data
-        if (!d) throw new Error('No data returned')
+        const d = await fetchAnimeDetail(anilistId)
         setData(d)
-        fetchExisting(d)
-
-        await sleep(400)
-        const charRes  = await fetch(`${JIKAN}/anime/${malId}/characters`)
-        const charJson = await charRes.json()
-        setChars(charJson.data || [])
-
-        await sleep(400)
-        const picRes  = await fetch(`${JIKAN}/anime/${malId}/pictures`)
-        const picJson = await picRes.json()
-        setPictures(picJson.data || [])
-
-        await sleep(400)
-        const promoRes  = await fetch(`${JIKAN}/anime/${malId}/videos/promo`)
-        const promoJson = await promoRes.json()
-        setPromos(promoJson.data || [])
+        if (d) await fetchExisting(d.id)
       } catch (err) {
         console.error('InfoPage fetch error:', err)
       } finally {
         setLoading(false)
       }
     }
-
     run()
-  }, [malId, fetchExisting])
-
-  const toggleTrailers = () => {
-    setShowTrailers((s) => {
-      const next = !s
-      if (next) {
-        setTimeout(() => {
-          trailerSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }, 60)
-      }
-      return next
-    })
-  }
+  }, [anilistId, fetchExisting])
 
   if (loading) return (
     <>
@@ -771,21 +715,42 @@ export default function InfoPage({ malId, onBack }) {
   )
 
   // ── Derived values ──────────────────────────────────────────────────────────
-  const format       = detectFormat(data)
+  const format       = detectAnimeFormat(data)
   const fColor       = formatColor(format)
   const year         = getYear(data)
-  const cover        = data.images?.jpg?.large_image_url || data.images?.jpg?.image_url || null
-  const backdrop      = data.trailer?.images?.maximum_image_url || null
-  const malScore      = data.score ? data.score.toFixed(2) : null
-  const runtime        = parseRuntime(data.duration)
-  const statusCfg      = existing ? (STATUS_CONFIG[existing.status] || {}) : null
-  const trailerCount   = (data.trailer?.youtube_id ? 1 : 0) + promos.filter((p) => p.trailer?.youtube_id).length
-  const openings       = (data.theme?.openings || []).slice(0, 3)
-  const endings        = (data.theme?.endings  || []).slice(0, 3)
-  const keywords       = [...(data.genres || []), ...(data.themes || []), ...(data.demographics || [])].slice(0, 20)
+  const cover        = getCover(data)
+  const title        = getTitle(data)
+  const altTitle     = data.title?.romaji !== title ? data.title?.romaji : null
+  const nativeTitle  = data.title?.native || null
+  const aniScore     = formatScore(data.averageScore)
+  const statusCfg    = existing ? (STATUS_CONFIG[existing.status] || {}) : null
+  const runtime      = formatRuntime(data.duration, format)
+  const keywords     = [...(data.genres || [])].slice(0, 20)
 
   const posterW = isCompact ? 190 : 230
   const posterH = isCompact ? 276 : 335
+
+  const mainStudios = (data.studios?.edges || []).filter((e) => e.isMain).map((e) => e.node.name)
+
+  const staffEdges = (data.staff?.edges || []).filter((e) =>
+    ['Director', 'Series Composition', 'Character Design', 'Music', 'Original Creator', 'Script', 'Episode Director', 'Sound Director'].includes(e.role)
+  ).slice(0, 8)
+
+  const charEdges = (data.characters?.edges || [])
+    .sort((a, b) => {
+      const order = { MAIN: 0, SUPPORTING: 1, BACKGROUND: 2 }
+      return (order[a.role] ?? 2) - (order[b.role] ?? 2)
+    })
+    .slice(0, 24)
+
+  const relationEdges = (data.relations?.edges || []).filter((e) => e.node?.type !== 'CHARACTER')
+
+  const tags = (data.tags || [])
+    .filter((t) => !t.isMediaSpoiler)
+    .sort((a, b) => (b.rank || 0) - (a.rank || 0))
+    .slice(0, 20)
+
+  const watchLinks = (data.externalLinks || []).filter((l) => l.type === 'STREAMING' || l.type === 'INFO')
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease' }}>
@@ -806,8 +771,8 @@ export default function InfoPage({ malId, onBack }) {
 
       {/* Hero */}
       <div style={{ position: 'relative', marginBottom: isCompact ? '40px' : '60px' }}>
-        {backdrop && (
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${backdrop})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
+        {data.bannerImage && (
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${data.bannerImage})`, backgroundSize: 'cover', backgroundPosition: 'center top', opacity: 0.1, filter: 'blur(3px)' }} />
         )}
         <div style={{
           position: 'relative', zIndex: 1,
@@ -816,7 +781,7 @@ export default function InfoPage({ malId, onBack }) {
           alignItems: isCompact ? 'center' : 'flex-start',
           flexDirection: isCompact ? 'column' : 'row',
           flexWrap: 'wrap',
-          padding: backdrop ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
+          padding: data.bannerImage ? (isCompact ? '20px 0 32px' : '36px 0 52px') : '0',
         }}>
 
           {/* Poster + action buttons */}
@@ -830,24 +795,15 @@ export default function InfoPage({ malId, onBack }) {
             <div style={{ width: `${posterW}px`, height: `${posterH}px`, background: C.surface, border: `1px solid ${fColor}55`, overflow: 'hidden', position: 'relative', boxShadow: `0 20px 70px rgba(0,0,0,0.85), 0 0 0 1px ${fColor}22, 0 0 50px ${fColor}0a` }}>
               <Corners color={fColor} size={13} opacity={0.55} />
               {cover
-                ? <img src={cover} alt={data.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, fontSize: '44px' }}>✦</div>
               }
             </div>
 
-            <div style={{ width: `${posterW}px`, display: 'flex', flexDirection: 'column', gap: '9px' }}>
-              <button
-                onClick={toggleTrailers}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: showTrailers ? C.bg : C.primary, background: showTrailers ? C.primary : C.primarySoft, border: `1px solid ${C.primary}66`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
-                onMouseEnter={(e) => { if (!showTrailers) e.currentTarget.style.background = 'rgba(94,234,212,0.18)' }}
-                onMouseLeave={(e) => { if (!showTrailers) e.currentTarget.style.background = C.primarySoft }}
-              >
-                ▶ Trailers {trailerCount > 0 && <span style={{ fontSize: '10px', opacity: 0.7 }}>({trailerCount})</span>}
-              </button>
-
+            <div style={{ width: `${posterW}px` }}>
               <button
                 onClick={() => { if (!user) { navigate('/profile'); return } setShowModal(true) }}
-                style={{ fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.gold, background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(163,230,53,0.12)', border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
+                style={{ width: '100%', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.18em', color: existing ? (statusCfg?.color || C.green) : C.gold, background: existing ? `${statusCfg?.color || C.green}15` : 'rgba(163,230,53,0.12)', border: `1px solid ${existing ? (statusCfg?.color || C.green) + '55' : C.gold + '66'}`, padding: '12px', minHeight: isCompact ? '44px' : 'auto', cursor: 'pointer', transition: 'all 0.25s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase' }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
               >
@@ -868,39 +824,39 @@ export default function InfoPage({ malId, onBack }) {
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '10px', letterSpacing: '0.18em', color: fColor, padding: '5px 13px', border: `1px solid ${fColor}55`, background: fColor + '10', fontFamily: '"Cinzel", serif', fontWeight: 700 }}>{format}</span>
               {data.status && (
-                <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: data.status === 'Finished Airing' ? C.textMuted : C.green, padding: '5px 13px', border: `1px solid ${data.status === 'Finished Airing' ? C.textDim + '44' : C.green + '44'}`, background: data.status === 'Finished Airing' ? 'transparent' : C.greenSoft, fontFamily: '"Cinzel", serif' }}>
-                  {data.status}
+                <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: data.status === 'FINISHED' ? C.textMuted : C.green, padding: '5px 13px', border: `1px solid ${data.status === 'FINISHED' ? C.textDim + '44' : C.green + '44'}`, background: data.status === 'FINISHED' ? 'transparent' : C.greenSoft, fontFamily: '"Cinzel", serif' }}>
+                  {formatStatus(data.status)}
                 </span>
               )}
-              {data.rating && (
-                <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: C.aurora, padding: '5px 13px', border: `1px solid ${C.aurora}44`, background: C.auroraSoft, fontFamily: '"Cinzel", serif' }}>{data.rating}</span>
+              {data.countryOfOrigin && data.countryOfOrigin !== 'JP' && (
+                <span style={{ fontSize: '10px', letterSpacing: '0.15em', color: C.aurora, padding: '5px 13px', border: `1px solid ${C.aurora}44`, background: C.auroraSoft, fontFamily: '"Cinzel", serif' }}>{data.countryOfOrigin}</span>
               )}
             </div>
 
             {/* Title */}
             <div>
               <h2 style={{ fontFamily: '"Cinzel", serif', fontSize: 'clamp(24px, 3.5vw, 44px)', fontWeight: 700, letterSpacing: '0.05em', color: C.text, margin: 0, lineHeight: 1.15, textShadow: `0 0 50px ${fColor}18` }}>
-                {data.title_english || data.title}
+                {title}
                 {year && <span style={{ fontSize: 'clamp(14px, 1.8vw, 22px)', color: C.textDim, fontWeight: 400, marginLeft: '14px', letterSpacing: '0.1em' }}>({year})</span>}
               </h2>
-              {data.title && data.title !== (data.title_english || data.title) && (
-                <div style={{ fontSize: '14px', color: C.textMuted, marginTop: '6px', fontStyle: 'italic', letterSpacing: '0.04em' }}>{data.title}</div>
+              {altTitle && altTitle !== title && (
+                <div style={{ fontSize: '14px', color: C.textMuted, marginTop: '6px', fontStyle: 'italic', letterSpacing: '0.04em' }}>{altTitle}</div>
               )}
-              {data.title_japanese && (
-                <div style={{ fontSize: '13px', color: C.textDim, marginTop: '4px', letterSpacing: '0.06em' }}>{data.title_japanese}</div>
+              {nativeTitle && (
+                <div style={{ fontSize: '13px', color: C.textDim, marginTop: '4px', letterSpacing: '0.06em' }}>{nativeTitle}</div>
               )}
             </div>
 
             {/* Scores */}
             <div style={{ display: 'flex', gap: isCompact ? '20px' : '36px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-              {malScore && parseFloat(malScore) > 0 && (
+              {aniScore && parseFloat(aniScore) > 0 && (
                 <div>
-                  <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ MAL Score</div>
+                  <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᛏ AniList</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(163,230,53,0.5)', lineHeight: 1 }}>★ {malScore}</span>
+                    <span style={{ fontFamily: '"Cinzel", serif', fontSize: isCompact ? '32px' : '38px', fontWeight: 700, color: C.gold, textShadow: '0 0 24px rgba(163,230,53,0.5)', lineHeight: 1 }}>★ {aniScore}</span>
                     <span style={{ fontSize: '12px', color: C.textDim }}>/10</span>
                   </div>
-                  {data.scored_by > 0 && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px' }}>{data.scored_by.toLocaleString()} votes</div>}
+                  {data.favourites > 0 && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px' }}>{data.favourites.toLocaleString()} favourites</div>}
                 </div>
               )}
               <div>
@@ -913,10 +869,10 @@ export default function InfoPage({ malId, onBack }) {
                 </div>
                 {!existing && <div style={{ fontSize: '10px', color: C.textDim, marginTop: '3px' }}>Not in list</div>}
               </div>
-              {data.rank > 0 && (
+              {data.popularity > 0 && (
                 <div>
-                  <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᚱ MAL Rank</div>
-                  <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', fontWeight: 700, color: '#67E8F9', lineHeight: 1 }}>#{data.rank}</div>
+                  <div style={{ fontSize: '9px', letterSpacing: '0.3em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '5px' }}>ᚱ Popularity</div>
+                  <div style={{ fontFamily: '"Cinzel", serif', fontSize: '28px', fontWeight: 700, color: '#67E8F9', lineHeight: 1 }}>#{data.popularity}</div>
                 </div>
               )}
             </div>
@@ -938,30 +894,30 @@ export default function InfoPage({ malId, onBack }) {
             {/* Genres */}
             {data.genres?.length > 0 && (
               <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-                {data.genres.map((g) => (
-                  <span key={g.mal_id} style={{ fontSize: '10px', letterSpacing: '0.12em', color: C.textMuted, padding: '5px 13px', border: `1px solid ${C.borderPrimary}`, background: C.surface, fontFamily: '"Cinzel", serif' }}>
-                    {g.name}
+                {data.genres.map((g, i) => (
+                  <span key={i} style={{ fontSize: '10px', letterSpacing: '0.12em', color: C.textMuted, padding: '5px 13px', border: `1px solid ${C.borderPrimary}`, background: C.surface, fontFamily: '"Cinzel", serif' }}>
+                    {g}
                   </span>
                 ))}
               </div>
             )}
 
             {/* Studios */}
-            {data.studios?.length > 0 && (
+            {mainStudios.length > 0 && (
               <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ color: C.primary + '77', fontFamily: '"Cinzel", serif', fontSize: '14px' }}>ᚾ</span>
-                <span style={{ color: C.textMuted }}>{data.studios.map((s) => s.name).join(' · ')}</span>
+                <span style={{ color: C.textMuted }}>{mainStudios.join(' · ')}</span>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Trailers (inline toggle) */}
-      {showTrailers && (
-        <div ref={trailerSectionRef} style={{ marginBottom: '56px', scrollMarginTop: '16px' }}>
-          <SectionDivider title="Trailers" rune="▶" right={`${trailerCount} available`} />
-          <TrailerSection trailer={data.trailer} promos={promos} isCompact={isCompact} />
+      {/* Trailer */}
+      {data.trailer?.id && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Trailer" rune="▶" />
+          <TrailerSection trailer={data.trailer} isCompact={isCompact} />
         </div>
       )}
 
@@ -979,12 +935,14 @@ export default function InfoPage({ malId, onBack }) {
       )}
 
       {/* Synopsis */}
-      {data.synopsis && (
+      {data.description && (
         <div style={{ marginBottom: '56px' }}>
           <SectionDivider title="Synopsis" rune="ᛊ" />
           <div style={{ padding: isCompact ? '18px 20px' : '24px 28px', background: C.surface, border: `1px solid ${C.borderPrimary}`, position: 'relative' }}>
             <Corners color={C.primary} size={10} opacity={0.2} />
-            <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>{data.synopsis}</p>
+            <p style={{ fontSize: '15px', color: C.textMuted, lineHeight: 1.9, margin: 0, letterSpacing: '0.02em' }}>
+              {data.description.replace(/<[^>]*>/g, '')}
+            </p>
           </div>
         </div>
       )}
@@ -994,14 +952,14 @@ export default function InfoPage({ malId, onBack }) {
         <SectionDivider title="Overview" rune="ᚱ" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
 
-          {/* MAL metadata grid */}
+          {/* AniList metadata grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
             {[
-              { label: 'Type',       value: data.type,        rune: 'ᛏ' },
-              { label: 'Source',     value: data.source,      rune: 'ᚢ' },
-              { label: 'Aired From', value: data.aired?.from  ? new Date(data.aired.from).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null, rune: 'ᛞ' },
-              { label: 'Aired To',   value: data.aired?.to   ? new Date(data.aired.to).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : data.status === 'Currently Airing' ? 'Ongoing' : null, rune: 'ᛞ' },
-              { label: 'Premiered',  value: data.season && data.year ? `${data.season.charAt(0).toUpperCase() + data.season.slice(1)} ${data.year}` : null, rune: 'ᚨ' },
+              { label: 'Format',     value: format,                                        rune: 'ᛏ' },
+              { label: 'Source',     value: formatSource(data.source),                     rune: 'ᚢ' },
+              { label: 'Start Date', value: anilistDateToString(data.startDate),            rune: 'ᛞ' },
+              { label: 'End Date',   value: anilistDateToString(data.endDate),              rune: 'ᛞ' },
+              { label: 'Season',     value: data.season && data.seasonYear ? `${data.season.charAt(0).toUpperCase() + data.season.slice(1).toLowerCase()} ${data.seasonYear}` : null, rune: 'ᚨ' },
               { label: 'Popularity', value: data.popularity ? `#${data.popularity}` : null, rune: 'ᚠ' },
             ].filter((r) => r.value).map((row) => (
               <div key={row.label} style={{ padding: '14px 16px', background: C.surface, border: `1px solid ${C.borderPrimary}` }}>
@@ -1016,9 +974,9 @@ export default function InfoPage({ malId, onBack }) {
           {/* My entry grid */}
           {existing && (() => {
             const myRows = [
-              existing.dateStarted   && { label: 'My Start Date',  value: existing.dateStarted.split('T')[0],   rune: 'ᛞ' },
-              existing.dateCompleted && { label: 'My End Date',    value: existing.dateCompleted.split('T')[0],  rune: 'ᛞ' },
-              existing.rewatchCount > 0 && { label: 'Rewatched',  value: `${existing.rewatchCount}×`,            rune: 'ᚲ' },
+              existing.dateStarted   && { label: 'My Start Date', value: formatDate(existing.dateStarted),   rune: 'ᛞ' },
+              existing.dateCompleted && { label: 'My End Date',   value: formatDate(existing.dateCompleted), rune: 'ᛞ' },
+              existing.rewatchCount > 0 && { label: 'Rewatched', value: `${existing.rewatchCount}×`,         rune: 'ᚲ' },
               existing.platforms?.length > 0 && { label: 'Watching On', value: existing.platforms.map((p) => p.name).join(', '), rune: 'ᛚ' },
             ].filter(Boolean)
             if (!myRows.length) return null
@@ -1039,34 +997,28 @@ export default function InfoPage({ malId, onBack }) {
             )
           })()}
 
-          {/* Music themes */}
-          {(openings.length > 0 || endings.length > 0) && (
+          {/* Tags */}
+          {tags.length > 0 && (
             <div>
-              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᚦ Music Themes</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {openings.map((t, i) => (
-                  <div key={`op${i}`} style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '9px', color: C.primary, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', whiteSpace: 'nowrap', minWidth: '50px' }}>OP {i + 1}</span>
-                    <span style={{ fontSize: '12px', color: C.textMuted }}>{t}</span>
-                  </div>
-                ))}
-                {endings.map((t, i) => (
-                  <div key={`ed${i}`} style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '9px', color: C.aurora, fontFamily: '"Cinzel", serif', letterSpacing: '0.15em', whiteSpace: 'nowrap', minWidth: '50px' }}>ED {i + 1}</span>
-                    <span style={{ fontSize: '12px', color: C.textMuted }}>{t}</span>
-                  </div>
+              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᚷ Tags</div>
+              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                {tags.map((t, i) => (
+                  <span key={i} style={{ fontSize: '11px', color: C.textDim, padding: '4px 10px', border: `1px solid ${C.textDim}33`, background: C.surface, letterSpacing: '0.05em' }}>{t.name}</span>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Tags */}
-          {keywords.length > 0 && (
+          {/* External links */}
+          {watchLinks.length > 0 && (
             <div>
-              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᚷ Tags</div>
-              <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-                {keywords.map((k, i) => (
-                  <span key={i} style={{ fontSize: '11px', color: C.textDim, padding: '4px 10px', border: `1px solid ${C.textDim}33`, background: C.surface, letterSpacing: '0.05em' }}>{k.name}</span>
+              <div style={{ fontSize: '10px', letterSpacing: '0.25em', color: C.textDim, fontFamily: '"Cinzel", serif', textTransform: 'uppercase', marginBottom: '12px' }}>ᛚ Watch Online</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {watchLinks.map((link, i) => (
+                  <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', letterSpacing: '0.1em', color: C.primary, padding: '6px 14px', border: `1px solid ${C.primary}44`, background: C.primarySoft, fontFamily: '"Cinzel", serif', textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(94,234,212,0.2)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = C.primarySoft }}
+                  >{link.site}</a>
                 ))}
               </div>
             </div>
@@ -1074,31 +1026,43 @@ export default function InfoPage({ malId, onBack }) {
         </div>
       </div>
 
-      {/* Characters */}
-      {characters.length > 0 && (
+      {/* Staff */}
+      {staffEdges.length > 0 && (
         <div style={{ marginBottom: '56px' }}>
-          <SectionDivider title="Characters" rune="ᛈ" right={`${characters.length} listed`} />
+          <SectionDivider title="Staff" rune="ᚾ" right={`${staffEdges.length} listed`} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px 12px' }}>
-            {(showAllCast ? characters : characters.slice(0, 12)).map((entry, i) => (
-              <CharacterCard key={i} entry={entry} />
+            {staffEdges.map((edge, i) => <StaffCard key={i} edge={edge} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Characters */}
+      {charEdges.length > 0 && (
+        <div style={{ marginBottom: '56px' }}>
+          <SectionDivider title="Characters" rune="ᛈ" right={`${charEdges.length} listed`} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px 12px' }}>
+            {(showAllCast ? charEdges : charEdges.slice(0, 12)).map((edge, i) => (
+              <CharacterCard key={i} edge={edge} />
             ))}
           </div>
-          {characters.length > 12 && (
+          {charEdges.length > 12 && (
             <button
               onClick={() => setShowAllCast((s) => !s)}
               style={{ marginTop: '22px', fontFamily: '"Cinzel", serif', fontSize: '11px', letterSpacing: '0.2em', color: C.primary, background: C.primarySoft, border: `1px solid ${C.primary}44`, padding: '10px 24px', cursor: 'pointer', transition: 'all 0.2s' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(94,234,212,0.2)' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = C.primarySoft }}
-            >{showAllCast ? '▲ Show Less' : `▼ Show All ${characters.length} Characters`}</button>
+            >{showAllCast ? '▲ Show Less' : `▼ Show All ${charEdges.length} Characters`}</button>
           )}
         </div>
       )}
 
-      {/* Images */}
-      {pictures.length > 0 && (
+      {/* Relations */}
+      {relationEdges.length > 0 && (
         <div style={{ marginBottom: '56px' }}>
-          <SectionDivider title="Images" rune="ᛒ" right={`${pictures.length} total`} />
-          <ImageGrid images={pictures} isCompact={isCompact} />
+          <SectionDivider title="Related Titles" rune="ᚦ" right={`${relationEdges.length} related`} />
+          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+            {relationEdges.map((edge, i) => <RelationCard key={i} edge={edge} />)}
+          </div>
         </div>
       )}
 
@@ -1108,7 +1072,7 @@ export default function InfoPage({ malId, onBack }) {
           animeData={data}
           existingEntry={existing}
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); fetchExisting(data) }}
+          onSaved={() => { setShowModal(false); fetchExisting(data.id) }}
           onDeleted={() => { setShowModal(false); setExisting(null) }}
           isCompact={isCompact}
         />

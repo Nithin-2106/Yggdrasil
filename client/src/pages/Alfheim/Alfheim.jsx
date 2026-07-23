@@ -284,7 +284,7 @@ function Navbar({ activePage, onNavigate, onSearch, isCompact }) {
             letterSpacing: '0.3em',
             color:         C.gold,
             userSelect:    'none',
-          }}>ᚨ</div>
+          }}>✶</div>
           {!isCompact && <div style={{ width: '1px', height: '20px', background: C.borderPrimary }} />}
           <span style={{
             fontFamily:    '"Cinzel", serif',
@@ -514,7 +514,7 @@ function PageTitle({ activePage, searchQuery }) {
   return (
     <div style={{ marginBottom: '10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '1px' }}>
-        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.primary + '66' }}>ᚨ</span>
+        <span style={{ fontFamily: '"Cinzel", serif', fontSize: '18px', color: C.primary + '66' }}>✶</span>
         <div style={{
           fontSize:      '10px',
           letterSpacing: '0.45em',
@@ -600,7 +600,7 @@ export default function Alfheim() {
       <main style={{
         position:  'relative',
         zIndex:    1,
-        maxWidth:  '1200px',
+        maxWidth:  '1800px',
         margin:    '0 auto',
         padding:   isCompact ? '84px 16px 56px' : '96px 36px 80px',
       }}>
@@ -619,12 +619,12 @@ export default function Alfheim() {
           {activePage === 'Search' && (
             <SearchPage
               query={searchQuery}
-              onSelectAnime={item => handleNavigate('Info', item.mal_id)}
+              onSelectAnime={item => handleNavigate('Info', item.id)}
             />
           )}
           {activePage === 'Info' && (
             <InfoPage
-              malId={selectedAnimeId}
+              anilistId={selectedAnimeId}
               onBack={() => handleNavigate('Search', searchQuery)}
             />
           )}

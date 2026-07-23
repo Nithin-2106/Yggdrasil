@@ -140,9 +140,9 @@ function AnimeRow({ anime, index, onNavigate }) {
   const [hovered, setHovered] = useState(false)
   const sc = STATUS_COLOR[anime.status] || C.textMuted
   const fc = FORMAT_COLOR[anime.format] || C.primary
-  const canNavigate = !!anime.malId
+  const canNavigate = !!anime.anilistId
 
-  const goToInfo = () => { if (canNavigate) onNavigate('Info', anime.malId) }
+  const goToInfo = () => { if (canNavigate) onNavigate('Info', anime.anilistId) }
 
   const tdBase = {
     borderBottom: `1px solid ${C.borderPrimary}33`,
@@ -207,7 +207,7 @@ function AnimeRow({ anime, index, onNavigate }) {
           </span>
           {!canNavigate && (
             <span style={{ fontSize: '10px', color: C.textDim + '88', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
-              (no MAL link — re-add to enable)
+              (no AniList link — re-add to enable)
             </span>
           )}
           <span style={{ fontSize: '11px', letterSpacing: '0.12em', color: sc, padding: '4px 10px', border: `1px solid ${sc}55`, background: `${sc}10`, fontFamily: '"Cinzel", serif', whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>
@@ -283,13 +283,13 @@ function StatusTab({ label, count, active, onClick, isCompact }) {
 function MobileAnimeCard({ anime, onNavigate }) {
   const sc = STATUS_COLOR[anime.status] || C.textMuted
   const fc = FORMAT_COLOR[anime.format] || C.primary
-  const canNavigate = !!anime.malId
+  const canNavigate = !!anime.anilistId
 
   const meta = [anime.format, anime.year].filter(Boolean).join(' · ')
 
   return (
     <div
-      onClick={() => canNavigate && onNavigate('Info', anime.malId)}
+      onClick={() => canNavigate && onNavigate('Info', anime.anilistId)}
       style={{
         display: 'flex', gap: '12px',
         padding: '12px',

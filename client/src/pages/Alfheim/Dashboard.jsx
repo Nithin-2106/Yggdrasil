@@ -3,8 +3,18 @@ import axios from 'axios'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import Counter from '../../components/Counter'
+import {
+  fetchTrending,
+  fetchSeasonal,
+  fetchBySort,
+  searchAnime,
+  detectAnimeFormat,
+  getTitle,
+  getYear,
+  getCover,
+  formatScore,
+} from '../../utils/anilistAnimeSearch'
 
-const JIKAN      = 'https://api.jikan.moe/v4'
 const API        = '/api/media/anime'
 const TOP10_LIST = '/api/animetop10/list'
 const TOP10_SLOT = '/api/animetop10'
@@ -31,45 +41,17 @@ const C = {
   borderAurora: 'rgba(192,132,252,0.18)',
 }
 
+const FORMAT_COLOR = {
+  Movie:   C.gold,
+  OVA:     C.aurora,
+  Special: C.green,
+  Series:  C.primary,
+}
+
 // Canonical poster card size for the whole dashboard — Top10Card mirrors
 // these exact dimensions so every horizontal rail feels consistent.
 const CARD_W = { compact: 96,  full: 160 }
 const CARD_H = { compact: 134, full: 220 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const sleep    = ms => new Promise(r => setTimeout(r, ms))
-const randPage = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
-
-function formatColor(format) {
-  if (format === 'Movie')   return C.gold
-  if (format === 'OVA')     return C.aurora
-  if (format === 'Special') return C.green
-  return C.primary
-}
-
-function getCurrentSeason() {
-  const m = new Date().getMonth()
-  const y = new Date().getFullYear()
-  const s = m < 3 ? 'winter' : m < 6 ? 'spring' : m < 9 ? 'summer' : 'fall'
-  return { year: y, season: s }
-}
-
-// Jikan fetch with exponential backoff on 429
-async function jikanFetch(url) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await sleep(2000 * attempt)
-    try {
-      const res = await fetch(url)
-      if (res.status === 429) { await sleep(3000 * (attempt + 1)); continue }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json()
-      return json.data || []
-    } catch {
-      if (attempt === 4) return []
-    }
-  }
-  return []
-}
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 function Corners({ color = C.gold, size = 12, opacity = 0.4 }) {
@@ -85,9 +67,6 @@ function Corners({ color = C.gold, size = 12, opacity = 0.4 }) {
   )
 }
 
-// Title + optional right-side content, always on one row (wraps only if the
-// viewport is genuinely too narrow) so Top10 actions / refresh buttons sit
-// next to the title on mobile instead of stacking below it.
 function SectionHeader({ title, rune, count, right, isCompact }) {
   return (
     <div style={{ marginBottom: '20px' }}>
@@ -220,21 +199,20 @@ function HorizontalScroll({
 // ── Anime card (shared by Trending / Recently Released / Explore) ─────────────
 function AnimeCard({ item, onNavigate, isCompact }) {
   const [hovered, setHovered] = useState(false)
-  const cover  = item.images?.jpg?.large_image_url || item.images?.jpg?.image_url
-  const format = item.type === 'Movie' ? 'Movie'
-    : item.type === 'OVA'     ? 'OVA'
-    : item.type === 'Special' ? 'Special'
-    : 'Series'
-  const fColor = formatColor(format)
-  const year   = item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : null)
-  const rating = item.score ? item.score.toFixed(1) : null
+  const format = detectAnimeFormat(item)
+  const fColor = FORMAT_COLOR[format] || C.primary
+  const cover  = getCover(item)
+  const year   = getYear(item)
+  const score  = formatScore(item.averageScore)
+  const title  = getTitle(item)
+  const hasScore = score && parseFloat(score) > 0
 
   const w = isCompact ? CARD_W.compact : CARD_W.full
   const h = isCompact ? CARD_H.compact : CARD_H.full
 
   return (
     <div
-      onClick={() => onNavigate('Info', item.mal_id)}
+      onClick={() => onNavigate('Info', item.id)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -253,32 +231,32 @@ function AnimeCard({ item, onNavigate, isCompact }) {
         transition: 'all 0.3s ease',
       }}>
         {cover
-          ? <img src={cover} alt={item.title_english || item.title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <div style={{
+          ? <img src={cover} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : (
+            <div style={{
               width: '100%', height: '100%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: C.textDim, fontSize: '32px',
               background: `linear-gradient(135deg, ${C.surface}, ${C.bg})`,
             }}>✦</div>
+          )
         }
         <div style={{
           position: 'absolute', top: '8px', left: '8px',
           padding: isCompact ? '2px 6px' : '3px 8px',
-          background: 'rgba(5,12,16,0.5)', backdropFilter: 'blur(3px)',
-          border: `1px solid ${fColor}66`,
-          fontSize: isCompact ? '8px' : '9px', letterSpacing: '0.15em',
-          color: fColor, fontFamily: '"Cinzel", serif',
+          background: 'rgba(5,12,16,0.85)', border: `1px solid ${fColor}66`,
+          fontSize: isCompact ? '8px' : '9px', letterSpacing: '0.15em', color: fColor, fontFamily: '"Cinzel", serif',
         }}>{format}</div>
-        {rating && parseFloat(rating) > 0 && (
+        {hasScore && (
           <div style={{
-            position: 'absolute', top: '8px', right: '8px',
+            position: 'absolute',
+            top:    isCompact ? 'auto' : '8px',
+            bottom: isCompact ? '8px'  : 'auto',
+            right: '8px',
             padding: isCompact ? '2px 6px' : '3px 8px',
-            background: 'rgba(5,12,16,0.5)', backdropFilter: 'blur(3px)',
-            border: `1px solid ${C.gold}55`,
-            fontSize: isCompact ? '9px' : '10px', color: C.gold,
-            fontFamily: '"Cinzel", serif', fontWeight: 700,
-          }}>★ {rating}</div>
+            background: 'rgba(5,12,16,0.85)', border: `1px solid ${C.gold}55`,
+            fontSize: isCompact ? '9px' : '10px', color: C.gold, fontFamily: '"Cinzel", serif', fontWeight: 700,
+          }}>★ {score}</div>
         )}
         <div style={{
           position: 'absolute', inset: 0,
@@ -294,16 +272,35 @@ function AnimeCard({ item, onNavigate, isCompact }) {
           transition: 'color 0.25s', lineHeight: 1.35,
           overflow: 'hidden', display: '-webkit-box',
           WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        }}>{item.title_english || item.title}</div>
+        }}>{title}</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '5px' }}>
           {year && <span style={{ fontSize: isCompact ? '10px' : '11px', color: C.textDim }}>{year}</span>}
-          {item.episodes > 0 && (
-            <span style={{ fontSize: '9px', color: fColor + 'aa', fontFamily: '"Cinzel", serif', letterSpacing: '0.1em' }}>
-              {item.episodes} eps
-            </span>
+          {item.episodes && (
+            <span style={{
+              fontSize: '9px', color: fColor + 'aa',
+              fontFamily: '"Cinzel", serif', letterSpacing: '0.1em',
+            }}>{item.episodes} eps</span>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Skeleton card (shared) ────────────────────────────────────────────────────
+function SkeletonCard({ isCompact }) {
+  const w = isCompact ? CARD_W.compact : CARD_W.full
+  const h = isCompact ? CARD_H.compact : CARD_H.full
+  return (
+    <div style={{ flexShrink: 0, width: `${w}px`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{
+        width: `${w}px`, height: `${h}px`,
+        background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
+        backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+        border: `1px solid ${C.borderPrimary}`,
+      }} />
+      <div style={{ height: '12px', width: '80%', background: C.surface, borderRadius: '2px' }} />
+      <div style={{ height: '10px', width: '50%', background: C.surface, borderRadius: '2px' }} />
     </div>
   )
 }
@@ -393,36 +390,18 @@ function TrendingSection({ onNavigate, isCompact }) {
 
   useEffect(() => {
     let cancelled = false
-    const run = async () => {
-      let data = await jikanFetch(`${JIKAN}/top/anime?filter=airing&limit=25`)
-      if (cancelled) return
-      const valid = data.filter(i => i.images?.jpg?.image_url)
-      if (valid.length) { setItems(valid); setLoading(false); return }
-      const { year, season } = getCurrentSeason()
-      data = await jikanFetch(`${JIKAN}/seasons/${year}/${season}`)
-      if (!cancelled) {
-        setItems(data.filter(i => i.images?.jpg?.image_url))
-        setLoading(false)
-      }
-    }
-    run()
+    fetchTrending(25)
+      .then(data => { if (!cancelled) setItems(data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
 
   if (loading) return (
     <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="Trending This Season" rune="ᚦ" isCompact={isCompact} />
+      <SectionHeader title="Trending Now" rune="ᚦ" isCompact={isCompact} />
       <div style={{ display: 'flex', gap: isCompact ? '8px' : '14px', overflow: 'hidden' }}>
-        {Array.from({ length: isCompact ? 4 : 6 }).map((_, i) => (
-          <div key={i} style={{
-            flexShrink: 0,
-            width: `${isCompact ? CARD_W.compact : CARD_W.full}px`,
-            height: `${isCompact ? CARD_H.compact : CARD_H.full}px`,
-            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-            border: `1px solid ${C.borderPrimary}`,
-          }} />
-        ))}
+        {Array.from({ length: isCompact ? 4 : 6 }).map((_, i) => <SkeletonCard key={i} isCompact={isCompact} />)}
       </div>
     </div>
   )
@@ -431,9 +410,9 @@ function TrendingSection({ onNavigate, isCompact }) {
 
   return (
     <div style={{ marginBottom: '52px' }}>
-      <SectionHeader title="Trending This Season" rune="ᚦ" count={items.length} isCompact={isCompact} />
+      <SectionHeader title="Trending Now" rune="ᚦ" count={items.length} isCompact={isCompact} />
       <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
-        {items.map(item => <AnimeCard key={item.mal_id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)}
+        {items.map(item => <AnimeCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)}
       </HorizontalScroll>
     </div>
   )
@@ -445,14 +424,14 @@ function WatchingCard({ anime, onNavigate, isCompact }) {
   const progress = anime.episodes?.total
     ? (anime.episodes.current / anime.episodes.total) * 100
     : null
-  const canNav = !!anime.malId
+  const canNav = !!anime.anilistId
 
   const w = isCompact ? CARD_W.compact - 10 : 150
   const h = isCompact ? CARD_H.compact - 10 : 210
 
   return (
     <div
-      onClick={() => canNav && onNavigate('Info', anime.malId)}
+      onClick={() => canNav && onNavigate('Info', anime.anilistId)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -548,14 +527,16 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
     if (!q.trim()) { setResults([]); setLoading(false); return }
     setLoading(true)
     try {
-      const data = await jikanFetch(`${JIKAN}/anime?q=${encodeURIComponent(q.trim())}&limit=12&sfw=false`)
-      setResults(data)
+      const res = await searchAnime(q)
+      setResults(res.slice(0, 12))
+    } catch {
+      setResults([])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Debounced search-as-you-type; manual Search button / Enter still work instantly.
+  // Debounced search-as-you-type; Enter / the button still trigger instantly.
   useEffect(() => {
     const t = setTimeout(() => runSearch(query), 350)
     return () => clearTimeout(t)
@@ -564,19 +545,15 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
   useEffect(() => { inputRef.current?.focus() }, [])
 
   const select = async (item) => {
-    if (saving || existingIds.includes(item.mal_id)) return
-    const format = item.type === 'Movie' ? 'Movie'
-      : item.type === 'OVA'     ? 'OVA'
-      : item.type === 'Special' ? 'Special'
-      : 'Series'
+    if (saving || existingIds.includes(item.id)) return
     setSaving(true)
     try {
       await axios.put(`${TOP10_SLOT}/${position}`, {
-        malId:      item.mal_id,
-        title:      item.title || '',
-        coverImage: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
-        year:       item.year || (item.aired?.from ? new Date(item.aired.from).getFullYear() : null),
-        format,
+        anilistId:  item.id,
+        title:      getTitle(item),
+        coverImage: getCover(item),
+        year:       getYear(item),
+        format:     detectAnimeFormat(item),
       })
       onSaved()
       onClose()
@@ -680,11 +657,11 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
           display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${isCompact ? 92 : 110}px, 1fr))`, gap: '12px',
         }}>
           {results.map(item => {
-            const cover = item.images?.jpg?.large_image_url || item.images?.jpg?.image_url
-            const dup   = existingIds.includes(item.mal_id)
+            const fColor = FORMAT_COLOR[detectAnimeFormat(item)] || C.primary
+            const dup    = existingIds.includes(item.id)
             return (
               <div
-                key={item.mal_id} onClick={() => select(item)}
+                key={item.id} onClick={() => select(item)}
                 style={{ cursor: dup || saving ? 'not-allowed' : 'pointer', opacity: saving && !dup ? 0.6 : 1 }}
               >
                 <div
@@ -694,11 +671,11 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
                     transition: 'border-color 0.2s',
                     filter: dup ? 'grayscale(0.6) brightness(0.5)' : 'none',
                   }}
-                  onMouseEnter={e => { if (!saving && !dup) e.currentTarget.style.borderColor = C.primary }}
+                  onMouseEnter={e => { if (!saving && !dup) e.currentTarget.style.borderColor = fColor }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.borderPrimary }}
                 >
-                  {cover
-                    ? <img src={cover} alt={item.title_english || item.title}
+                  {getCover(item)
+                    ? <img src={getCover(item)} alt={getTitle(item)}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <div style={{
                         width: '100%', height: '100%',
@@ -725,7 +702,7 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
                   color: dup ? C.textDim : C.textMuted, lineHeight: 1.3,
                   overflow: 'hidden', display: '-webkit-box',
                   WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                }}>{item.title_english || item.title}</div>
+                }}>{getTitle(item)}</div>
               </div>
             )
           })}
@@ -738,8 +715,8 @@ function Top10SearchModal({ position, existingIds, onClose, onSaved, isCompact }
 function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
   const [hovered,     setHovered]     = useState(false)
   const [showActions, setShowActions] = useState(false)
-  const isEmpty  = !entry.malId
-  const fColor   = entry.format ? formatColor(entry.format) : C.textDim
+  const isEmpty  = !entry.anilistId
+  const fColor   = entry.format ? (FORMAT_COLOR[entry.format] || C.primary) : C.textDim
   const rankColor = index === 0 ? '#FFD700'
     : index === 1 ? '#E8C04A'
     : index === 2 ? '#C9963A'
@@ -774,7 +751,7 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
   const handlePosterClick = () => {
     if (longPressFired.current) { longPressFired.current = false; return }
     if (isEmpty) onEdit()
-    else if (entry.malId) onNavigate('Info', entry.malId)
+    else if (entry.anilistId) onNavigate('Info', entry.anilistId)
   }
 
   useEffect(() => {
@@ -898,18 +875,16 @@ function Top10Card({ entry, index, onEdit, onClear, onNavigate, isCompact }) {
 
 const EMPTY_ENTRIES = () =>
   Array.from({ length: 10 }, (_, i) => ({
-    position: i + 1, malId: null, title: '', coverImage: '', year: null, format: '',
+    position: i + 1, anilistId: null, title: '', coverImage: '', year: null, format: '',
   }))
 
 function normaliseEntries(rawEntries) {
   return Array.from({ length: 10 }, (_, i) => {
     const found = (rawEntries || []).find(e => e.position === i + 1)
-    return found || { position: i + 1, malId: null, title: '', coverImage: '', year: null, format: '' }
+    return found || { position: i + 1, anilistId: null, title: '', coverImage: '', year: null, format: '' }
   })
 }
 
-// Skeleton mirrors the real number+poster geometry (with shimmer) so loading
-// no longer feels like a broken/static state.
 function Top10Skeleton({ isCompact }) {
   const posterW = isCompact ? CARD_W.compact : CARD_W.full
   const posterH = isCompact ? CARD_H.compact : CARD_H.full
@@ -974,7 +949,7 @@ function Top10Section({ onNavigate, isCompact }) {
   }
 
   const existingIdsForSlot = (pos) =>
-    entries.filter(e => e.position !== pos && e.malId).map(e => e.malId)
+    entries.filter(e => e.position !== pos && e.anilistId).map(e => e.anilistId)
 
   return (
     <div style={{ marginBottom: '52px' }}>
@@ -1011,43 +986,29 @@ function Top10Section({ onNavigate, isCompact }) {
 }
 
 // ── 5. RECENTLY RELEASED ─────────────────────────────────────────────────────
+// Current-season airing anime, sorted by popularity — replaces the old
+// seasons/now Jikan fallback chain. AniList's season/seasonYear filter is
+// accurate server-side, so unlike Valhalla's manga pooling (which existed
+// purely to compensate for KR/CN country-filter thinning) no multi-page
+// pooling is needed here.
 function RecentlyReleasedSection({ onNavigate, isCompact }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    const timer = setTimeout(async () => {
-      const { year, season } = getCurrentSeason()
-      let data = await jikanFetch(`${JIKAN}/seasons/${year}/${season}`)
-      if (cancelled) return
-      const valid = data
-        .filter(i => i.images?.jpg?.image_url)
-        .sort((a, b) => (b.members || 0) - (a.members || 0))
-      if (valid.length) { setItems(valid); setLoading(false); return }
-      data = await jikanFetch(`${JIKAN}/seasons/now`)
-      if (!cancelled) {
-        setItems(data.filter(i => i.images?.jpg?.image_url))
-        setLoading(false)
-      }
-    }, 800)
-    return () => { cancelled = true; clearTimeout(timer) }
+    fetchSeasonal(25)
+      .then(data => { if (!cancelled) setItems(data) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [])
 
   if (loading) return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Recently Released" rune="ᚾ" isCompact={isCompact} />
       <div style={{ display: 'flex', gap: isCompact ? '8px' : '14px', overflow: 'hidden' }}>
-        {Array.from({ length: isCompact ? 4 : 5 }).map((_, i) => (
-          <div key={i} style={{
-            flexShrink: 0,
-            width: `${isCompact ? CARD_W.compact : CARD_W.full}px`,
-            height: `${isCompact ? CARD_H.compact : CARD_H.full}px`,
-            background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-            backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-            border: `1px solid ${C.borderPrimary}`,
-          }} />
-        ))}
+        {Array.from({ length: isCompact ? 4 : 5 }).map((_, i) => <SkeletonCard key={i} isCompact={isCompact} />)}
       </div>
     </div>
   )
@@ -1058,18 +1019,15 @@ function RecentlyReleasedSection({ onNavigate, isCompact }) {
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Recently Released" rune="ᚾ" count={items.length} isCompact={isCompact} />
       <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
-        {items.map(item => <AnimeCard key={item.mal_id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)}
+        {items.map(item => <AnimeCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)}
       </HorizontalScroll>
     </div>
   )
 }
 
 // ── 6. EXPLORE ────────────────────────────────────────────────────────────────
-// Pulls from three different Jikan queries on randomized pages, staggered
-// 800ms apart to respect the 3 req/sec limit — gives a genuinely varied pool
-// instead of always the same page-2-by-popularity 25 items.
-const EXPLORE_COUNT = 10
-
+// Shows 10 random picks per refresh, pooled across 4 sort orders on random
+// pages — same pattern as Valhalla's ExploreSection.
 function ExploreSection({ onNavigate, isCompact }) {
   const [pool,     setPool]     = useState([])
   const [shown,    setShown]    = useState([])
@@ -1077,48 +1035,43 @@ function ExploreSection({ onNavigate, isCompact }) {
   const [spinning, setSpinning] = useState(false)
   const shownIds = useRef(new Set())
 
-  const pickN = (arr, excludeIds, n) => {
-    const available = arr.filter(i => !excludeIds.has(i.mal_id))
-    const source = available.length >= n ? available : arr
-    return [...source].sort(() => Math.random() - 0.5).slice(0, n)
+  function pick10(arr, excludeIds) {
+    const available = arr.filter(i => !excludeIds.has(i.id))
+    const source    = available.length >= 10 ? available : arr
+    return [...source].sort(() => Math.random() - 0.5).slice(0, 10)
   }
 
   useEffect(() => {
     let cancelled = false
     const timer = setTimeout(async () => {
-      const queries = [
-        `${JIKAN}/top/anime?filter=bypopularity&page=${randPage(1, 5)}`,
-        `${JIKAN}/top/anime?filter=favorite&page=${randPage(1, 5)}`,
-        `${JIKAN}/top/anime?page=${randPage(1, 5)}`,
-      ]
-      const seen = new Set()
-      const all  = []
-      for (let i = 0; i < queries.length; i++) {
-        if (cancelled) return
-        if (i > 0) await sleep(800)
-        const data = await jikanFetch(queries[i])
-        data.forEach(item => {
-          if (item.images?.jpg?.image_url && !seen.has(item.mal_id)) {
-            seen.add(item.mal_id)
-            all.push(item)
-          }
-        })
-      }
+      const sorts = ['POPULARITY_DESC', 'SCORE_DESC', 'TRENDING_DESC', 'FAVOURITES_DESC']
+      const fetches = sorts.map(sort => {
+        const randomPage = Math.floor(Math.random() * 5) + 1
+        return fetchBySort(sort, randomPage, 60).catch(() => [])
+      })
+      const results = await Promise.all(fetches)
       if (cancelled) return
-      setPool(all)
-      const initial = pickN(all, new Set(), EXPLORE_COUNT)
-      shownIds.current = new Set(initial.map(i => i.mal_id))
+      const seen = new Set()
+      const valid = results.flat().filter(item => {
+        if (!getCover(item)) return false
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
+      setPool(valid)
+      const initial = pick10(valid, new Set())
+      shownIds.current = new Set(initial.map(i => i.id))
       setShown(initial)
       setLoading(false)
-    }, 1600)
+    }, 1200)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [])
 
   const refresh = () => {
     if (!pool.length) return
     setSpinning(true)
-    const next = pickN(pool, shownIds.current, EXPLORE_COUNT)
-    shownIds.current = new Set(next.map(i => i.mal_id))
+    const next = pick10(pool, shownIds.current)
+    shownIds.current = new Set(next.map(i => i.id))
     setShown(next)
     setTimeout(() => setSpinning(false), 400)
   }
@@ -1145,25 +1098,14 @@ function ExploreSection({ onNavigate, isCompact }) {
     </button>
   )
 
-  const shimmerBox = (i) => (
-    <div key={i} style={{
-      flexShrink: 0,
-      width: `${isCompact ? CARD_W.compact : CARD_W.full}px`,
-      height: `${isCompact ? CARD_H.compact : CARD_H.full}px`,
-      background: `linear-gradient(110deg, ${C.surface} 30%, ${C.surfaceHover} 50%, ${C.surface} 70%)`,
-      backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
-      border: `1px solid ${C.borderPrimary}`,
-    }} />
-  )
-
   return (
     <div style={{ marginBottom: '52px' }}>
       <SectionHeader title="Explore" rune="ᚱ" right={RefreshButton} isCompact={isCompact} />
       <div style={{ opacity: spinning ? 0.4 : 1, transition: 'opacity 0.2s' }}>
         <HorizontalScroll isCompact={isCompact} gap={isCompact ? '8px' : '14px'}>
           {loading
-            ? Array.from({ length: EXPLORE_COUNT }).map((_, i) => shimmerBox(i))
-            : shown.map(item => <AnimeCard key={item.mal_id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)
+            ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} isCompact={isCompact} />)
+            : shown.map(item => <AnimeCard key={item.id} item={item} onNavigate={onNavigate} isCompact={isCompact} />)
           }
         </HorizontalScroll>
       </div>
@@ -1183,11 +1125,11 @@ const STATUS_COLOR = {
 function RecentlyAddedCard({ anime, onNavigate, isCompact }) {
   const [hovered, setHovered] = useState(false)
   const sc     = STATUS_COLOR[anime.status] || C.textMuted
-  const canNav = !!anime.malId
+  const canNav = !!anime.anilistId
 
   return (
     <div
-      onClick={() => canNav && onNavigate('Info', anime.malId)}
+      onClick={() => canNav && onNavigate('Info', anime.anilistId)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -1239,7 +1181,6 @@ function RecentlyAddedCard({ anime, onNavigate, isCompact }) {
         </div>
       </div>
 
-      {/* Rating before status, both fixed-width so columns stay aligned */}
       {anime.rating && (
         <div style={{
           fontSize: isCompact ? '12px' : '14px', fontWeight: 700, color: C.gold,
