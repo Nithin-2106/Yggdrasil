@@ -1,4 +1,5 @@
 import { withCache } from './apiCache'
+import { anilistFetch } from './anilistClient'
 
 const TTL_LIST   = 10 * 60 * 1000 // trending/popular/seasonal/sort pages
 const TTL_SEARCH = 5 * 60 * 1000
@@ -6,31 +7,11 @@ const TTL_DETAIL = 10 * 60 * 1000
 // client/src/utils/anilistAnimeSearch.js
 // AniList GraphQL API utility for Alfheim (Anime)
 // Replaces the retired Jikan/MyAnimeList integration — no MAL calls remain.
-
-const ENDPOINT = 'https://graphql.anilist.co'
-
-// ── Core fetch helper ─────────────────────────────────────────────────────────
-async function anilistFetch(query, variables = {}) {
-  try {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    // AniList can return HTTP 200 with errors array — handle gracefully
-    if (json.errors?.length) {
-      console.warn('AniList error:', json.errors[0].message)
-      return null
-    }
-    if (!json.data) return null
-    return json.data
-  } catch (err) {
-    console.error('AniList fetch error:', err)
-    return null
-  }
-}
+//
+// anilistFetch now comes from the shared anilistClient — AniList enforces
+// one rate-limit budget across the whole app (Alfheim + Valhalla both draw
+// from it), so every call here goes through that shared, throttled,
+// retrying queue instead of hitting graphql.anilist.co directly.
 
 // ── Shared field fragment ─────────────────────────────────────────────────────
 const MEDIA_FIELDS = `

@@ -1,8 +1,8 @@
 // client/src/pages/Alfheim/BrowsePage.jsx
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useIsCompact } from '../../hooks/useMediaQuery'
+import { anilistFetch } from '../../utils/anilistClient'
 
-const ANILIST   = 'https://graphql.anilist.co'
 const PER_PAGE  = 25
 const PAGE_SIZE = 24
 
@@ -49,23 +49,6 @@ const MEDIA_FIELDS = `
   genres
   startDate { year }
 `
-
-async function anilistFetch(query, variables = {}) {
-  try {
-    const res = await fetch(ANILIST, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    if (json.errors) throw new Error(json.errors[0].message)
-    return json.data
-  } catch (err) {
-    console.error('AniList fetch error:', err)
-    return null
-  }
-}
 
 function buildQuery(sortKey, formatKey, page) {
   const mode    = SORT_MODES.find(m => m.key === sortKey)
@@ -427,7 +410,7 @@ export default function BrowsePage({ onNavigate }) {
     })
   }, [poolReady, loading, expandPool])
 
-  const displayed   = pool.current.slice(0, visibleCount)
+  const displayed    = pool.current.slice(0, visibleCount)
   const activeFilter = FORMAT_FILTERS.find(f => f.key === formatFilter)
   const activeColor  = activeFilter?.color || C.primary
   const hasMore      = poolReady && (visibleCount < poolSize || !exhausted.current)

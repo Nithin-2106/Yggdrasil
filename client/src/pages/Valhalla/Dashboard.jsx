@@ -3,6 +3,7 @@ import axios from 'axios'
 import Counter from '../../components/Counter'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { anilistFetch } from '../../utils/anilistClient'
 import {
   fetchBySort,
   searchManga,
@@ -25,7 +26,11 @@ const TOP10 = '/api/mangatop10'
 // This mirrors the proven pattern from BrowsePage.jsx: server-side filtering
 // where possible, and pooled multi-page fetching so client-side filters never
 // run the section dry.
-const ANILIST = 'https://graphql.anilist.co'
+//
+// All requests still go through the shared anilistClient queue (imported
+// above) — AniList enforces one rate-limit budget across the whole app, so
+// Trending/Recently Released here share it with every other AniList call in
+// both Alfheim and Valhalla, not just within this file.
 
 const DASH_MEDIA_FIELDS = `
   id
@@ -40,23 +45,6 @@ const DASH_MEDIA_FIELDS = `
   genres
   startDate { year }
 `
-
-async function anilistFetch(query, variables = {}) {
-  try {
-    const res = await fetch(ANILIST, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = await res.json()
-    if (json.errors) throw new Error(json.errors[0].message)
-    return json.data
-  } catch (err) {
-    console.error('AniList fetch error:', err)
-    return null
-  }
-}
 
 // Pulls pages until `target` items pass `accept`, or we run out of pages / hit maxPages.
 async function fetchMangaPool({ sort, extraFilter = '', accept, target, maxPages = 6, perPage = 50 }) {
